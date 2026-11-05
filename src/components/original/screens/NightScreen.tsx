@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { audioManager } from "@/lib/audio/AudioManager";
-import { NIGHT_DONE_LINES, NIGHT_LINES, dailyLine } from "@/lib/left-on-read/flavor";
+import { NIGHT_DONE_LINES, NIGHT_LINES, NIGHT_UNREAD_LINES, QUIET_PHONE_LINES, dailyLine } from "@/lib/left-on-read/flavor";
 import type { RunState } from "@/lib/left-on-read/game";
+import { readyChats, visibleChats } from "@/lib/left-on-read/story";
 import { drawNightScene, drawPhoneScene, drawSleepScene } from "../pixel/scenes";
 import { COLOR, DialogBox, PixelButton, Scene, ScreenBody, StatusBar, Typewriter } from "../ui";
 
@@ -13,15 +14,21 @@ interface NightScreenProps {
   run: RunState;
   onMenu: () => void;
   onOpenApp: () => void;
+  onOpenChats: () => void;
   onSleep: () => void;
 }
 
-/** 深夜的租屋處。滑完或放棄之後，只剩下去睡覺 */
-export function NightScreen({ run, onMenu, onOpenApp, onSleep }: NightScreenProps) {
+/** 深夜的租屋處。睡前都能回訊息；滑完或放棄之後，就不能再開 Swipy 滑卡了 */
+export function NightScreen({ run, onMenu, onOpenApp, onOpenChats, onSleep }: NightScreenProps) {
   const [sleeping, setSleeping] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const done = run.phase === "nightDone";
-  const line = dailyLine(done ? NIGHT_DONE_LINES : NIGHT_LINES, run.dayIndex);
+  const chats = visibleChats(run.chats, run.dayIndex);
+  const ready = readyChats(chats, run.dayIndex).length;
+  const waiting = chats.length - ready;
+  const lines = ready > 0 ? NIGHT_UNREAD_LINES : done ? NIGHT_DONE_LINES : NIGHT_LINES;
+  const line = dailyLine(lines, run.dayIndex);
+  const quiet = dailyLine(QUIET_PHONE_LINES, run.dayIndex);
 
   useEffect(
     () => () => {
@@ -40,14 +47,25 @@ export function NightScreen({ run, onMenu, onOpenApp, onSleep }: NightScreenProp
     <>
       <StatusBar run={run} onMenu={onMenu} />
       <Scene
-        draw={sleeping ? drawSleepScene : done ? drawPhoneScene : drawNightScene}
+        draw={sleeping ? drawSleepScene : done || ready > 0 ? drawPhoneScene : drawNightScene}
         label={sleeping ? "冠宇睡著了" : "深夜的租屋處"}
       />
       <ScreenBody
         actions={
           <>
+            {chats.length > 0 ? (
+              <PixelButton
+                color={ready > 0 ? COLOR.pink : COLOR.gray}
+                disabled={sleeping}
+                onClick={onOpenChats}
+                sub={ready > 0 ? (waiting > 0 ? `另外 ${waiting} 個還沒回` : undefined) : "沒有新訊息"}
+              >
+                躺在床上回訊息
+                {ready > 0 ? `（${ready}）` : ""}
+              </PixelButton>
+            ) : null}
             {!done ? (
-              <PixelButton color={COLOR.pink} disabled={sleeping} onClick={onOpenApp}>
+              <PixelButton color={ready > 0 ? COLOR.blue : COLOR.pink} disabled={sleeping} onClick={onOpenApp}>
                 打開 Swipy
               </PixelButton>
             ) : null}
@@ -59,6 +77,9 @@ export function NightScreen({ run, onMenu, onOpenApp, onSleep }: NightScreenProp
       >
         <DialogBox>
           <Typewriter key={line} text={line} />
+          {chats.length > 0 && ready === 0 && !sleeping ? (
+            <p className="mt-2 text-sm text-[#a9abc9]">{quiet}</p>
+          ) : null}
         </DialogBox>
       </ScreenBody>
     </>

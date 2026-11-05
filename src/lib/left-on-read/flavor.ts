@@ -44,6 +44,14 @@ export const NIGHT_DONE_LINES: readonly string[] = [
   "關掉 App。黑掉的螢幕映出一張戴眼鏡的臉，他看起來也沒配到。",
 ];
 
+/** 晚上還有訊息沒回的時候，取代深夜的那句話 */
+export const NIGHT_UNREAD_LINES: readonly string[] = [
+  "手機亮了一下。不是電信公司，是真的有人。",
+  "白天沒回的訊息還躺在那裡。她應該沒在等。我還是想了一下要怎麼回。",
+  "躺到床上才想起來還沒回她。這是我今天唯一欠人的東西。",
+  "打了一行字又刪掉。半夜傳訊息要很小心，看起來不能太閒，雖然我很閒。",
+];
+
 export const QUIET_PHONE_LINES: readonly string[] = [
   "打開手機看了一下。沒有新訊息。再看一下。也沒有。",
   "只有電信公司傳簡訊來關心我。",

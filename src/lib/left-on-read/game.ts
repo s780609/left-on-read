@@ -147,15 +147,25 @@ function affordableDate(run: RunState) {
   return chat && step?.date && run.money >= step.date.cost ? { chat, step, date: step.date } : null;
 }
 
+/** 手機拿得起來的階段：白天，還有回到家之後；吃飯、滑卡、配對的畫面中不行 */
+export function canUsePhone(phase: Phase): boolean {
+  return phase === "daytime" || phase === "night" || phase === "nightDone";
+}
+
+function chatActions(run: RunState): GameAction["type"][] {
+  const steps = run.chats.filter((c) => isChatReady(c, run.dayIndex)).map(storyStep);
+  const actions: GameAction["type"][] = [];
+  if (steps.some((s) => s && !isFinal(s))) actions.push("reply");
+  if (steps.some((s) => s && isFinal(s))) actions.push("closeChat");
+  return actions;
+}
+
 export function legalActions(run: RunState): GameAction["type"][] {
   switch (run.phase) {
     case "payday":
       return ["ackPayday"];
     case "daytime": {
-      const steps = run.chats.filter((c) => isChatReady(c, run.dayIndex)).map(storyStep);
-      const actions: GameAction["type"][] = [];
-      if (steps.some((s) => s && !isFinal(s))) actions.push("reply");
-      if (steps.some((s) => s && isFinal(s))) actions.push("closeChat");
+      const actions = chatActions(run);
       if (affordableDate(run)) actions.push("goOnDate");
       actions.push("endDaytime");
       return actions;
@@ -165,13 +175,13 @@ export function legalActions(run: RunState): GameAction["type"][] {
       return meal && run.money >= meal.price ? ["eatOut", "goHome"] : ["goHome"];
     }
     case "night":
-      return ["openApp", "sleep"];
+      return [...chatActions(run), "openApp", "sleep"];
     case "swiping":
       return ["swipe", "quitApp"];
     case "matched":
       return ["chooseOpener"];
     case "nightDone":
-      return ["sleep"];
+      return [...chatActions(run), "sleep"];
   }
 }
 
@@ -191,7 +201,7 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
     }
 
     case "reply": {
-      if (run.phase !== "daytime") return same;
+      if (!canUsePhone(run.phase)) return same;
       const chat = run.chats.find((c) => c.id === action.chatId);
       if (!chat || !isChatReady(chat, run.dayIndex)) return same;
       const step = storyStep(chat);
@@ -253,7 +263,7 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
     }
 
     case "closeChat": {
-      if (run.phase !== "daytime") return same;
+      if (!canUsePhone(run.phase)) return same;
       const chat = run.chats.find((c) => c.id === action.chatId);
       if (!chat || !isChatReady(chat, run.dayIndex)) return same;
       const step = storyStep(chat);

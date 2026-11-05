@@ -23,7 +23,7 @@ export const GHOST_STORIES: readonly Story[] = [
         incoming: { kind: "read" },
         replies: [
           "今天天氣不錯欸",
-          "妳午餐吃了嗎 我吃雞腿便當",
+          "妳今天吃了嗎 我吃雞腿便當",
           "我看了一下 妳都是中午已讀 代表妳有好好休息 很棒",
         ],
       },
@@ -115,7 +115,7 @@ export const GHOST_STORIES: readonly Story[] = [
       {
         incoming: { kind: "message", text: "（貼圖：兔子躺著睡覺）" },
         replies: [
-          "妳要睡了嗎 現在下午兩點欸",
+          "妳要睡了嗎 我們才講三句欸",
           "兔子今天也辛苦了",
           "我查了 這組貼圖一共 24 張 我想全部看過",
         ],

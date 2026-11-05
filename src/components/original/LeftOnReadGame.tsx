@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { audioManager } from "@/lib/audio/AudioManager";
 import { dexProgress } from "@/lib/left-on-read/dex";
-import { advance, createRun, type GameAction, type GameEvent } from "@/lib/left-on-read/game";
+import { advance, createRun, type GameAction, type GameEvent, type RunState } from "@/lib/left-on-read/game";
 import { generateGirl } from "@/lib/left-on-read/girl";
 import { NOODLES } from "@/lib/left-on-read/meals";
 import { comebackChat, dueDateChat, visibleChats } from "@/lib/left-on-read/story";
@@ -189,6 +189,38 @@ export default function LeftOnReadGame() {
 
   // ---------- 畫面 ----------
 
+  /** 手機開著的時候蓋住當下的畫面，白天和晚上共用；沒開就回傳 null */
+  const renderPhone = (run: RunState) => {
+    const chat = typeof phone === "number" ? run.chats.find((c) => c.id === phone) : undefined;
+    if (chat) {
+      return (
+        <ChatRoom
+          run={run}
+          chat={chat}
+          onBack={() => {
+            audioManager.pop();
+            setPhone("list");
+          }}
+          onReply={(choice) => reply(chat.id, choice)}
+          onFinish={() => closeChat(chat.id)}
+        />
+      );
+    }
+    if (phone !== null && visibleChats(run.chats, run.dayIndex).length > 0) {
+      return (
+        <ChatList
+          run={run}
+          onOpen={(id) => {
+            audioManager.pop();
+            setPhone(id);
+          }}
+          onClose={() => setPhone(null)}
+        />
+      );
+    }
+    return null;
+  };
+
   const renderGame = () => {
     const { run } = save;
     if (!run) return null;
@@ -216,33 +248,8 @@ export default function LeftOnReadGame() {
         if (returning) return <ComebackScreen chat={returning} onReply={(choice) => reply(returning.id, choice)} />;
         const dateChat = onDate ? dueDateChat(run.chats, run.dayIndex) : null;
         if (dateChat) return <DateScreen chat={dateChat} onDone={finishDate} />;
-        const chat = typeof phone === "number" ? run.chats.find((c) => c.id === phone) : undefined;
-        if (chat) {
-          return (
-            <ChatRoom
-              run={run}
-              chat={chat}
-              onBack={() => {
-                audioManager.pop();
-                setPhone("list");
-              }}
-              onReply={(choice) => reply(chat.id, choice)}
-              onFinish={() => closeChat(chat.id)}
-            />
-          );
-        }
-        if (phone !== null && visibleChats(run.chats, run.dayIndex).length > 0) {
-          return (
-            <ChatList
-              run={run}
-              onOpen={(id) => {
-                audioManager.pop();
-                setPhone(id);
-              }}
-              onClose={() => setPhone(null)}
-            />
-          );
-        }
+        const phoneScreen = renderPhone(run);
+        if (phoneScreen) return phoneScreen;
         return (
           <DayScreen
             run={run}
@@ -259,16 +266,20 @@ export default function LeftOnReadGame() {
       case "evening":
         return <EveningScreen run={run} onMenu={toMenu} onEatOut={eatOut} onGoHome={goHome} />;
       case "night":
-      case "nightDone":
+      case "nightDone": {
+        const phoneScreen = renderPhone(run);
+        if (phoneScreen) return phoneScreen;
         return (
           <NightScreen
             key={run.dayIndex}
             run={run}
             onMenu={toMenu}
             onOpenApp={() => dispatch({ type: "openApp" })}
+            onOpenChats={() => setPhone("list")}
             onSleep={() => dispatch({ type: "sleep" })}
           />
         );
+      }
       case "swiping":
         return (
           <SwipeScreen

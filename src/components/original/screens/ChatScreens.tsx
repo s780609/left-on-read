@@ -84,6 +84,7 @@ export function ChatList({ run, onOpen, onClose }: ChatListProps) {
     <>
       <div className={TOP_BAR_CLASS}>
         <div className="min-w-0 flex-1 text-lg text-[#ff9fb4]">Swipy 訊息</div>
+        {run.phase !== "daytime" ? <span className="shrink-0 text-xs text-[#a9abc9]">深夜</span> : null}
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">
         {visibleChats(run.chats, run.dayIndex).map((chat) => {
@@ -204,7 +205,9 @@ export function ChatRoom({ run, chat, onReply, onFinish, onBack }: ChatRoomProps
         {!ready ? (
           <>
             <p className="text-center text-sm text-[#a9abc9]">
-              {dateIsNext ? "約好了。週末白天才能出門赴約。" : "已送出。今天她不會再回了。"}
+              {dateIsNext
+                ? "約好了。週末白天才能出門赴約。"
+                : `已送出。${run.phase === "daytime" ? "今天" : "今晚"}她不會再回了。`}
             </p>
             <PixelButton onClick={onBack}>回列表</PixelButton>
           </>

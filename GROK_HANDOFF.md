@@ -65,6 +65,7 @@ src/lib/left-on-read/               純邏輯，不依賴 React 或 DOM
   stories/                          ghost、fade、pitch、quick 共 27 種，special.ts 是隱藏路線，heroine.ts 是小晴路線和約會腳本
   storyTypes.ts                     劇情型別
   girl.ts、girlData.ts              女角產生器（seed 決定一切）
+  nightReply.test.ts                夜間回覆的規則、小晴和個工路線、舊存檔、模糊測試
   match.ts、swipe.ts、calendar.ts、meals.ts、flavor.ts、dex.ts、save.ts、intro.ts、ladybug.ts、trueEnding.ts
 public/left-on-read/                intro/（開場 4 張）、scene/（eatery 與各菜色版本、weekend、小晴路線的 date-*、epi-*）、heroine/（小晴的 08、09）
 assets/heroine/                     真結局女角素材 01～11.jpg，只有 08、09 複製進遊戲，這裡的不會打包進 App
@@ -78,7 +79,10 @@ assets/heroine/                     真結局女角素材 01～11.jpg，只有 0
 - 每月 5 號入帳 36,000、扣房租水電 12,500，週末也會
 - 起始金額 8,200。餐費 100～260，泡麵 30。錢扣到 0 為止，沒有 game over
 - 每晚 10 張卡。右滑才可能配對，機率約 2%～29%，連續右滑會下降（`match.ts`）
-- 配對後白天可回訊息，每個聊天每天推進一步
+- 配對後白天和晚上都能回訊息（`night`、`nightDone`，也就是滑卡前後都行；領薪、吃飯、滑卡、配對畫面中不行，判斷在 `canUsePhone`）
+- 每個聊天每天推進一步，白天和晚上共用這一步：白天回過，晚上就是「今晚她不會再回了」；晚上回過，下一則要等隔天。回訊息不花錢、不佔時間，也沒有晚回的懲罰
+- 假失敗可能在晚上演完，她當晚從手機上消失，隔天早上才回來。約會仍然只有週末白天能去
+- 回覆可能在白天或半夜送出，新增回覆選項不要寫死當下時段（例如「現在下午兩點」）；早安圖傳人的「早安」是角色的笑點，刻意保留
 - 女角年齡固定 22～38 歲，有測試保證
 - 女角外貌：新增圖層時，在 `girl.ts` 的 `ROLL` 加新編號，不要動既有編號，名字和劇情相關的抽選才不會變；配件和髮型、服裝的衝突寫在 `isAccessoryAllowed`
 
@@ -102,6 +106,7 @@ assets/heroine/                     真結局女角素材 01～11.jpg，只有 0
 | 從 TinyTap 獨立成這個 repo | 完成 |
 | Swipy 女角精緻像素化 | 完成：120×150 原寸算圖，所有圖層由 seed 決定；小晴仍然用照片 |
 | 遊戲內場景換插圖 | 部分完成：吃飯、週末是合成的暫代圖，瓢蟲結局的巷子和鐵門還是像素圖 |
+| 晚上回訊息 | 完成：夜間入口在 `screens/NightScreen.tsx`，手機畫面和白天共用，測試在 `nightReply.test.ts`；沒有新增存檔欄位 |
 | 真結局女角素材 | 08、09 已接進遊戲，其他幾張等擁有者決定 |
 | 真結局 | 完成，在 `feat/true-ending` 等審；三次約會和尾聲都已換成 `scene/date-*.jpg`、`scene/epi-*.jpg` 插圖 |
 
