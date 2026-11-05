@@ -11,6 +11,8 @@ interface PixelCanvasProps {
   className?: string;
   style?: CSSProperties;
   label?: string;
+  /** 每隔幾毫秒重畫一次；預設 50（舊遊戲的節奏），開場的鏡頭推移用 0 每個 rAF 都畫才順 */
+  frameMs?: number;
 }
 
 /** 舊遊戲的節奏：不用每個 rAF 都重畫 */
@@ -19,7 +21,16 @@ const FRAME_MS = 50;
 const MAX_STEP_MS = 100;
 
 /** 低解析 canvas，用 CSS 放大成像素風。繪製只在 effect 裡，伺服器不會執行。 */
-export default function PixelCanvas({ width, height, draw, animate = false, className = "", style, label }: PixelCanvasProps) {
+export default function PixelCanvas({
+  width,
+  height,
+  draw,
+  animate = false,
+  className = "",
+  style,
+  label,
+  frameMs = FRAME_MS,
+}: PixelCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawRef = useRef(draw);
   const staticDraw = animate ? null : draw;
@@ -45,7 +56,7 @@ export default function PixelCanvas({ width, height, draw, animate = false, clas
       last = now;
       clock += step;
       sinceDraw += step;
-      if (sinceDraw >= FRAME_MS) {
+      if (sinceDraw >= frameMs) {
         sinceDraw = 0;
         drawRef.current(ctx, clock);
       }
@@ -54,7 +65,7 @@ export default function PixelCanvas({ width, height, draw, animate = false, clas
     drawRef.current(ctx, 0);
     raf = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(raf);
-  }, [staticDraw, width, height]);
+  }, [staticDraw, width, height, frameMs]);
 
   return (
     <canvas

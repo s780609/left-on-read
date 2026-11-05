@@ -2,20 +2,29 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { audioManager } from "@/lib/audio/AudioManager";
-import { INTRO_MELODY, INTRO_SHOTS, introShotAt } from "@/lib/left-on-read/intro";
+import { INTRO_MELODY, INTRO_SHOTS, introShotAt, shotFadeAt } from "@/lib/left-on-read/intro";
 import { midiToFreq } from "@/lib/rhythm/music";
 import PixelCanvas from "../PixelCanvas";
-import { dither, rect, type Ctx } from "../pixel/draw";
+import type { Ctx } from "../pixel/draw";
 import { INTRO_H, INTRO_SCENES, INTRO_W, loadIntroImages, type IntroImages } from "../pixel/introScenes";
 import { PixelButton } from "../ui";
 
 const MUSIC_GAIN = 0.55;
-/** 每個分鏡前後用抖色淡入淡出 */
-const FADE_MS = 280;
 
 export default function IntroScreen({ onDone }: { onDone: () => void }) {
   const [images, setImages] = useState<IntroImages | null>(null);
   const finished = useRef(false);
+  // 系統設定「減少動態效果」時，鏡頭不推不晃，只留淡入淡出
+  const reducedMotion = useRef(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    reducedMotion.current = mq.matches;
+    const onChange = (e: MediaQueryListEvent) => {
+      reducedMotion.current = e.matches;
+    };
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
 
   // 圖載好才開始計時，第一幕才不會空著播掉
   useEffect(() => {
@@ -33,13 +42,12 @@ export default function IntroScreen({ onDone }: { onDone: () => void }) {
       if (!images) return;
       const { index, localMs, done } = introShotAt(t);
       const shot = INTRO_SHOTS[index];
-      INTRO_SCENES[shot.id](ctx, localMs, images);
-      const fadeIn = index > 0 && INTRO_SHOTS[index - 1].continues ? FADE_MS : localMs;
-      const fadeOut = shot.continues ? FADE_MS : shot.durationMs - localMs;
-      const fade = Math.min(fadeIn, fadeOut);
-      if (fade < FADE_MS) {
-        if (fade < FADE_MS / 2) rect(ctx, "#000000", 0, 0, INTRO_W, INTRO_H);
-        else dither(ctx, "#000000", 0, 0, INTRO_W, INTRO_H);
+      INTRO_SCENES[shot.id](ctx, localMs, images, { still: reducedMotion.current });
+      // 分鏡交界：黑幕用緩動慢慢落下、慢慢掀開，不再兩格硬切
+      const fade = shotFadeAt(index, localMs);
+      if (fade > 0) {
+        ctx.fillStyle = `rgba(0,0,0,${fade})`;
+        ctx.fillRect(0, 0, INTRO_W, INTRO_H);
       }
       if (done && !finished.current) {
         finished.current = true;
@@ -80,6 +88,7 @@ export default function IntroScreen({ onDone }: { onDone: () => void }) {
             height={INTRO_H}
             draw={draw}
             animate
+            frameMs={0}
             label="開場影片：下班、擠捷運、回到租屋處滑交友軟體"
             className="block h-full min-h-0 w-full object-contain"
           />

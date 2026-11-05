@@ -39,6 +39,51 @@ export function introShotAt(tMs: number): { index: number; localMs: number; done
   return { index: 0, localMs: 0, done: false };
 }
 
+// ---------- 緩動與轉場：鏡頭、淡入淡出都用這些，動起來才不會一格一格硬切 ----------
+
+const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
+
+/** 慢進慢出 */
+export function easeInOut(p: number): number {
+  const x = clamp01(p);
+  return 0.5 - 0.5 * Math.cos(Math.PI * x);
+}
+
+/** 快進慢停：字和卡片落定用 */
+export function easeOut(p: number): number {
+  const x = clamp01(p);
+  return 1 - (1 - x) ** 3;
+}
+
+/** 慢起快走：卡片被甩出去用 */
+export function easeIn(p: number): number {
+  const x = clamp01(p);
+  return x * x * x;
+}
+
+/** t 從 from 走到 to 的緩動進度 0～1 */
+export function easedRamp(t: number, from: number, to: number): number {
+  return easeInOut((t - from) / (to - from));
+}
+
+/** 分鏡之間淡入淡出的長度 */
+export const INTRO_FADE_MS = 650;
+
+/**
+ * 這一格要蓋多少黑（0～1）。接著演的分鏡之間不淡出；
+ * 其他交界前後各淡 INTRO_FADE_MS，用緩動讓黑幕自然地落下、再自然地掀開。
+ */
+export function shotFadeAt(index: number, localMs: number): number {
+  const shot = INTRO_SHOTS[index];
+  if (!shot) return 0;
+  const prev = INTRO_SHOTS[index - 1];
+  const fadeIn = prev?.continues ? Infinity : localMs;
+  const fadeOut = shot.continues ? Infinity : shot.durationMs - localMs;
+  const f = Math.min(fadeIn, fadeOut);
+  if (f >= INTRO_FADE_MS) return 0;
+  return 1 - easeInOut(Math.max(0, f) / INTRO_FADE_MS);
+}
+
 /** 辦公室的時鐘：盯著它從 17:58 走到 18:00 */
 export function introClock(localMs: number): string {
   if (localMs < 2400) return "17:58";
