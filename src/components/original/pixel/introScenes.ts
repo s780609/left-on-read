@@ -9,6 +9,10 @@ import {
   INTRO_TAGLINE,
   INTRO_TITLE,
   SWIPE_BEATS,
+  SWIPE_BEAT_MS,
+  easeIn,
+  easeOut,
+  easedRamp,
   introClock,
   swipeBeatAt,
   type IntroSceneId,
@@ -55,9 +59,17 @@ export async function loadIntroImages(): Promise<IntroImages> {
   return images;
 }
 
-const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
-/** t 從 from 走到 to 的進度 0～1 */
-const ramp = (t: number, from: number, to: number) => clamp01((t - from) / (to - from));
+export interface IntroSceneOpts {
+  /** 減少動態效果：鏡頭不推、不晃、卡片不甩 */
+  still?: boolean;
+}
+
+/** t 從 from 走到 to 的緩動進度 0～1，慢進慢出 */
+const ramp = easedRamp;
+const lerp = (a: number, b: number, p: number) => a + (b - a) * p;
+/** 鏡頭焦點從 a 慢慢移到 b */
+const pan = (a: readonly [number, number], b: readonly [number, number], p: number) =>
+  [lerp(a[0], b[0], p), lerp(a[1], b[1], p)] as const;
 
 /** 畫一張圖：zoom 放大時 focus 這個點留在原位，鏡頭就像慢慢推向它 */
 function photo(
@@ -105,8 +117,10 @@ function outlined(ctx: Ctx, text: string, y: number, size: number, color: string
 
 // ---------- 場景 1：盯著時鐘等下班 ----------
 
-const office = (ctx: Ctx, t: number, images: IntroImages) => {
-  photo(ctx, images.office, 1 + 0.14 * (t / 7000), FACE.office);
+const office = (ctx: Ctx, t: number, images: IntroImages, { still }: IntroSceneOpts) => {
+  // 鏡頭從整間辦公室慢慢推到他臉上，起步和停下都是緩的
+  const cam = still ? 0 : ramp(t, 0, 7000);
+  photo(ctx, images.office, 1 + 0.14 * cam, pan([360, 560], FACE.office, cam));
   // 六點整之後他走了，辦公室的燈跟著暗下去
   darken(ctx, ramp(t, 5400, 7000) * 0.8);
 
@@ -121,12 +135,21 @@ const office = (ctx: Ctx, t: number, images: IntroImages) => {
 
 // ---------- 場景 2：人很多，但只看得到他 ----------
 
-const commute = (ctx: Ctx, t: number, images: IntroImages) => {
-  photo(ctx, images.commute, 1 + 0.1 * (t / 6000), FACE.commute);
+const commute = (ctx: Ctx, t: number, images: IntroImages, { still }: IntroSceneOpts) => {
+  const cam = still ? 0 : ramp(t, 0, 6000);
+  photo(ctx, images.commute, 1 + 0.1 * cam, pan([340, 470], FACE.commute, cam));
   rain(ctx, t, 0, 0, INTRO_W, 330, 70);
   const [fx, fy] = FACE.commute;
-  spotlight(ctx, fx * TO_SCREEN, fy * TO_SCREEN, 170, ramp(t, 400, 2600) * 0.82);
-  if (t > 1800) outlined(ctx, INTRO_COMMUTE_TEXT, 470, 34, "#f6f1de");
+  // 聚光燈收得慢一點，人群一點一點暗下去
+  spotlight(ctx, fx * TO_SCREEN, fy * TO_SCREEN, lerp(260, 170, ramp(t, 300, 3000)), ramp(t, 300, 3000) * 0.82);
+  // 字淡入、往上浮一點點再停住
+  const show = easeOut((t - 1900) / 900);
+  if (show > 0) {
+    ctx.save();
+    ctx.globalAlpha = show;
+    outlined(ctx, INTRO_COMMUTE_TEXT, Math.round(478 - 8 * show), 34, "#f6f1de");
+    ctx.restore();
+  }
 };
 
 // ---------- 場景 3：丟下背包躺平，然後坐起來拿手機 ----------
@@ -140,18 +163,19 @@ function phoneGlow(ctx: Ctx, t: number, x: number, y: number, radius: number) {
   ctx.fillRect(0, 0, INTRO_W, INTRO_H);
 }
 
-const room = (ctx: Ctx, t: number, images: IntroImages) => {
-  // 整個人倒上床的那一下，畫面晃一晃
-  const thud = t < 320 ? Math.round(Math.sin(t / 22) * (320 - t) * 0.03) : 0;
+const room = (ctx: Ctx, t: number, images: IntroImages, { still }: IntroSceneOpts) => {
+  // 整個人倒上床的那一下，畫面往下沉再彈回來，晃動慢慢收掉
+  const thud = still || t >= 700 ? 0 : 7 * Math.sin((t / 700) * Math.PI * 2.5) * (1 - t / 700) ** 2;
   ctx.save();
   ctx.translate(0, thud);
-  photo(ctx, images.bed, 1.04 + 0.1 * (t / 5200), FACE.bed);
+  photo(ctx, images.bed, 1.04 + (still ? 0 : 0.1 * ramp(t, 0, 5600)), FACE.bed);
   ctx.restore();
   rain(ctx, t, 205, 30, 100, 135, 14);
 
-  const sitUp = ramp(t, 4300, 5200);
+  // 坐起來拿手機：兩張圖慢慢交疊，不是一下子換掉
+  const sitUp = ramp(t, 4000, 5400);
   if (sitUp > 0) {
-    photo(ctx, images.phone, 1 + 0.08 * ramp(t, 4300, 7000), PHONE_SCREEN, sitUp);
+    photo(ctx, images.phone, 1 + (still ? 0 : 0.08 * ramp(t, 4000, 7000)), PHONE_SCREEN, sitUp);
     ctx.globalAlpha = sitUp;
     phoneGlow(ctx, t, PHONE_LIGHT[0] * TO_SCREEN, PHONE_LIGHT[1] * TO_SCREEN, 110);
     ctx.globalAlpha = 1;
@@ -212,7 +236,7 @@ function moodInset(ctx: Ctx, index: number, images: IntroImages) {
   }
 }
 
-function swipeUi(ctx: Ctx, images: IntroImages, index: number, exit: number) {
+function swipeUi(ctx: Ctx, images: IntroImages, index: number, exit: number, still = false) {
   const { dir } = SWIPE_BEATS[index];
   rect(ctx, "#05050c", 0, 0, INTRO_W, INTRO_H);
   rect(ctx, "#101018", 36, 22, 320, 540);
@@ -220,16 +244,26 @@ function swipeUi(ctx: Ctx, images: IntroImages, index: number, exit: number) {
   pixelText(ctx, "Swipy", 56, 46, 22, "#ff9fb4");
 
   // 下一張在底下等著，上面這張飛出去
+  // 底下那張跟著慢慢浮上來
+  const rise = still ? 1 : 0.95 + 0.05 * easeOut(exit);
+  ctx.save();
+  ctx.translate(CARD_X + CARD_W / 2, CARD_Y + CARD_H / 2);
+  ctx.scale(rise, rise);
+  ctx.translate(-(CARD_X + CARD_W / 2), -(CARD_Y + CARD_H / 2));
   drawCard(ctx, CARD_SEEDS[index + 1]);
+  ctx.restore();
   if (exit < 1) {
     const sign = dir === "right" ? 1 : -1;
+    const fly = still ? 0 : easeIn(exit);
     ctx.save();
-    ctx.translate(CARD_X + CARD_W / 2 + sign * exit * exit * 380, CARD_Y + CARD_H);
-    ctx.rotate(sign * exit * 0.22);
+    ctx.globalAlpha = still ? 1 - exit : 1;
+    ctx.translate(CARD_X + CARD_W / 2 + sign * fly * 400, CARD_Y + CARD_H);
+    ctx.rotate(sign * fly * 0.26);
     ctx.translate(-(CARD_X + CARD_W / 2), -(CARD_Y + CARD_H));
     drawCard(ctx, CARD_SEEDS[index]);
     if (exit > 0) {
       const color = dir === "right" ? "#ff5a7e" : "#e8e8f0";
+      ctx.globalAlpha = Math.min(1, exit * 4) * ctx.globalAlpha;
       outlined(ctx, dir === "right" ? "♥" : "✕", CARD_Y + 110, 90, color);
     }
     ctx.restore();
@@ -247,39 +281,68 @@ function swipeUi(ctx: Ctx, images: IntroImages, index: number, exit: number) {
   moodInset(ctx, index, images);
 }
 
-const swipe = (ctx: Ctx, t: number, images: IntroImages) => {
+/** 換表情時小視窗交疊一下，不要一下子跳掉 */
+function moodInsetBlend(ctx: Ctx, images: IntroImages, t: number) {
+  const { index } = swipeBeatAt(t);
+  const into = (t - index * SWIPE_BEAT_MS) / 300;
+  if (index === 0 || into >= 1) return;
+  if (SWIPE_BEATS[index - 1].mood === SWIPE_BEATS[index].mood) return;
+  ctx.save();
+  ctx.globalAlpha = 1 - easeOut(into);
+  moodInset(ctx, index - 1, images);
+  ctx.restore();
+}
+
+const swipe = (ctx: Ctx, t: number, images: IntroImages, { still }: IntroSceneOpts) => {
   const { index, exit } = swipeBeatAt(t);
-  swipeUi(ctx, images, index, exit);
-  // 開頭接著上一幕，鏡頭一路推進手機裡
-  const dive = ramp(t, 0, 900);
-  if (dive < 1) photo(ctx, images.phone, 1.08 + dive * dive * 3, PHONE_SCREEN, 1 - ramp(t, 550, 900));
+  swipeUi(ctx, images, index, exit, still);
+  moodInsetBlend(ctx, images, t);
+  // 開頭接著上一幕，鏡頭一路推進手機裡，越推越快，再淡進滑卡畫面
+  const dive = still ? 0 : easeIn(t / 1100);
+  const leave = ramp(t, 500, 1100);
+  if (leave < 1) photo(ctx, images.phone, 1.08 + dive * 3, PHONE_SCREEN, 1 - leave);
 };
 
 // ---------- 場景 5：螢幕暗掉，倒回床上，片名 ----------
 
-const end = (ctx: Ctx, t: number, images: IntroImages) => {
+const end = (ctx: Ctx, t: number, images: IntroImages, { still }: IntroSceneOpts) => {
   rect(ctx, "#000000", 0, 0, INTRO_W, INTRO_H);
   if (t < 3000) {
     const { index, exit } = swipeBeatAt(Number.MAX_SAFE_INTEGER);
-    if (t < 1500) swipeUi(ctx, images, index, exit);
-    darken(ctx, ramp(t, 0, 1400));
-    photo(ctx, images.bed, 1.14, FACE.bed, ramp(t, 1200, 1900));
-    if (t > 1200) darken(ctx, 0.35 + ramp(t, 2200, 3000) * 0.65);
+    // 螢幕暗掉，床那張圖從黑裡浮出來，再一起沉下去
+    const screenOff = ramp(t, 0, 1400);
+    if (screenOff < 1) {
+      swipeUi(ctx, images, index, exit, still);
+      darken(ctx, screenOff);
+    }
+    const bed = ramp(t, 1000, 2000);
+    photo(ctx, images.bed, still ? 1.14 : 1.12 + 0.03 * ramp(t, 1000, 3000), FACE.bed, bed);
+    if (bed > 0) darken(ctx, 0.35 + ramp(t, 2100, 3000) * 0.65);
     return;
   }
+  // 片名淡入、從下面浮上來一點；粉紅線從中間往兩邊拉開；標語晚一拍
+  const title = easeOut((t - 3100) / 900);
+  const line = easeOut((t - 3400) / 700);
+  const tag = easeOut((t - 4000) / 700);
+  const lift = still ? 0 : Math.round(10 * (1 - title));
   ctx.save();
-  ctx.globalAlpha = ramp(t, 3100, 3700);
-  pixelText(ctx, INTRO_TITLE, INTRO_W / 2 + 3, 203, 76, "#7a2c44", "center");
-  pixelText(ctx, INTRO_TITLE, INTRO_W / 2, 200, 76, "#f6f1de", "center");
-  rect(ctx, "#ff6f91", 46, 292, INTRO_W - 92, 4);
-  ctx.globalAlpha = ramp(t, 4000, 4500);
-  pixelText(ctx, INTRO_TAGLINE, INTRO_W / 2, 316, 22, "#a8acc8", "center");
+  ctx.globalAlpha = title;
+  pixelText(ctx, INTRO_TITLE, INTRO_W / 2 + 3, 203 + lift, 76, "#7a2c44", "center");
+  pixelText(ctx, INTRO_TITLE, INTRO_W / 2, 200 + lift, 76, "#f6f1de", "center");
+  ctx.globalAlpha = 1;
+  const lineW = Math.round((INTRO_W - 92) * line);
+  if (lineW > 0) rect(ctx, "#ff6f91", INTRO_W / 2 - lineW / 2, 292, lineW, 4);
+  ctx.globalAlpha = tag;
+  pixelText(ctx, INTRO_TAGLINE, INTRO_W / 2, 316 + (still ? 0 : Math.round(6 * (1 - tag))), 22, "#a8acc8", "center");
   ctx.restore();
   // 游標一閃一閃，像在等對方輸入
   if (t > 4500 && saw(t, 900) < 0.5) rect(ctx, "#a8acc8", INTRO_W / 2 - 3, 362, 6, 14);
 };
 
-export const INTRO_SCENES: Record<IntroSceneId, (ctx: Ctx, tMs: number, images: IntroImages) => void> = {
+export const INTRO_SCENES: Record<
+  IntroSceneId,
+  (ctx: Ctx, tMs: number, images: IntroImages, opts: IntroSceneOpts) => void
+> = {
   office,
   commute,
   room,

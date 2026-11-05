@@ -8,8 +8,14 @@ import {
   INTRO_TITLE,
   SWIPE_BEATS,
   SWIPE_BEAT_MS,
+  INTRO_FADE_MS,
+  easeIn,
+  easeInOut,
+  easeOut,
+  easedRamp,
   introClock,
   introShotAt,
+  shotFadeAt,
   swipeBeatAt,
   typewriterCount,
 } from "./intro.ts";
@@ -139,4 +145,47 @@ test("音符不超過開場總長，時間遞增（單位是秒，對應 schedul
     last = n.time;
   }
   assert.ok(last > 1, "旋律的時間看起來不是以秒為單位");
+});
+
+test("緩動：0 到 1 之間、兩端固定、單調不倒退、超出範圍會夾住", () => {
+  for (const f of [easeInOut, easeOut, easeIn]) {
+    assert.equal(f(0), 0);
+    assert.ok(Math.abs(f(1) - 1) < 1e-9);
+    assert.equal(f(-3), 0);
+    assert.ok(Math.abs(f(7) - 1) < 1e-9);
+    let last = 0;
+    for (let p = 0; p <= 1.0001; p += 0.01) {
+      const v = f(p);
+      assert.ok(v >= last - 1e-12 && v <= 1 + 1e-12, `p=${p} v=${v}`);
+      last = v;
+    }
+  }
+  assert.ok(Math.abs(easeInOut(0.5) - 0.5) < 1e-9);
+  assert.ok(easeInOut(0.1) < 0.1, "開頭要慢");
+  assert.ok(easeOut(0.1) > 0.1, "easeOut 開頭快");
+  assert.ok(easeIn(0.5) < 0.5, "easeIn 開頭慢");
+  assert.equal(easedRamp(100, 200, 400), 0);
+  assert.ok(Math.abs(easedRamp(300, 200, 400) - 0.5) < 1e-9);
+  assert.ok(Math.abs(easedRamp(500, 200, 400) - 1) < 1e-9);
+});
+
+test("shotFadeAt：開頭從全黑淡入，中段不蓋黑，接著演的分鏡之間不淡出", () => {
+  assert.equal(shotFadeAt(0, 0), 1);
+  assert.equal(shotFadeAt(0, INTRO_FADE_MS), 0);
+  assert.equal(shotFadeAt(0, 3000), 0);
+  INTRO_SHOTS.forEach((shot, i) => {
+    const prev = INTRO_SHOTS[i - 1];
+    const end = shotFadeAt(i, shot.durationMs);
+    assert.equal(end, shot.continues ? 0 : 1, `${shot.id} 結尾`);
+    const start = shotFadeAt(i, 0);
+    assert.equal(start, prev?.continues ? 0 : 1, `${shot.id} 開頭`);
+    // 淡出過程只會越來越黑，不會忽明忽暗
+    let last = 0;
+    for (let t = shot.durationMs - INTRO_FADE_MS; t <= shot.durationMs; t += 25) {
+      const v = shotFadeAt(i, t);
+      assert.ok(v >= last - 1e-12 && v >= 0 && v <= 1, `${shot.id} t=${t} v=${v}`);
+      last = v;
+    }
+  });
+  assert.equal(shotFadeAt(99, 0), 0);
 });
