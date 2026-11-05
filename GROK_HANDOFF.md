@@ -41,7 +41,7 @@ npm run lint
 npm run build
 ```
 
-目前狀態：217 個測試全過，型別檢查和 build 都過，lint 只有一個既有警告（`save.test.ts` 的 `_ignored`）。
+目前狀態：所有測試全過，型別檢查和 build 都過，lint 只有一個既有警告（`save.test.ts` 的 `_ignored`）。
 
 ## 3. 程式結構
 
@@ -60,12 +60,12 @@ src/components/original/
 src/lib/left-on-read/               純邏輯，不依賴 React 或 DOM
   game.ts                           狀態機：advance、legalActions、checkInvariants
   story.ts                          開場白、抽劇情權重、聊天推進、對話紀錄、資料驗證
-  stories/                          ghost、fade、pitch、quick 共 27 種，special.ts 是隱藏路線
+  stories/                          ghost、fade、pitch、quick 共 27 種，special.ts 是隱藏路線，heroine.ts 是小晴路線和約會腳本
   storyTypes.ts                     劇情型別
   girl.ts、girlData.ts              女角產生器（seed 決定一切）
-  match.ts、swipe.ts、calendar.ts、meals.ts、flavor.ts、dex.ts、save.ts、intro.ts、ladybug.ts
-public/left-on-read/                intro/（開場 4 張）、scene/（eatery、weekend 暫代圖）
-assets/heroine/                     真結局女角素材 01～11.jpg，還沒用在遊戲裡，不會打包進 App
+  match.ts、swipe.ts、calendar.ts、meals.ts、flavor.ts、dex.ts、save.ts、intro.ts、ladybug.ts、trueEnding.ts
+public/left-on-read/                intro/（開場 4 張）、scene/（eatery、weekend 暫代圖）、heroine/（小晴的 08、09）
+assets/heroine/                     真結局女角素材 01～11.jpg，只有 08、09 複製進遊戲，這裡的不會打包進 App
 ```
 
 ## 4. 目前的規則
@@ -98,8 +98,8 @@ assets/heroine/                     真結局女角素材 01～11.jpg，還沒�
 | 個工路線、瓢蟲結局 | 完成 |
 | 從 TinyTap 獨立成這個 repo | 完成 |
 | 遊戲內場景換插圖 | 部分完成：吃飯、週末是合成的暫代圖，瓢蟲結局的巷子和鐵門還是像素圖 |
-| 真結局女角素材 | 已放進 `assets/heroine/`，還沒接進遊戲 |
-| **真結局** | **還沒開始，下一步就是做這個（第 6 節）** |
+| 真結局女角素材 | 08、09 已接進遊戲，其他幾張等擁有者決定 |
+| 真結局 | 完成，在 `feat/true-ending` 等審；場景圖還是暫代（`pixel/heroineScenes.ts`，換圖只改一行） |
 
 ## 6. 真結局計畫
 
