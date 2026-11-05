@@ -53,7 +53,9 @@ function GirlCard({ girl, photoIndex = 0 }: { girl: Girl; photoIndex?: number })
             {girl.nickname}
             <span className="ml-1.5">{girl.age}</span>
           </span>
-          <span className="shrink-0 text-xs text-[#5a5a78]">{girl.distanceKm} 公里</span>
+          <span className="shrink-0 text-xs text-[#5a5a78]">
+            {girl.city}．{girl.distanceKm} 公里
+          </span>
         </div>
         <p className="truncate text-xs text-[#5a5a78]">{educationLine(girl)}</p>
         <p className="mt-0.5 text-sm font-normal leading-snug">{girl.bio}</p>

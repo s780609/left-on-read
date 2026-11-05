@@ -13,22 +13,50 @@ export const HAIRS = [
   { id: "braid", label: "側編髮" },
   { id: "bangs", label: "齊瀏海" },
   { id: "wolf", label: "層次狼尾" },
+  { id: "halfup", label: "公主頭" },
+  { id: "lob", label: "水波鎖骨髮" },
 ] as const;
 
 export const HAIR_COLORS = [
-  { id: "black", base: "#22202b", shade: "#14121c", shine: "#46425a" },
-  { id: "brown", base: "#4a2f24", shade: "#301c16", shine: "#745040" },
-  { id: "chestnut", base: "#7a4a2a", shade: "#54301a", shine: "#a8703f" },
-  { id: "ash", base: "#77727f", shade: "#55515e", shine: "#a3a0aa" },
-  { id: "wine", base: "#7c2c44", shade: "#551a2e", shine: "#ab4f6a" },
-  { id: "honey", base: "#b58a3e", shade: "#8a6426", shine: "#e0bb6b" },
+  { id: "black", base: "#2b2833", shade: "#191720", shine: "#5a5670" },
+  { id: "brown", base: "#4f3429", shade: "#32201a", shine: "#86604c" },
+  { id: "chestnut", base: "#7f4e2d", shade: "#57331c", shine: "#b57d4a" },
+  { id: "ash", base: "#77727f", shade: "#55515e", shine: "#aeabb6" },
+  { id: "wine", base: "#7c2c44", shade: "#551a2e", shine: "#b5597a" },
+  { id: "honey", base: "#b58a3e", shade: "#8a6426", shine: "#e8c67a" },
+  { id: "milktea", base: "#a98a72", shade: "#7d6250", shine: "#d8bda6" },
+  { id: "mocha", base: "#5e4034", shade: "#3f2a23", shine: "#9a7362" },
 ] as const;
 
 export const SKINS = [
-  { id: "fair", base: "#fbe2cf", shade: "#ecc2a8", blush: "#f6b5ab" },
-  { id: "light", base: "#f4cfae", shade: "#dcaa86", blush: "#ee9e8e" },
-  { id: "tan", base: "#dba97d", shade: "#bb8558", blush: "#d58068" },
-  { id: "deep", base: "#a97449", shade: "#855632", blush: "#b05c44" },
+  { id: "fair", base: "#fce6d6", shade: "#efc8b0", blush: "#f6a9a0", line: "#a8614e" },
+  { id: "light", base: "#f7d6b8", shade: "#e2b08e", blush: "#ee9686", line: "#9c5a42" },
+  { id: "tan", base: "#e3b48a", shade: "#c28d62", blush: "#d67c62", line: "#814b30" },
+  { id: "deep", base: "#b5805a", shade: "#8e5e3c", blush: "#b85c44", line: "#5a3420" },
+] as const;
+
+/** 臉型：[離頭頂幾列, 半寬]，下巴高度也在裡面。不做幼態比例，全部是成年人的長度 */
+export const FACE_SHAPES = [
+  {
+    id: "oval",
+    label: "鵝蛋臉",
+    profile: [[0, 11], [3, 17], [9, 21], [18, 23], [30, 23], [38, 20], [45, 15], [50, 9], [53, 4], [54, 0]],
+  },
+  {
+    id: "round",
+    label: "圓臉",
+    profile: [[0, 12], [3, 18], [9, 22], [18, 24], [31, 24], [39, 22], [45, 17], [49, 11], [51, 6], [52, 0]],
+  },
+  {
+    id: "heart",
+    label: "瓜子臉",
+    profile: [[0, 11], [3, 18], [9, 22], [18, 24], [28, 23], [36, 19], [43, 13], [49, 7], [53, 3], [54, 0]],
+  },
+  {
+    id: "square",
+    label: "方圓臉",
+    profile: [[0, 12], [3, 18], [9, 22], [18, 23], [33, 23], [41, 21], [47, 16], [51, 9], [53, 5], [54, 0]],
+  },
 ] as const;
 
 export const EYES = [
@@ -37,38 +65,172 @@ export const EYES = [
   { id: "sleepy" },
   { id: "smile" },
   { id: "lash" },
+  { id: "droopy" },
 ] as const;
 
-export const MOUTHS = [{ id: "smile" }, { id: "small" }, { id: "grin" }, { id: "flat" }] as const;
+export const EYE_COLORS = [
+  { id: "darkbrown", deep: "#2c1a18", mid: "#4f2f26", light: "#8c5a3e" },
+  { id: "brown", deep: "#3a2118", mid: "#6e4128", light: "#b57d48" },
+  { id: "hazel", deep: "#3e2c16", mid: "#7a5c24", light: "#c49a48" },
+  { id: "gray", deep: "#2c2e3a", mid: "#555b6e", light: "#98a2b4" },
+] as const;
 
+/** 眉毛和嘴巴一起決定表情 */
+export const BROWS = [{ id: "soft" }, { id: "arched" }, { id: "flat" }, { id: "worried" }] as const;
+
+export const MOUTHS = [
+  { id: "smile" },
+  { id: "small" },
+  { id: "grin" },
+  { id: "flat" },
+  { id: "pout" },
+  { id: "laugh" },
+  { id: "smirk" },
+] as const;
+
+export const LIP_COLORS = [
+  { id: "coral", color: "#d9634f" },
+  { id: "rose", color: "#c94f66" },
+  { id: "nude", color: "#b9635a" },
+] as const;
+
+/** 臉上的小特徵 */
+export const FACE_MARKS = [
+  { id: "none", weight: 6 },
+  { id: "mole", weight: 2 },
+  { id: "freckles", weight: 1 },
+] as const;
+
+/** 非對稱的髮型（旁分、馬尾、側編髮）甩向哪一邊 */
+export const HAIR_SIDES = [{ id: "left" }, { id: "right" }] as const;
+
+/** weight：沒有配件的人要占多數，不然每個人都像在拍配件型錄 */
 export const ACCESSORIES = [
-  { id: "none", label: "無" },
-  { id: "glasses", label: "眼鏡" },
-  { id: "earrings", label: "耳環" },
-  { id: "headband", label: "髮帶" },
-  { id: "cap", label: "帽子" },
-  { id: "mask", label: "口罩自拍" },
+  { id: "none", label: "無", weight: 8 },
+  { id: "glasses", label: "眼鏡", weight: 3 },
+  { id: "roundGlasses", label: "圓框眼鏡", weight: 2 },
+  { id: "earrings", label: "耳環", weight: 3 },
+  { id: "necklace", label: "項鍊", weight: 2 },
+  { id: "headband", label: "髮帶", weight: 2 },
+  { id: "ribbon", label: "緞帶", weight: 2 },
+  { id: "hairclip", label: "髮夾", weight: 2 },
+  { id: "cap", label: "帽子", weight: 2 },
+  { id: "beanie", label: "毛帽", weight: 2 },
+  { id: "mask", label: "口罩自拍", weight: 1 },
 ] as const;
 
-/** 全部是日常服裝 */
+/**
+ * 全部是日常服裝。colors 只列這件衣服配得起來的顏色：
+ * base 是主色，trim 是領口、內搭這類第二個顏色，stripe 是選用的條紋色。
+ */
 export const OUTFITS = [
-  { id: "tee", label: "T 恤", base: "#e8e4d8", trim: "#b9b4a4" },
-  { id: "shirt", label: "襯衫", base: "#8fb4d9", trim: "#f2f2ea" },
-  { id: "sweater", label: "毛衣", base: "#c9694f", trim: "#a34c36" },
-  { id: "hoodie", label: "連帽衫", base: "#6d7f6b", trim: "#4f5f4e" },
-  { id: "jacket", label: "外套", base: "#3d4a66", trim: "#f0ece0" },
-  { id: "cardigan", label: "開襟衫", base: "#d9b45f", trim: "#f5f0e4" },
-  { id: "overalls", label: "吊帶褲", base: "#5a7fa8", trim: "#f0e8d8" },
-  { id: "blazer", label: "西裝外套", base: "#2f2f3a", trim: "#dfe3e8" },
+  {
+    id: "tee",
+    label: "T 恤",
+    colors: [
+      { id: "cream", base: "#ece6d8", trim: "#bdb6a4" },
+      { id: "breton", base: "#f0ece0", trim: "#3d4f78", stripe: "#3d4f78" },
+      { id: "sage", base: "#a8bfa0", trim: "#7f9a78" },
+      { id: "coral", base: "#ef9a86", trim: "#c9705e" },
+    ],
+  },
+  {
+    id: "shirt",
+    label: "襯衫",
+    colors: [
+      { id: "skyblue", base: "#a7c6e4", trim: "#f2f2ea" },
+      { id: "white", base: "#f0efe8", trim: "#ffffff" },
+      { id: "pinstripe", base: "#e6ecf2", trim: "#ffffff", stripe: "#a2b6d0" },
+      { id: "butter", base: "#f2dfa6", trim: "#fff6dc" },
+    ],
+  },
+  {
+    id: "sweater",
+    label: "毛衣",
+    colors: [
+      { id: "terracotta", base: "#c9694f", trim: "#a34c36" },
+      { id: "oatmeal", base: "#dccdb4", trim: "#b8a68a" },
+      { id: "lilac", base: "#b6a4d4", trim: "#8e7cb0" },
+      { id: "forest", base: "#55785f", trim: "#3c5a46" },
+    ],
+  },
+  {
+    id: "hoodie",
+    label: "連帽衫",
+    colors: [
+      { id: "moss", base: "#7d8f7a", trim: "#5e6f5c" },
+      { id: "gray", base: "#a9abb2", trim: "#84868e" },
+      { id: "navy", base: "#3f4d6e", trim: "#2c3852" },
+      { id: "peach", base: "#f0b8a0", trim: "#cf907a" },
+    ],
+  },
+  {
+    id: "jacket",
+    label: "牛仔外套",
+    colors: [
+      { id: "denim", base: "#5d7fa8", trim: "#f0ece0" },
+      { id: "darkdenim", base: "#3d4a66", trim: "#e8dfcf" },
+      { id: "khaki", base: "#b39d74", trim: "#f4efe2" },
+    ],
+  },
+  {
+    id: "cardigan",
+    label: "開襟衫",
+    colors: [
+      { id: "mustard", base: "#d9b45f", trim: "#f5f0e4" },
+      { id: "dustypink", base: "#d9a3a8", trim: "#f8f2ea" },
+      { id: "mint", base: "#a6cfc0", trim: "#f6f3ea" },
+      { id: "charcoal", base: "#54535e", trim: "#ece7da" },
+    ],
+  },
+  {
+    id: "overalls",
+    label: "吊帶褲",
+    colors: [
+      { id: "denim", base: "#5a7fa8", trim: "#f0e8d8" },
+      { id: "olive", base: "#7c8254", trim: "#f4efe0" },
+      { id: "corduroy", base: "#a9744a", trim: "#f6f0e0" },
+    ],
+  },
+  {
+    id: "blazer",
+    label: "西裝外套",
+    colors: [
+      { id: "ink", base: "#34343f", trim: "#e6e9ee" },
+      { id: "beige", base: "#c8b596", trim: "#f6f2e8" },
+      { id: "navy", base: "#2f3d5c", trim: "#eef0f2" },
+    ],
+  },
+  {
+    id: "turtleneck",
+    label: "高領上衣",
+    colors: [
+      { id: "black", base: "#32313a", trim: "#23222a" },
+      { id: "camel", base: "#bb9264", trim: "#997448" },
+      { id: "ivory", base: "#ece4d2", trim: "#c6bca6" },
+    ],
+  },
+  {
+    id: "dress",
+    label: "小圓領洋裝",
+    colors: [
+      { id: "navy", base: "#3e4c70", trim: "#f6f2e6" },
+      { id: "wine", base: "#8a3f50", trim: "#f6efe4" },
+      { id: "sagegreen", base: "#8ea78c", trim: "#faf6ea" },
+    ],
+  },
 ] as const;
 
-/** 身材只影響剪影：身高、肩寬、輪廓寬度（像素），不做其他差異 */
+/**
+ * 身材只影響剪影：身高、肩寬、輪廓寬度（像素），不做其他差異。
+ * lift 是頭往上移幾像素；shoulder、torso 是整個寬度。
+ */
 export const BODY_TYPES = [
-  { id: "petite", label: "嬌小", lift: -10, shoulder: 32, torso: 26 },
-  { id: "slim", label: "纖細", lift: 0, shoulder: 34, torso: 26 },
-  { id: "average", label: "勻稱", lift: 0, shoulder: 40, torso: 34 },
-  { id: "tall", label: "高挑", lift: 10, shoulder: 38, torso: 30 },
-  { id: "plump", label: "肉肉", lift: 0, shoulder: 50, torso: 48 },
+  { id: "petite", label: "嬌小", lift: -5, shoulder: 62, torso: 46 },
+  { id: "slim", label: "纖細", lift: 0, shoulder: 66, torso: 46 },
+  { id: "average", label: "勻稱", lift: 0, shoulder: 72, torso: 52 },
+  { id: "tall", label: "高挑", lift: 5, shoulder: 70, torso: 50 },
+  { id: "plump", label: "肉肉", lift: 0, shoulder: 88, torso: 68 },
 ] as const;
 
 export const PHOTO_BGS = [
@@ -194,6 +356,25 @@ export const STUDIO_BIOS = [
   "不玩遊戲，有誠意的哥哥再來",
 ] as const;
 
+/**
+ * 住哪裡要跟「幾公里外」對得上：冠宇住在雙北，所以近的是台北，遠的才到桃園基隆。
+ * 依序找第一個 maxKm 不小於距離的那一組。
+ */
+export const CITY_BANDS = [
+  {
+    maxKm: 8,
+    cities: ["台北市大安區", "台北市中山區", "台北市信義區", "台北市松山區", "台北市萬華區", "台北市大同區", "台北市中正區", "台北市文山區"],
+  },
+  {
+    maxKm: 18,
+    cities: ["新北市板橋區", "新北市三重區", "新北市新店區", "新北市永和區", "新北市中和區", "新北市蘆洲區", "新北市汐止區", "台北市內湖區", "台北市北投區"],
+  },
+  {
+    maxKm: 35,
+    cities: ["新北市淡水區", "新北市林口區", "新北市三峽區", "新北市鶯歌區", "桃園市桃園區", "桃園市中壢區", "基隆市仁愛區", "基隆市七堵區"],
+  },
+] as const;
+
 export const JOBS = [
   "行政助理", "護理師", "客服專員", "UI 設計師", "會計", "門市店長", "藥師", "行銷企劃",
   "銀行櫃員", "業務助理", "翻譯", "記者", "社工", "牙醫助理", "瑜珈老師", "咖啡師",
@@ -205,9 +386,16 @@ export type HairColorId = (typeof HAIR_COLORS)[number]["id"];
 export type SkinId = (typeof SKINS)[number]["id"];
 export type EyesId = (typeof EYES)[number]["id"];
 export type MouthId = (typeof MOUTHS)[number]["id"];
+export type FaceShapeId = (typeof FACE_SHAPES)[number]["id"];
+export type EyeColorId = (typeof EYE_COLORS)[number]["id"];
+export type BrowId = (typeof BROWS)[number]["id"];
+export type LipColorId = (typeof LIP_COLORS)[number]["id"];
+export type FaceMarkId = (typeof FACE_MARKS)[number]["id"];
+export type HairSideId = (typeof HAIR_SIDES)[number]["id"];
 export type AccessoryId = (typeof ACCESSORIES)[number]["id"];
 export type OutfitId = (typeof OUTFITS)[number]["id"];
 export type BodyType = (typeof BODY_TYPES)[number]["id"];
+export type OutfitColorId = (typeof OUTFITS)[number]["colors"][number]["id"];
 export type PhotoBgId = (typeof PHOTO_BGS)[number]["id"];
 export type InterestId = (typeof INTERESTS)[number]["id"] | typeof HEROINE_INTEREST.id;
 export type EducationId = (typeof EDUCATIONS)[number]["id"];

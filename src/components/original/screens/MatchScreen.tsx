@@ -6,7 +6,7 @@ import { openerOptions } from "@/lib/left-on-read/story";
 import type { OpenerKind } from "@/lib/left-on-read/storyTypes";
 import PixelCanvas from "../PixelCanvas";
 import { blink, pixelText, rect, saw, sprite, type Ctx } from "../pixel/draw";
-import { PHOTO_H, PHOTO_W, drawGirl } from "../pixel/girlSprite";
+import { PHOTO_H, PHOTO_W, drawGirl, faceCrop } from "../pixel/girlSprite";
 import { drawGuanyuBust } from "../pixel/guanyuSprite";
 import { SCENE_H, SCENE_W } from "../pixel/scenes";
 import { PixelButton } from "../ui";
@@ -61,7 +61,9 @@ function makeDraw(girl: Girl) {
     rect(ctx, "#000000", rx - 2, 72, 68, 78);
     ctx.imageSmoothingEnabled = false;
     if (!portrait) {
-      ctx.drawImage(photo, 0, 0, PHOTO_W, PHOTO_H, rx + 2, 74, 60, 75);
+      // 一比一裁到臉，細線才不會被縮圖吃掉
+      const crop = faceCrop(girl, 60);
+      ctx.drawImage(photo, crop.x, crop.y, 60, 75, rx + 2, 74, 60, 75);
     } else if (portrait.complete && portrait.naturalWidth > 0) {
       // 只取照片上半部，比例和一般卡片的頭像相同
       const w = portrait.naturalWidth;
@@ -120,7 +122,7 @@ export function MatchScreen({ girlSeed, onChoose }: MatchScreenProps) {
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
         <p className="mb-2 text-center text-sm leading-relaxed">
-          {girl.nickname}，{girl.age} 歲，{girl.distanceKm} 公里外。
+          {girl.nickname}，{girl.age} 歲，住{girl.city}，{girl.distanceKm} 公里外。
           <br />
           你有一句話的機會。
         </p>

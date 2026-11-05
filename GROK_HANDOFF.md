@@ -56,7 +56,9 @@ src/components/original/
   screens/                          各畫面
   pixel/scenes.ts                   遊戲內場景（插圖 + 小動畫）
   pixel/introScenes.ts              開場分鏡
-  pixel/girlSprite.ts               女角分層繪製
+  pixel/girlSprite.ts               女角照片：背景加人物，裁頭像
+  pixel/girlPortrait.ts              女角半身像分層算圖（髮型、臉、表情、服裝、配件），不碰 DOM，可在 Node 測試
+  pixel/raster.ts                    逐像素工具：曲線遮罩、自動描邊、色階，最後才轉成 fillRect
 src/lib/left-on-read/               純邏輯，不依賴 React 或 DOM
   game.ts                           狀態機：advance、legalActions、checkInvariants
   story.ts                          開場白、抽劇情權重、聊天推進、對話紀錄、資料驗證
@@ -78,6 +80,7 @@ assets/heroine/                     真結局女角素材 01～11.jpg，只有 0
 - 每晚 10 張卡。右滑才可能配對，機率約 2%～29%，連續右滑會下降（`match.ts`）
 - 配對後白天可回訊息，每個聊天每天推進一步
 - 女角年齡固定 22～38 歲，有測試保證
+- 女角外貌：新增圖層時，在 `girl.ts` 的 `ROLL` 加新編號，不要動既有編號，名字和劇情相關的抽選才不會變；配件和髮型、服裝的衝突寫在 `isAccessoryAllowed`
 
 **劇情引擎的關鍵限制：**
 
@@ -97,6 +100,7 @@ assets/heroine/                     真結局女角素材 01～11.jpg，只有 0
 | 27 種失敗劇情、失敗圖鑑、畢業典禮 | 完成 |
 | 個工路線、瓢蟲結局 | 完成 |
 | 從 TinyTap 獨立成這個 repo | 完成 |
+| Swipy 女角精緻像素化 | 完成：120×150 原寸算圖，所有圖層由 seed 決定；小晴仍然用照片 |
 | 遊戲內場景換插圖 | 部分完成：吃飯、週末是合成的暫代圖，瓢蟲結局的巷子和鐵門還是像素圖 |
 | 真結局女角素材 | 08、09 已接進遊戲，其他幾張等擁有者決定 |
 | 真結局 | 完成，在 `feat/true-ending` 等審；三次約會和尾聲都已換成 `scene/date-*.jpg`、`scene/epi-*.jpg` 插圖 |
