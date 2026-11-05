@@ -6,6 +6,9 @@
 import { calendarOf, isPayday } from "./calendar.ts";
 import {
   DECK_SIZE,
+  HEROINE_NIGHT_RATE,
+  HEROINE_SEED,
+  HEROINE_UNLOCK_FAILURES,
   MAX_MONEY,
   MONTHLY_RENT,
   MONTHLY_SALARY,
@@ -13,17 +16,17 @@ import {
   START_MONEY,
   STUDIO_MATCH_P,
 } from "./constants.ts";
-import { isDexComplete, recordFailure } from "./dex.ts";
+import { dexProgress, isDexComplete, recordFailure } from "./dex.ts";
 import type { Dex } from "./dex.ts";
 import { deckSeed, generateGirl } from "./girl.ts";
 import { EDUCATIONS } from "./girlData.ts";
 import { matchProbability, nextStreak, rollMatch } from "./match.ts";
 import { MEALS } from "./meals.ts";
 import type { Meal } from "./meals.ts";
-import { createRng, mixSeed, pick } from "./rng.ts";
+import { createRng, mixSeed, pick, randInt } from "./rng.ts";
 import type { Rng } from "./rng.ts";
-import { STORY_BY_ID, STUDIO_STORY_ID } from "./stories/index.ts";
-import { isChatReady, isFinal, pickStory, renderLine } from "./story.ts";
+import { HEROINE_STORY_ID, STORY_BY_ID, STUDIO_STORY_ID } from "./stories/index.ts";
+import { chatScore, dueDateChat, isChatReady, isFinal, pendingDateStep, pickStory, renderLine } from "./story.ts";
 import type { Chat, OpenerKind } from "./storyTypes.ts";
 
 export type Phase = "payday" | "daytime" | "evening" | "night" | "swiping" | "matched" | "nightDone";
@@ -44,12 +47,15 @@ export interface RunState {
   offeredMealId: string | null;
   chats: Chat[];
   nextChatId: number;
+  /** 這一局已經右滑過小晴（不管還在走還是走回失敗），她就不會再出現 */
+  heroineMet: boolean;
 }
 
 export type GameAction =
   | { type: "ackPayday" }
   | { type: "reply"; chatId: number; choice: number }
   | { type: "closeChat"; chatId: number }
+  | { type: "goOnDate"; choice: number }
   | { type: "endDaytime" }
   | { type: "eatOut" }
   | { type: "goHome" }
@@ -68,6 +74,9 @@ export type GameEvent =
   | { type: "chatAdvanced"; chatId: number }
   | { type: "chatEnded"; storyId: string; narration: string; paid: number; firstTime: boolean; antiFraud: boolean }
   | { type: "dexCompleted" }
+  /** 演得像失敗結局，但沒有記圖鑑，聊天也還在 */
+  | { type: "fakeEnding"; storyId: string; narration: string }
+  | { type: "dateFinished"; index: number; cost: number }
   /** 這一局走到結局了，存檔由畫面清掉 */
   | { type: "gameEnding"; endingId: string };
 
@@ -94,6 +103,7 @@ export function createRun(runSeed: number): RunState {
     offeredMealId: null,
     chats: [],
     nextChatId: 1,
+    heroineMet: false,
   };
 }
 
@@ -118,6 +128,25 @@ function storyStep(chat: Chat) {
   return STORY_BY_ID[chat.storyId]?.steps[chat.stepIndex];
 }
 
+/** 小晴今晚排在牌組第幾張，null 代表今晚沒有她；只由 runSeed、dayIndex 決定，重新載入不能重擲 */
+export function heroineCardIndex(run: RunState, dex: Dex): number | null {
+  if (run.heroineMet || dexProgress(dex).collected < HEROINE_UNLOCK_FAILURES) return null;
+  const rng = createRng(mixSeed(run.runSeed, run.dayIndex, 0x5a1e));
+  return rng() < HEROINE_NIGHT_RATE ? randInt(rng, 0, DECK_SIZE - 1) : null;
+}
+
+/** 今晚牌組第幾張是誰 */
+export function deckCardSeed(run: RunState, dex: Dex, cardIndex: number): number {
+  return heroineCardIndex(run, dex) === cardIndex ? HEROINE_SEED : deckSeed(run.runSeed, run.dayIndex, cardIndex);
+}
+
+/** 今天付得起、可以出門赴約的那一場 */
+function affordableDate(run: RunState) {
+  const chat = dueDateChat(run.chats, run.dayIndex);
+  const step = chat && pendingDateStep(chat);
+  return chat && step?.date && run.money >= step.date.cost ? { chat, step, date: step.date } : null;
+}
+
 export function legalActions(run: RunState): GameAction["type"][] {
   switch (run.phase) {
     case "payday":
@@ -127,6 +156,7 @@ export function legalActions(run: RunState): GameAction["type"][] {
       const actions: GameAction["type"][] = [];
       if (steps.some((s) => s && !isFinal(s))) actions.push("reply");
       if (steps.some((s) => s && isFinal(s))) actions.push("closeChat");
+      if (affordableDate(run)) actions.push("goOnDate");
       actions.push("endDaytime");
       return actions;
     }
@@ -182,10 +212,43 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
         lastAdvancedDay: run.dayIndex,
         replies: [...chat.replies, action.choice],
       };
+      // 總分不夠就換到失敗路線；兩條路線前面的對話相同，對話紀錄接得起來
+      if (step.gate && chatScore(next) < step.gate.minScore) next.storyId = step.gate.failStoryId;
+      const events: GameEvent[] = [{ type: "chatAdvanced", chatId: chat.id }];
+      if (step.fakeEnding) events.push({ type: "fakeEnding", ...step.fakeEnding });
       return {
         run: { ...run, chats: run.chats.map((c) => (c === chat ? next : c)) },
         dex,
-        events: [{ type: "chatAdvanced", chatId: chat.id }],
+        events,
+      };
+    }
+
+    case "goOnDate": {
+      if (run.phase !== "daytime") return same;
+      const due = affordableDate(run);
+      if (!due) return same;
+      const { chat, step, date } = due;
+      if (!Number.isInteger(action.choice) || action.choice < 0 || action.choice >= step.replies.length) return same;
+      const money = run.money - date.cost;
+      const finished: GameEvent = { type: "dateFinished", index: date.index, cost: date.cost };
+      if (date.endingId) {
+        return {
+          run: { ...run, money, chats: run.chats.filter((c) => c !== chat) },
+          dex: recordFailure(dex, date.endingId, run.dayIndex),
+          events: [finished, { type: "gameEnding", endingId: date.endingId }],
+        };
+      }
+      const next: Chat = {
+        ...chat,
+        stepIndex: chat.stepIndex + 1,
+        lastAdvancedDay: run.dayIndex,
+        replies: [...chat.replies, action.choice],
+      };
+      // 約會佔掉一整天，回到家已經是深夜，晚餐也吃過了
+      return {
+        run: { ...run, money, phase: "night", offeredMealId: null, chats: run.chats.map((c) => (c === chat ? next : c)) },
+        dex,
+        events: [finished],
       };
     }
 
@@ -255,7 +318,15 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
       if (action.dir === "left") {
         return { run: { ...run, deckIndex, rightStreak, phase: afterDeck }, dex, events: [swiped] };
       }
-      const seed = deckSeed(run.runSeed, run.dayIndex, run.deckIndex);
+      const seed = deckCardSeed(run, dex, run.deckIndex);
+      // 她右滑一定配對，不看一般機率；當局不會再出現
+      if (seed === HEROINE_SEED) {
+        return {
+          run: { ...run, deckIndex, rightStreak, phase: "matched", pendingMatchSeed: seed, heroineMet: true },
+          dex,
+          events: [swiped, { type: "matched", girlSeed: seed }],
+        };
+      }
       const girl = generateGirl(seed);
       const eduMod = EDUCATIONS.find((e) => e.id === girl.education)?.matchMod ?? 0;
       const p = girl.studio
@@ -283,9 +354,11 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
       const activeStoryIds = run.chats.map((c) => c.storyId);
       // 個工只走隱藏路線；同時已經有一條在聊，就當一般人抽
       const story =
-        generateGirl(girlSeed).studio && !activeStoryIds.includes(STUDIO_STORY_ID)
-          ? STORY_BY_ID[STUDIO_STORY_ID]
-          : pickStory(action.opener, dex, activeStoryIds, factory("story", girlSeed, openerIndex));
+        girlSeed === HEROINE_SEED
+          ? STORY_BY_ID[HEROINE_STORY_ID]
+          : generateGirl(girlSeed).studio && !activeStoryIds.includes(STUDIO_STORY_ID)
+            ? STORY_BY_ID[STUDIO_STORY_ID]
+            : pickStory(action.opener, dex, activeStoryIds, factory("story", girlSeed, openerIndex));
       const chat: Chat = {
         id: run.nextChatId,
         girlSeed,
@@ -346,6 +419,7 @@ export function checkInvariants(run: RunState): string[] {
   if (run.phase === "matched" && run.pendingMatchSeed === null) errors.push("配對階段沒有對象");
   if (run.phase !== "matched" && run.pendingMatchSeed !== null) errors.push("不是配對階段卻有對象");
   if (run.phase === "evening" && !offeredMeal(run)) errors.push(`晚上的餐點無效：${run.offeredMealId}`);
+  if (!run.heroineMet && run.chats.some((c) => c.girlSeed === HEROINE_SEED)) errors.push("和小晴在聊天卻沒有遇過她");
 
   const ids = new Set<number>();
   for (const chat of run.chats) {

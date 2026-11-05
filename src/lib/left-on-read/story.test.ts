@@ -525,6 +525,8 @@ function incomingLine(incoming: Incoming, girl: Girl): TranscriptLine {
       return { who: "her", text: renderLine(incoming.text, girl) };
     case "narration":
       return { who: "narration", text: renderLine(incoming.text, girl) };
+    case "none":
+      throw new Error("27 種失敗不會用到 none");
     default:
       return { who: "status", status: incoming.kind };
   }

@@ -2,10 +2,11 @@
  * 聊天的規則：開場白、抽劇情的權重、等待與 ready、對話紀錄、劇情資料驗證。
  */
 
-import { calendarOf } from "./calendar.ts";
+import { calendarOf, isWorkday } from "./calendar.ts";
+import { HEROINE_INTEREST_OPENER_SCORE } from "./constants.ts";
 import type { Dex } from "./dex.ts";
 import type { Girl } from "./girl.ts";
-import { INTERESTS } from "./girlData.ts";
+import { HEROINE_INTEREST, INTERESTS } from "./girlData.ts";
 import { weightedPick } from "./rng.ts";
 import type { Rng } from "./rng.ts";
 import { STORIES, STORY_BY_ID } from "./stories/index.ts";
@@ -47,7 +48,11 @@ export function isFinal(step: ReplyStep | FinalStep): step is FinalStep {
 }
 
 function interestOf(girl: Girl) {
-  return INTERESTS.find((i) => i.id === girl.interest);
+  return girl.interest === HEROINE_INTEREST.id ? HEROINE_INTEREST : INTERESTS.find((i) => i.id === girl.interest);
+}
+
+export function interestLabel(girl: Girl): string {
+  return interestOf(girl)?.label ?? "";
 }
 
 export function renderLine(text: string, girl: Girl): string {
@@ -97,15 +102,63 @@ export function firstReadyDay(lastAdvancedDay: number, wait: StepWait = DEFAULT_
 
 export function isChatReady(chat: Chat, dayIndex: number): boolean {
   const step = STORY_BY_ID[chat.storyId]?.steps[chat.stepIndex];
-  return step !== undefined && dayIndex >= firstReadyDay(chat.lastAdvancedDay, step.wait);
+  if (step === undefined || ("date" in step && step.date)) return false;
+  return dayIndex >= firstReadyDay(chat.lastAdvancedDay, step.wait);
 }
 
 export function readyChats(chats: readonly Chat[], dayIndex: number): Chat[] {
   return chats.filter((chat) => isChatReady(chat, dayIndex));
 }
 
-function incomingLine(incoming: Incoming, girl: Girl): TranscriptLine {
+/** 開場白挑興趣句有加分，再加上每句回覆的分數；不存在狀態裡，舊存檔和壞資料都算得出來 */
+export function chatScore(chat: Chat): number {
+  const steps = STORY_BY_ID[chat.storyId]?.steps ?? [];
+  return chat.replies.reduce(
+    (total, choice, i) => {
+      const step = steps[i];
+      return total + (step && "replies" in step ? (step.scores?.[choice] ?? 0) : 0);
+    },
+    chat.opener === "interest" ? HEROINE_INTEREST_OPENER_SCORE : 0
+  );
+}
+
+/** 卡在約會那一步的聊天：要等赴約才會往下走 */
+export function pendingDateStep(chat: Chat): ReplyStep | null {
+  const step = STORY_BY_ID[chat.storyId]?.steps[chat.stepIndex];
+  return step && "date" in step && step.date ? step : null;
+}
+
+/** 今天可以赴約的聊天：週末，而且已經等滿這一步的等待時間 */
+export function dueDateChat(chats: readonly Chat[], dayIndex: number): Chat | null {
+  if (isWorkday(calendarOf(dayIndex))) return null;
+  const due = chats.find((chat) => {
+    const step = pendingDateStep(chat);
+    return step !== null && dayIndex >= firstReadyDay(chat.lastAdvancedDay, step.wait);
+  });
+  return due ?? null;
+}
+
+/** 假失敗之後，她今天主動回來了的聊天 */
+export function comebackChat(chats: readonly Chat[], dayIndex: number): Chat | null {
+  const due = chats.find((chat) => {
+    const step = STORY_BY_ID[chat.storyId]?.steps[chat.stepIndex];
+    return step && "comeback" in step && step.comeback && isChatReady(chat, dayIndex);
+  });
+  return due ?? null;
+}
+
+/** 假失敗到隔天早上之前，她要從手機上消失，玩家才會真的以為斷聯了；資料還留著 */
+export function visibleChats(chats: readonly Chat[], dayIndex: number): Chat[] {
+  return chats.filter((chat) => {
+    const step = STORY_BY_ID[chat.storyId]?.steps[chat.stepIndex];
+    return !(step && "comeback" in step && step.comeback) || isChatReady(chat, dayIndex);
+  });
+}
+
+function incomingLine(incoming: Incoming, girl: Girl): TranscriptLine | null {
   switch (incoming.kind) {
+    case "none":
+      return null;
     case "message":
       return { who: "her", text: renderLine(incoming.text, girl) };
     case "narration":
@@ -120,14 +173,20 @@ export function chatTranscript(chat: Chat, girl: Girl, dayIndex: number): Transc
   const story = STORY_BY_ID[chat.storyId];
   const opener = openerOptions(girl).find((o) => o.kind === chat.opener);
   const lines: TranscriptLine[] = opener ? [{ who: "me", text: opener.text }] : [];
+  const pushIncoming = (incoming: Incoming) => {
+    const line = incomingLine(incoming, girl);
+    if (line) lines.push(line);
+  };
   for (let i = 0; i < chat.stepIndex; i++) {
     const step = story.steps[i] as ReplyStep;
-    lines.push(incomingLine(step.incoming, girl));
-    lines.push({ who: "me", text: renderLine(step.replies[chat.replies[i]], girl) });
+    pushIncoming(step.incoming);
+    // 約會裡的選擇和「……就這樣了」不是傳給她的訊息
+    if (!step.date && !step.fakeEnding) {
+      lines.push({ who: "me", text: renderLine(step.replies[chat.replies[i]], girl) });
+    }
+    if (step.answer) lines.push({ who: "her", text: renderLine(step.answer, girl) });
   }
-  if (isChatReady(chat, dayIndex)) {
-    lines.push(incomingLine(story.steps[chat.stepIndex].incoming, girl));
-  }
+  if (isChatReady(chat, dayIndex)) pushIncoming(story.steps[chat.stepIndex].incoming);
   return lines;
 }
 
@@ -141,14 +200,35 @@ function placeholderErrors(text: unknown, where: string): string[] {
   return errors;
 }
 
-function waitErrors(wait: StepWait | undefined, where: string): string[] {
+function waitErrors(wait: StepWait | undefined, where: string, minDays = 1): string[] {
   if (wait === undefined) return [];
   if ("days" in wait) {
-    return Number.isInteger(wait.days) && wait.days >= 1 ? [] : [`${where} 的等待天數不合法`];
+    return Number.isInteger(wait.days) && wait.days >= minDays ? [] : [`${where} 的等待天數不合法`];
   }
   return Number.isInteger(wait.weekday) && wait.weekday >= 0 && wait.weekday <= 6
     ? []
     : [`${where} 的星期不合法`];
+}
+
+/** 她路線才有的欄位 */
+function routeFieldErrors(step: ReplyStep, where: string): string[] {
+  const errors: string[] = [];
+  const { scores, gate, answer, date, fakeEnding, comeback } = step;
+  if (scores) {
+    if (scores.length !== step.replies.length) errors.push(`${where} 的分數和回覆數不符`);
+    if (!scores.every((s) => s === 1 || s === 0 || s === -1)) errors.push(`${where} 的分數不合法`);
+  }
+  if (gate && (!Number.isInteger(gate.minScore) || !STORY_BY_ID[gate.failStoryId])) {
+    errors.push(`${where} 的分數門檻不合法`);
+  }
+  if (answer !== undefined) errors.push(...placeholderErrors(answer, `${where} 的回應`));
+  if (date && (!Number.isInteger(date.cost) || date.cost < 0)) errors.push(`${where} 的約會花費不合法`);
+  if (fakeEnding) {
+    errors.push(...placeholderErrors(fakeEnding.narration, `${where} 的假結局`));
+    if (!STORY_BY_ID[fakeEnding.storyId]) errors.push(`${where} 的假結局劇情不存在`);
+  }
+  if (comeback) errors.push(...placeholderErrors(comeback.aside, `${where} 的旁白`));
+  return errors;
 }
 
 /** 回傳錯誤訊息，空陣列代表沒問題 */
@@ -160,7 +240,7 @@ export function validateStory(story: Story): string[] {
     const last = i === story.steps.length - 1;
     const hasReplies = "replies" in step;
     if ("text" in step.incoming) errors.push(...placeholderErrors(step.incoming.text, `${where} 的內容`));
-    errors.push(...waitErrors(step.wait, where));
+    errors.push(...waitErrors(step.wait, where, "fakeEnding" in step && step.fakeEnding ? 0 : 1));
     if (isFinal(step)) {
       if (!last) errors.push(`${where} 不是最後一步卻有結局`);
       if (hasReplies) errors.push(`${where} 同時有結局和回覆`);
@@ -168,12 +248,14 @@ export function validateStory(story: Story): string[] {
       const { cost } = step.ending;
       if (cost !== undefined && (!Number.isInteger(cost) || cost < 0)) errors.push(`${where} 的花費不合法`);
     } else {
-      if (last) errors.push(`${where} 是最後一步卻沒有結局`);
-      if (!hasReplies || step.replies.length < 2 || step.replies.length > 3) {
+      if (last && !step.date?.endingId) errors.push(`${where} 是最後一步卻沒有結局`);
+      const minReplies = step.answer !== undefined || step.fakeEnding ? 1 : 2;
+      if (!hasReplies || step.replies.length < minReplies || step.replies.length > 3) {
         errors.push(`${where} 的回覆要 2～3 句`);
       } else {
         step.replies.forEach((reply, r) => errors.push(...placeholderErrors(reply, `${where} 回覆 ${r}`)));
         if (step.decision && !step.replies[step.decision.choice]) errors.push(`${where} 的抉擇選項不存在`);
+        errors.push(...routeFieldErrors(step, where));
       }
     }
   });

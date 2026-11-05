@@ -2,6 +2,7 @@
  * 失敗圖鑑：只計 STORIES 裡有的 id，未知 id 不能湊數。
  */
 
+import { LADYBUG_ENDING_ID, TRUE_ENDING_ID } from "./constants.ts";
 import { STORIES } from "./stories/index.ts";
 
 export interface DexEntry {
@@ -29,4 +30,10 @@ export function dexProgress(dex: Dex): { collected: number; total: number } {
 export function isDexComplete(dex: Dex): boolean {
   const { collected, total } = dexProgress(dex);
   return collected === total;
+}
+
+/** 兩個結局：和失敗圖鑑分開算 */
+export function endingProgress(dex: Dex): { collected: number; total: number } {
+  const ids = [LADYBUG_ENDING_ID, TRUE_ENDING_ID];
+  return { collected: ids.filter((id) => Object.hasOwn(dex, id)).length, total: ids.length };
 }

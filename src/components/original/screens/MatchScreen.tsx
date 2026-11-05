@@ -32,7 +32,12 @@ function sunburst(ctx: Ctx, t: number) {
 /** 配對畫面：先閃白，兩個人從左右滑進來，大字砸下來，愛心一路往上飄 */
 function makeDraw(girl: Girl) {
   let photo: HTMLCanvasElement | null = null;
+  let portrait: HTMLImageElement | null = null;
   return (ctx: Ctx, t: number) => {
+    if (girl.photos && !portrait) {
+      portrait = new Image();
+      portrait.src = girl.photos[0];
+    }
     if (!photo) {
       photo = document.createElement("canvas");
       photo.width = PHOTO_W;
@@ -55,7 +60,13 @@ function makeDraw(girl: Girl) {
     drawGuanyuBust(ctx, lx, 80, { t });
     rect(ctx, "#000000", rx - 2, 72, 68, 78);
     ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(photo, 0, 0, PHOTO_W, PHOTO_H, rx + 2, 74, 60, 75);
+    if (!portrait) {
+      ctx.drawImage(photo, 0, 0, PHOTO_W, PHOTO_H, rx + 2, 74, 60, 75);
+    } else if (portrait.complete && portrait.naturalWidth > 0) {
+      // 只取照片上半部，比例和一般卡片的頭像相同
+      const w = portrait.naturalWidth;
+      ctx.drawImage(portrait, 0, 0, w, (w * 75) / 60, rx + 2, 74, 60, 75);
+    }
 
     // 中間的愛心跳動
     const beat = saw(t, 700) < 0.2 ? 1 : 0;

@@ -1,8 +1,8 @@
 "use client";
 
 import { calendarOf, formatDate } from "@/lib/left-on-read/calendar";
-import { dexProgress, type Dex } from "@/lib/left-on-read/dex";
-import { LADYBUG_ENDING_ID } from "@/lib/left-on-read/constants";
+import { dexProgress, endingProgress, type Dex } from "@/lib/left-on-read/dex";
+import { LADYBUG_ENDING_ID, TRUE_ENDING_ID } from "@/lib/left-on-read/constants";
 import { SPECIAL_STORIES, STORIES } from "@/lib/left-on-read/stories/index";
 import type { StoryCategory } from "@/lib/left-on-read/storyTypes";
 import { COLOR, PixelButton, TOP_BAR_CLASS } from "../ui";
@@ -14,8 +14,18 @@ const CATEGORY: readonly { id: StoryCategory; label: string }[] = [
   { id: "quick", label: "秒殺學程" },
 ];
 
-export function DexScreen({ dex, onBack, onLadybug }: { dex: Dex; onBack: () => void; onLadybug: () => void }) {
+const UNKNOWN_ENDING_CLASS = "border-2 border-black bg-[#2a2a4e] px-2.5 py-2 text-[#6d7096] shadow-[3px_3px_0_#000]";
+
+interface DexScreenProps {
+  dex: Dex;
+  onBack: () => void;
+  onLadybug: () => void;
+  onTrueEnding: () => void;
+}
+
+export function DexScreen({ dex, onBack, onLadybug, onTrueEnding }: DexScreenProps) {
   const { collected, total } = dexProgress(dex);
+  const endings = endingProgress(dex);
   return (
     <>
       <div className={TOP_BAR_CLASS}>
@@ -62,7 +72,12 @@ export function DexScreen({ dex, onBack, onLadybug }: { dex: Dex; onBack: () => 
           </section>
         ))}
         <section className="mb-4">
-          <h2 className="mb-2 border-b-2 border-[#55587a] pb-1 text-sm text-[#f2d675]">隱藏路線</h2>
+          <h2 className="mb-2 flex justify-between border-b-2 border-[#55587a] pb-1 text-sm text-[#f2d675]">
+            <span>隱藏路線</span>
+            <span>
+              結局 {endings.collected} / {endings.total}
+            </span>
+          </h2>
           <ul className="space-y-2">
             {SPECIAL_STORIES.filter((s) => Object.hasOwn(dex, s.id)).map((story) => (
               <li key={story.id} className="border-2 border-black bg-[#f4efe0] px-2.5 py-2 text-[#20203c] shadow-[3px_3px_0_#000]">
@@ -80,9 +95,16 @@ export function DexScreen({ dex, onBack, onLadybug }: { dex: Dex; onBack: () => 
                 </PixelButton>
               </li>
             ) : (
-              <li className="border-2 border-black bg-[#2a2a4e] px-2.5 py-2 text-[#6d7096] shadow-[3px_3px_0_#000]">
-                ？？？　這裡有一個結局
+              <li className={UNKNOWN_ENDING_CLASS}>？？？　這裡有一個結局</li>
+            )}
+            {Object.hasOwn(dex, TRUE_ENDING_ID) ? (
+              <li>
+                <PixelButton color={COLOR.pink} onClick={onTrueEnding} sub="重看這個結局">
+                  真結局
+                </PixelButton>
               </li>
+            ) : (
+              <li className={UNKNOWN_ENDING_CLASS}>？？？　這裡還有一個結局</li>
             )}
           </ul>
         </section>
