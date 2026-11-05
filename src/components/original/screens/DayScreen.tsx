@@ -1,0 +1,87 @@
+"use client";
+
+import { calendarOf, isWorkday } from "@/lib/left-on-read/calendar";
+import { MONTHLY_RENT, MONTHLY_SALARY } from "@/lib/left-on-read/constants";
+import { PAYDAY_LINES, QUIET_PHONE_LINES, WEEKEND_LINES, WORK_LINES, dailyLine } from "@/lib/left-on-read/flavor";
+import type { RunState } from "@/lib/left-on-read/game";
+import { readyChats } from "@/lib/left-on-read/story";
+import { drawOfficeScene, drawPaydaySlip, drawWeekendScene } from "../pixel/scenes";
+import { COLOR, DialogBox, PixelButton, Scene, ScreenBody, StatusBar, Typewriter } from "../ui";
+
+interface DayScreenProps {
+  run: RunState;
+  onMenu: () => void;
+  onOpenChats: () => void;
+  onEndDay: () => void;
+}
+
+/** 白天：平日上班，週末在房間；有訊息可以回時才多一顆按鈕 */
+export function DayScreen({ run, onMenu, onOpenChats, onEndDay }: DayScreenProps) {
+  const workday = isWorkday(calendarOf(run.dayIndex));
+  const ready = readyChats(run.chats, run.dayIndex).length;
+  const waiting = run.chats.length - ready;
+  const line = dailyLine(workday ? WORK_LINES : WEEKEND_LINES, run.dayIndex);
+  const quiet = dailyLine(QUIET_PHONE_LINES, run.dayIndex);
+
+  return (
+    <>
+      <StatusBar run={run} onMenu={onMenu} />
+      <Scene draw={workday ? drawOfficeScene : drawWeekendScene} label={workday ? "冠宇在辦公室上班" : "週末的租屋處"} />
+      <ScreenBody
+        actions={
+          <>
+            {run.chats.length > 0 ? (
+              <PixelButton
+                color={ready > 0 ? COLOR.pink : COLOR.gray}
+                onClick={onOpenChats}
+                sub={ready > 0 ? (waiting > 0 ? `另外 ${waiting} 個還沒回` : undefined) : "沒有新訊息"}
+              >
+                {workday ? "偷偷拿手機回訊息" : "看手機回訊息"}
+                {ready > 0 ? `（${ready}）` : ""}
+              </PixelButton>
+            ) : null}
+            <PixelButton color={COLOR.blue} onClick={onEndDay}>
+              {workday ? "撐到下班" : "撐到晚上"}
+            </PixelButton>
+          </>
+        }
+      >
+        <DialogBox>
+          <Typewriter key={line} text={line} />
+          {run.chats.length > 0 && ready === 0 ? (
+            <p className="mt-2 text-sm text-[#a9abc9]">{quiet}</p>
+          ) : null}
+        </DialogBox>
+      </ScreenBody>
+    </>
+  );
+}
+
+/** 每月 5 號：入帳和扣房租 */
+export function PaydayScreen({ run, onMenu, onAck }: { run: RunState; onMenu: () => void; onAck: () => void }) {
+  const after = run.money + MONTHLY_SALARY - MONTHLY_RENT;
+  const line = dailyLine(PAYDAY_LINES, run.dayIndex);
+  const net = after.toLocaleString("en-US");
+  return (
+    <>
+      <StatusBar run={run} onMenu={onMenu} />
+      <Scene draw={(ctx, t) => drawPaydaySlip(ctx, t, net)} label="薪資入帳通知" />
+      <ScreenBody
+        actions={
+          <PixelButton color={COLOR.green} silent onClick={onAck}>
+            收到了
+          </PixelButton>
+        }
+      >
+        <DialogBox>
+          <p className="text-sm">
+            <span className="text-[#8fe0b0]">薪水 +{MONTHLY_SALARY.toLocaleString("en-US")}</span>
+            <span className="mx-2 text-[#ff9a8f]">房租水電 -{MONTHLY_RENT.toLocaleString("en-US")}</span>
+          </p>
+          <p className="mb-2 text-sm">餘額 NT${net}</p>
+          <Typewriter key={line} text={line} />
+        </DialogBox>
+      </ScreenBody>
+    </>
+  );
+}

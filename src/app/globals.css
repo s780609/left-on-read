@@ -1,0 +1,623 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-nunito: "Nunito", sans-serif;
+}
+
+:root {
+  --background: #fff0f5;
+  --foreground: #4a4a4a;
+}
+
+* {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  overscroll-behavior: none;
+  overflow: hidden;
+  height: 100%;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-nunito);
+}
+
+/* Balloon float animation */
+@keyframes balloon-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-2deg);
+  }
+  25% {
+    transform: translateY(-12px) rotate(2deg);
+  }
+  50% {
+    transform: translateY(-6px) rotate(-1deg);
+  }
+  75% {
+    transform: translateY(-15px) rotate(1deg);
+  }
+}
+
+.animate-balloon-float {
+  animation: balloon-float 3s ease-in-out infinite;
+}
+
+/* Balloon pop */
+@keyframes balloon-pop {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.3);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(0);
+    opacity: 0;
+  }
+}
+
+.animate-pop {
+  animation: balloon-pop 0.25s ease-out forwards;
+}
+
+/* Gentle wobble for wrong answers */
+@keyframes wobble {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-8px);
+  }
+  40% {
+    transform: translateX(8px);
+  }
+  60% {
+    transform: translateX(-4px);
+  }
+  80% {
+    transform: translateX(4px);
+  }
+}
+
+.animate-wobble {
+  animation: wobble 0.4s ease-in-out;
+}
+
+/* Bounce in */
+@keyframes bounce-in {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-bounce-in {
+  animation: bounce-in 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* Bubble wobble float */
+@keyframes bubble-float {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  25% {
+    transform: translate(8px, -15px) scale(1.02);
+  }
+  50% {
+    transform: translate(-5px, -8px) scale(0.98);
+  }
+  75% {
+    transform: translate(10px, -20px) scale(1.01);
+  }
+}
+
+.animate-bubble-float {
+  animation: bubble-float 4s ease-in-out infinite;
+}
+
+/* Title bounce */
+@keyframes title-bounce {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.animate-title-bounce {
+  animation: title-bounce 2s ease-in-out infinite;
+}
+
+/* Celebration scale */
+@keyframes celebrate {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-celebrate {
+  animation: celebrate 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* Slide up */
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.4s ease-out;
+}
+
+/* Float up + fade for story-book sprite reactions */
+@keyframes float-up {
+  0% {
+    transform: translate(-50%, -50%) scale(0.6);
+    opacity: 0;
+  }
+  20% {
+    transform: translate(-50%, -60%) scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -180%) scale(0.9);
+    opacity: 0;
+  }
+}
+
+.animate-float-up {
+  animation: float-up 0.9s ease-out forwards;
+}
+
+/* Slow bounce for ambient sprite movement */
+@keyframes bounce-slow {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) translateY(0);
+  }
+  50% {
+    transform: translate(-50%, -50%) translateY(-8px);
+  }
+}
+
+.animate-bounce-slow {
+  animation: bounce-slow 2.4s ease-in-out infinite;
+}
+
+/* Pulse glow for interactive items */
+@keyframes pulse-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 105, 180, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 20px 10px rgba(255, 105, 180, 0.2);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* 釣魚：水族箱裡的魚左右游（emoji 預設朝左，往右游時翻面） */
+@keyframes aquarium-swim {
+  0% {
+    left: 4%;
+    transform: scaleX(-1);
+  }
+  49.99% {
+    left: 82%;
+    transform: scaleX(-1);
+  }
+  50% {
+    left: 82%;
+    transform: scaleX(1);
+  }
+  100% {
+    left: 4%;
+    transform: scaleX(1);
+  }
+}
+
+.animate-aquarium-swim {
+  animation: aquarium-swim 12s linear infinite;
+}
+
+@keyframes aquarium-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+.animate-aquarium-bob {
+  animation: aquarium-bob 3s ease-in-out infinite;
+}
+
+@keyframes aquarium-bubble {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateY(-100vh);
+    opacity: 0;
+  }
+}
+
+.animate-aquarium-bubble {
+  animation: aquarium-bubble 7s linear infinite;
+}
+
+/* 釣魚：被點到跳一下 */
+@keyframes fish-jump {
+  0% {
+    transform: translateY(0) rotate(0);
+  }
+  40% {
+    transform: translateY(-46px) rotate(-20deg);
+  }
+  100% {
+    transform: translateY(0) rotate(0);
+  }
+}
+
+.animate-fish-jump {
+  animation: fish-jump 0.6s ease-out;
+}
+
+/* 坦克大戰：直向「HUD / 地圖 / 十字鍵＋發射」，橫向「十字鍵 | HUD＋地圖 | 發射」 */
+.tank-layout {
+  --pad-size: min(150px, 40vw);
+  --fire-size: min(96px, 26vw);
+  display: grid;
+  grid-template-areas:
+    "hud hud"
+    "map map"
+    "pad fire";
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: auto auto 1fr;
+}
+
+.tank-hud {
+  height: 76px;
+  padding-top: 12px;
+}
+
+@media (orientation: landscape) {
+  .tank-layout {
+    --pad-size: min(150px, 22vw, 60vh);
+    --fire-size: min(100px, 15vw, 40vh);
+    grid-template-areas:
+      "pad hud fire"
+      "pad map fire";
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+  }
+
+  .tank-hud {
+    height: 52px;
+    padding-top: 6px;
+  }
+}
+
+/* 遊戲結束字樣由下往上升 */
+@keyframes tank-rise {
+  from {
+    transform: translateY(40vh);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.tank-rise {
+  animation: tank-rise 1.4s ease-out both;
+}
+
+/* 小精靈：直向「HUD / 地圖 / 十字鍵」，橫向「十字鍵 | HUD＋地圖 | 空白」 */
+.pacman-layout {
+  --pad-size: min(150px, 40vw);
+  display: grid;
+  grid-template-areas:
+    "hud"
+    "map"
+    "pad";
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto 1fr;
+}
+
+.pacman-hud {
+  height: 76px;
+  padding-top: 12px;
+}
+
+@media (orientation: landscape) {
+  .pacman-layout {
+    --pad-size: min(150px, 22vw, 60vh);
+    grid-template-areas:
+      "pad hud ."
+      "pad map .";
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+  }
+
+  .pacman-hud {
+    height: 52px;
+    padding-top: 6px;
+  }
+}
+
+/* 釣魚：「收下」按鈕下方的倒數條，跑完自動收下 */
+@keyframes auto-keep {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+.animate-auto-keep {
+  animation: auto-keep 6s linear forwards;
+}
+
+/* 小小廚房：左右各一排配料、下面一排配料，中間是料理 */
+.kitchen-layout {
+  --side: clamp(64px, 11vw, 100px);
+  --btn: min(calc(var(--side) - 12px), calc((100dvh - 100px) / 4 - 8px));
+  height: 100dvh;
+  overflow: hidden;
+  display: grid;
+  grid-template-areas:
+    ".    top    done"
+    "left food   right"
+    "left bottom right";
+  grid-template-columns: var(--side) minmax(0, 1fr) var(--side);
+  grid-template-rows: 68px minmax(0, 1fr) calc(var(--btn) + 14px);
+}
+
+.kitchen-left {
+  grid-area: left;
+  padding-bottom: 6px;
+}
+.kitchen-right {
+  grid-area: right;
+  padding-bottom: 6px;
+}
+.kitchen-top {
+  grid-area: top;
+}
+.kitchen-done {
+  grid-area: done;
+  padding: 12px 6px 0;
+}
+.kitchen-food {
+  grid-area: food;
+}
+.kitchen-bottom {
+  grid-area: bottom;
+}
+.kitchen-btn {
+  width: var(--btn);
+  height: var(--btn);
+  flex: none;
+}
+
+/* 配料放上去時從上面掉下來 */
+@keyframes kitchen-drop {
+  0% {
+    transform: translateY(-14px) scale(1.4);
+    opacity: 0;
+  }
+  60% {
+    transform: translateY(0) scale(0.9);
+    opacity: 1;
+  }
+  100% {
+    transform: none;
+  }
+}
+.kitchen-drop {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: kitchen-drop 0.35s ease-out;
+}
+
+@keyframes kitchen-flame {
+  from {
+    transform: scale(1, 1);
+  }
+  to {
+    transform: scale(0.85, 1.12);
+  }
+}
+.kitchen-flame {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: kitchen-flame 0.35s ease-in-out infinite alternate;
+}
+
+/* 吹熄後冒一縷煙 */
+@keyframes kitchen-smoke {
+  from {
+    transform: translateY(0);
+    opacity: 0.9;
+  }
+  to {
+    transform: translateY(-14px);
+    opacity: 0;
+  }
+}
+.kitchen-smoke {
+  animation: kitchen-smoke 1.4s ease-out forwards;
+}
+
+/* 完成時料理跳一下 */
+@keyframes kitchen-yum {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.08);
+  }
+  70% {
+    transform: scale(0.98);
+  }
+  100% {
+    transform: scale(1.03);
+  }
+}
+.kitchen-yum {
+  animation: kitchen-yum 0.7s ease-out forwards;
+}
+
+/* 敲敲蛋 */
+.hatch-egg {
+  --egg: min(62vw, 44dvh);
+  width: var(--egg);
+  height: calc(var(--egg) * 1.2);
+}
+.hatch-nest {
+  width: calc(min(62vw, 44dvh) * 1.5);
+  margin-top: calc(min(62vw, 44dvh) * -0.32);
+}
+/* 孵過的動物：直向排在最下面，橫向排在右邊兩欄 */
+.hatch-shelf {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 8px;
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+}
+@media (orientation: landscape) {
+  .hatch-shelf {
+    left: auto;
+    right: 16px;
+    bottom: auto;
+    top: 50%;
+    transform: translateY(-50%);
+    display: grid;
+    grid-template-columns: repeat(2, 48px);
+  }
+}
+/* 動物的圖是固定尺寸，放大到跟蛋一樣比例 */
+.hatch-rise > * {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+@keyframes hatch-wobble {
+  0% {
+    transform: rotate(0);
+  }
+  25% {
+    transform: rotate(-12deg);
+  }
+  50% {
+    transform: rotate(9deg);
+  }
+  75% {
+    transform: rotate(-5deg);
+  }
+  100% {
+    transform: rotate(0);
+  }
+}
+.hatch-wobble {
+  transform-origin: 50% 90%;
+  animation: hatch-wobble 0.45s ease-out;
+}
+
+/* 上半蛋殼飛走 */
+@keyframes hatch-fly {
+  0% {
+    transform: none;
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-45%, -150%) rotate(-55deg);
+    opacity: 0;
+  }
+}
+.hatch-fly {
+  animation: hatch-fly 0.7s ease-out forwards;
+}
+
+/* 動物從蛋裡跳出來 */
+@keyframes hatch-rise {
+  0% {
+    transform: translate(-50%, 45%) scale(0.4);
+  }
+  60% {
+    transform: translate(-50%, -8%) scale(1.08);
+  }
+  100% {
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+.hatch-rise {
+  transform: translate(-50%, 0);
+  animation: hatch-rise 0.55s cubic-bezier(0.34, 1.3, 0.64, 1) both;
+}
+
+/* 新的蛋從右邊滑進來 */
+@keyframes hatch-roll-in {
+  0% {
+    transform: translateX(100vw);
+  }
+  70% {
+    transform: translateX(-4%);
+  }
+  100% {
+    transform: none;
+  }
+}
+.hatch-roll-in {
+  animation: hatch-roll-in 0.6s ease-out;
+}
