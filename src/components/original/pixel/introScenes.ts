@@ -33,6 +33,8 @@ const FACE: Record<ImageId, readonly [number, number]> = {
   phone: [385, 345],
 };
 const PHONE_SCREEN = [310, 650] as const;
+/** 螢幕朝著他，光從手機上緣打到手和臉上 */
+const PHONE_LIGHT = [335, 560] as const;
 
 /** 載入四張圖；載入失敗的就留空，那一幕只剩黑底，不會卡住開場 */
 export async function loadIntroImages(): Promise<IntroImages> {
@@ -151,7 +153,7 @@ const room = (ctx: Ctx, t: number, images: IntroImages) => {
   if (sitUp > 0) {
     photo(ctx, images.phone, 1 + 0.08 * ramp(t, 4300, 7000), PHONE_SCREEN, sitUp);
     ctx.globalAlpha = sitUp;
-    phoneGlow(ctx, t, PHONE_SCREEN[0] * TO_SCREEN, PHONE_SCREEN[1] * TO_SCREEN, 110);
+    phoneGlow(ctx, t, PHONE_LIGHT[0] * TO_SCREEN, PHONE_LIGHT[1] * TO_SCREEN, 110);
     ctx.globalAlpha = 1;
   }
 };
