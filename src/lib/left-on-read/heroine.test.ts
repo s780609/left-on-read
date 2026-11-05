@@ -428,7 +428,7 @@ test("隔天一定會收到她的訊息；當晚她從手機上消失，資料�
   const lines = chatTranscript(tomorrow.chats[0], generateGirl(HEROINE_SEED), tomorrow.dayIndex);
   assert.deepEqual(lines.at(-1), {
     who: "her",
-    text: "欸，你什麼時候有空？板橋耶誕城我一直想去。這次換我約。",
+    text: "欸，你什麼時候有空？淡水漁人碼頭我一直想去看夕陽。這次換我約。",
   });
   assert.match(stepAt(COMEBACK_STEP).comeback?.aside ?? "", /第二個主動找我的人/);
   // 重新載入也一樣

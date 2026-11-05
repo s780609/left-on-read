@@ -49,9 +49,9 @@ export const HEROINE_DATES: readonly HeroineDate[] = [
     closing: "煙火放完，她說明年還想來。明年。她用了明年這個詞。",
   },
   {
-    place: "板橋耶誕城",
+    place: "淡水漁人碼頭",
     cost: HEROINE_DATE_COSTS[2],
-    opening: "整條路都是燈。她的手很冰，我想了三分鐘要不要講這件事。",
+    opening: "情人橋的燈一盞一盞亮起來。海風很大，她的手很冰，我想了三分鐘要不要講這件事。",
     options: [
       {
         text: "「我喜歡妳。我想了很久要怎麼講，最後還是只有這句。」",
@@ -144,7 +144,7 @@ export const HEROINE_STORY: Story = {
       fakeEnding: { storyId: FAKE_ENDING_STORY_ID, narration: "下次是一個地名，很遠，沒有車到。" },
     },
     {
-      incoming: { kind: "message", text: "欸，你什麼時候有空？板橋耶誕城我一直想去。這次換我約。" },
+      incoming: { kind: "message", text: "欸，你什麼時候有空？淡水漁人碼頭我一直想去看夕陽。這次換我約。" },
       replies: ["這週末。我這週末有空。", "我看一下行事曆……這週末有空。"],
       comeback: { stamp: "下次吧", aside: "這是第二個主動找我的人。第一個要我加 LINE 看盤。" },
     },
