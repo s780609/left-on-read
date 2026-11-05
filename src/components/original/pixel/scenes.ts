@@ -8,7 +8,7 @@ import { blink, digits, digitsWidth, glow, pixelText, rain, rect, saw, type Ctx 
 export const SCENE_W = 180;
 export const SCENE_H = 150;
 
-// ---------- 插圖場景：跟開場同一批圖，裁出橫向的一段 ----------
+// ---------- 插圖場景：開場的直式圖裁一段，或 scene/ 底下專門畫的 6:5 橫圖 ----------
 
 const PHOTO_SRC = {
   office: "/left-on-read/intro/office.jpg",
@@ -17,6 +17,8 @@ const PHOTO_SRC = {
   phone: "/left-on-read/intro/phone.jpg",
   eatery: "/left-on-read/scene/eatery.jpg",
   weekend: "/left-on-read/scene/weekend.jpg",
+  night: "/left-on-read/scene/night.jpg",
+  noodle: "/left-on-read/scene/noodle.jpg",
 } as const;
 type PhotoId = keyof typeof PHOTO_SRC;
 const PHOTO_SRC_W = 784;
@@ -57,16 +59,16 @@ export function drawCommuteScene(ctx: Ctx, t: number) {
 }
 
 export function drawNoodleScene(ctx: Ctx, t: number) {
-  photoScene(ctx, "bed", 515, t);
+  photoScene(ctx, "noodle", 0, t);
   // 泡麵的熱氣
   for (let i = 0; i < 3; i++) {
     const p = saw(t + i * 700, 2100);
-    rect(ctx, "#ffffff44", 58 + i * 3 + Math.sin(p * 6 + i) * 2, 100 - p * 18, 1, 2);
+    rect(ctx, "#ffffff44", 84 + i * 4 + Math.sin(p * 6 + i) * 2, 82 - p * 18, 1, 2);
   }
 }
 
 export function drawNightScene(ctx: Ctx, t: number) {
-  photoScene(ctx, "bed", 300, t);
+  photoScene(ctx, "night", 0, t);
 }
 
 export function drawPhoneScene(ctx: Ctx, t: number) {
@@ -76,10 +78,10 @@ export function drawPhoneScene(ctx: Ctx, t: number) {
 }
 
 export function drawSleepScene(ctx: Ctx, t: number) {
-  photoScene(ctx, "bed", 300, t);
+  photoScene(ctx, "night", 0, t);
   rect(ctx, "#00000088", 0, 0, SCENE_W, SCENE_H);
-  if (blink(t, 700)) pixelText(ctx, "z", 58, 26, 11, "#cbd5e8");
-  if (blink(t + 350, 700)) pixelText(ctx, "Z", 66, 16, 14, "#cbd5e8");
+  if (blink(t, 700)) pixelText(ctx, "z", 62, 36, 11, "#cbd5e8");
+  if (blink(t + 350, 700)) pixelText(ctx, "Z", 70, 24, 14, "#cbd5e8");
 }
 
 export function drawEateryScene(ctx: Ctx, t: number) {
@@ -87,16 +89,16 @@ export function drawEateryScene(ctx: Ctx, t: number) {
   // 便當的熱氣
   for (let i = 0; i < 3; i++) {
     const p = saw(t + i * 800, 2400);
-    rect(ctx, "#ffffff55", 88 + i * 8 + Math.sin(p * 6 + i) * 2, 118 - p * 16, 1, 2);
+    rect(ctx, "#ffffff55", 62 + i * 9 + Math.sin(p * 6 + i) * 2, 102 - p * 16, 1, 2);
   }
 }
 
 export function drawWeekendScene(ctx: Ctx, t: number) {
-  photoScene(ctx, "weekend", 40, t);
+  photoScene(ctx, "weekend", 0, t);
   // 窗戶進來的光裡，灰塵在飄
   for (let i = 0; i < 5; i++) {
     const p = saw(t + i * 1500, 7000);
-    rect(ctx, "#fff8e0aa", 92 + i * 11, 46 + p * 60, 1, 1);
+    rect(ctx, "#fff8e0aa", 30 + i * 7, 14 + p * 36, 1, 1);
   }
 }
 
