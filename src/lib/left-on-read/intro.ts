@@ -2,7 +2,17 @@
  * 開場影片的時間表、文字和憂傷的旋律。畫面在 components/original/pixel/introScenes.ts。
  */
 
-export type IntroSceneId = "office" | "commute" | "room" | "swipe" | "end";
+export type IntroSceneId =
+  | "office"
+  | "commute"
+  | "room"
+  | "game"
+  | "video"
+  | "ptt"
+  | "lonely"
+  | "search"
+  | "swipe"
+  | "end";
 
 export interface IntroShot {
   id: IntroSceneId;
@@ -11,12 +21,85 @@ export interface IntroShot {
   continues?: boolean;
 }
 
+/**
+ * 下班、兩點一線回家；遊戲、YouTube、PTT 都提不起勁；
+ * 突然覺得好孤單、好冷；查了最多人用的交友 App，開始滑。
+ */
 export const INTRO_SHOTS: readonly IntroShot[] = [
-  { id: "office", durationMs: 7000 },
-  { id: "commute", durationMs: 6000 },
-  { id: "room", durationMs: 7000, continues: true },
-  { id: "swipe", durationMs: 9000, continues: true },
-  { id: "end", durationMs: 6000 },
+  { id: "office", durationMs: 4500 },
+  { id: "commute", durationMs: 4500 },
+  { id: "room", durationMs: 3000 },
+  { id: "game", durationMs: 3500 },
+  { id: "video", durationMs: 3500 },
+  { id: "ptt", durationMs: 3500 },
+  { id: "lonely", durationMs: 4500 },
+  { id: "search", durationMs: 4500, continues: true },
+  { id: "swipe", durationMs: 6600, continues: true },
+  { id: "end", durationMs: 5500 },
+];
+
+/** 冠宇心裡的話：每個分鏡從 atMs 開始換成這一句 */
+export const INTRO_LINES: Partial<Record<IntroSceneId, readonly { atMs: number; text: string }[]>> = {
+  commute: [{ atMs: 2600, text: "公司、捷運、租屋處。兩點一線。" }],
+  room: [
+    { atMs: 500, text: "到家了。" },
+    { atMs: 1500, text: "今天也什麼都沒發生。" },
+  ],
+  game: [
+    { atMs: 300, text: "開了遊戲。" },
+    { atMs: 1700, text: "打了兩場，不知道在打什麼。" },
+  ],
+  video: [
+    { atMs: 300, text: "換看 YouTube。" },
+    { atMs: 1700, text: "推薦的影片，好像都看過了。" },
+  ],
+  ptt: [
+    { atMs: 300, text: "滑一下 PTT。" },
+    { atMs: 1900, text: "滑一滑……好無聊。" },
+  ],
+  lonely: [
+    { atMs: 500, text: "房間突然好安靜。" },
+    { atMs: 2000, text: "……好冷。" },
+    { atMs: 3100, text: "不是天氣的那種冷。" },
+  ],
+  search: [{ atMs: 2300, text: "……試試看好了。" }],
+};
+
+/** 這個時間點該顯示哪一句、已經出現多久；還沒輪到就是 null */
+export function introLineAt(id: IntroSceneId, localMs: number): { text: string; sinceMs: number } | null {
+  const lines = INTRO_LINES[id];
+  if (!lines) return null;
+  let current: { text: string; sinceMs: number } | null = null;
+  for (const line of lines) {
+    if (localMs >= line.atMs) current = { text: line.text, sinceMs: localMs - line.atMs };
+  }
+  return current;
+}
+
+/** 搜尋框裡打的字 */
+export const INTRO_SEARCH_QUERY = "最多人用的交友軟體";
+
+/** 搜尋那一幕的節奏：打字 → 結果 → 下載 → 打開 */
+export const SEARCH_BEATS = {
+  typedAt: 1500,
+  resultsAt: 1700,
+  installAt: 2700,
+  installedAt: 3500,
+  openAt: 3800,
+} as const;
+
+/** PTT 上滑過去的標題（都是虛構的） */
+export const PTT_TITLES: readonly string[] = [
+  "[問卦] 下班回家都在幹嘛？",
+  "[閒聊] 一個人吃飯都配什麼",
+  "[問卦] 有沒有北漂的八卦",
+  "Re: [問卦] 下班回家都在幹嘛？",
+  "[新聞] 雙北房租再創新高",
+  "[心情] 今天也沒有人敲我",
+  "[問卦] 週末都待在家正常嗎",
+  "[閒聊] 交友軟體真的有用嗎",
+  "[問卦] 為什麼越滑越空虛",
+  "[閒聊] 好冷，大家都在幹嘛",
 ];
 
 export const INTRO_COMMUTE_TEXT = "北漂第 2 年";
@@ -86,8 +169,8 @@ export function shotFadeAt(index: number, localMs: number): number {
 
 /** 辦公室的時鐘：盯著它從 17:58 走到 18:00 */
 export function introClock(localMs: number): string {
-  if (localMs < 2400) return "17:58";
-  if (localMs < 4200) return "17:59";
+  if (localMs < 1700) return "17:58";
+  if (localMs < 3100) return "17:59";
   return "18:00";
 }
 
@@ -97,9 +180,9 @@ export function typewriterCount(text: string, localMs: number, charsPerSec: numb
 
 export type SwipeMood = "bored" | "hope" | "empty";
 
-export const SWIPE_BEAT_MS = 1500;
+export const SWIPE_BEAT_MS = 1100;
 /** 卡片最後這段時間飛出去 */
-const SWIPE_EXIT_MS = 350;
+const SWIPE_EXIT_MS = 300;
 export const SWIPE_BEATS: readonly { dir: "left" | "right"; mood: SwipeMood }[] = [
   { dir: "left", mood: "bored" },
   { dir: "left", mood: "bored" },

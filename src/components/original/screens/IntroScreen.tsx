@@ -89,7 +89,7 @@ export default function IntroScreen({ onDone }: { onDone: () => void }) {
             draw={draw}
             animate
             frameMs={0}
-            label="開場影片：下班、擠捷運、回到租屋處滑交友軟體"
+            label="開場影片：下班擠捷運回家，打電動、看 YouTube、滑 PTT 都提不起勁，突然覺得好孤單，下載了交友軟體開始滑"
             className="block h-full min-h-0 w-full object-contain"
           />
         )}

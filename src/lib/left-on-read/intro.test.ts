@@ -9,6 +9,11 @@ import {
   SWIPE_BEATS,
   SWIPE_BEAT_MS,
   INTRO_FADE_MS,
+  INTRO_LINES,
+  INTRO_SEARCH_QUERY,
+  PTT_TITLES,
+  SEARCH_BEATS,
+  introLineAt,
   easeIn,
   easeInOut,
   easeOut,
@@ -23,17 +28,57 @@ import {
 const totalMs = () => INTRO_SHOTS.reduce((sum, s) => sum + s.durationMs, 0);
 const shot = (id: string) => INTRO_SHOTS.find((s) => s.id === id)!;
 
-test("照分鏡腳本的 5 個場景依序播放，每個都有長度", () => {
+test("照分鏡腳本依序播放：下班、回家、提不起勁、孤單、找交友 App、滑卡、片名", () => {
   assert.deepEqual(
     INTRO_SHOTS.map((s) => s.id),
-    ["office", "commute", "room", "swipe", "end"]
+    ["office", "commute", "room", "game", "video", "ptt", "lonely", "search", "swipe", "end"]
   );
   for (const s of INTRO_SHOTS) assert.ok(s.durationMs > 0, `${s.id} 長度 ${s.durationMs}`);
 });
 
-test("總長 25～35 秒", () => {
+test("總長 35～45 秒", () => {
   const total = totalMs();
-  assert.ok(total >= 25_000 && total <= 35_000, `總長 ${total}ms`);
+  assert.ok(total >= 35_000 && total <= 45_000, `總長 ${total}ms`);
+});
+
+test("心裡的話：每句都在自己的分鏡裡出現、照時間排、短到一行放得下", () => {
+  for (const [id, lines] of Object.entries(INTRO_LINES)) {
+    const s = shot(id);
+    assert.ok(s, `${id} 不是分鏡`);
+    let last = -1;
+    for (const line of lines!) {
+      assert.ok(line.atMs > last && line.atMs < s.durationMs - 500, `${id}「${line.text}」at ${line.atMs}`);
+      assert.ok([...line.text].length <= 16, `${id}「${line.text}」太長`);
+      last = line.atMs;
+    }
+  }
+  // 劇情的每一拍都有一句
+  for (const id of ["commute", "room", "game", "video", "ptt", "lonely", "search"]) assert.ok(INTRO_LINES[id as "room"]?.length, id);
+  assert.ok(INTRO_LINES.lonely!.some((l) => l.text.includes("冷")), "要覺得冷");
+});
+
+test("introLineAt：還沒輪到是 null，之後換成最新的一句", () => {
+  const room = INTRO_LINES.room!;
+  assert.equal(introLineAt("room", room[0].atMs - 1), null);
+  assert.deepEqual(introLineAt("room", room[0].atMs), { text: room[0].text, sinceMs: 0 });
+  assert.equal(introLineAt("room", room[1].atMs + 10)?.text, room[1].text);
+  assert.equal(introLineAt("room", room[1].atMs + 10)?.sinceMs, 10);
+  assert.equal(introLineAt("office", 1000), null);
+});
+
+test("搜尋那一幕：打完字才出結果，下載完才打開，都在分鏡時間內", () => {
+  const b = SEARCH_BEATS;
+  assert.ok(b.typedAt <= b.resultsAt && b.resultsAt < b.installAt && b.installAt < b.installedAt && b.installedAt < b.openAt);
+  assert.ok(b.openAt + 600 <= shot("search").durationMs);
+  assert.ok(INTRO_SEARCH_QUERY.includes("交友"));
+  assert.equal(typewriterCount(INTRO_SEARCH_QUERY, b.typedAt - 200, (INTRO_SEARCH_QUERY.length * 1000) / (b.typedAt - 200)), INTRO_SEARCH_QUERY.length);
+  // 搜尋接著滑卡，中間不淡黑
+  assert.equal(shot("search").continues, true);
+});
+
+test("PTT 標題：有好幾條、一行放得下", () => {
+  assert.ok(PTT_TITLES.length >= 8);
+  for (const title of PTT_TITLES) assert.ok([...title].length <= 20, title);
 });
 
 test("腳本指定的文字", () => {
@@ -83,7 +128,8 @@ test("swipeBeatAt：卡片先停著再飛出去，交界正確，超過時間不
 });
 
 test("文字不含 Tinder", () => {
-  assert.ok(!/tinder/i.test(INTRO_COMMUTE_TEXT + INTRO_TITLE + INTRO_TAGLINE));
+  const all = [INTRO_COMMUTE_TEXT, INTRO_TITLE, INTRO_TAGLINE, INTRO_SEARCH_QUERY, ...PTT_TITLES, ...Object.values(INTRO_LINES).flatMap((ls) => ls!.map((l) => l.text))];
+  assert.ok(!/tinder/i.test(all.join("")));
 });
 
 test("introShotAt：0 毫秒是第一個分鏡", () => {
