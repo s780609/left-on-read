@@ -49,7 +49,7 @@ export const QUICK_STORIES: readonly Story[] = [
       },
       {
         incoming: { kind: "message", text: "有車嗎" },
-        replies: ["有 公共的那種", "捷運月票算嗎", "我有駕照 這樣有沒有部分給分"],
+        replies: ["有 公共的那種", "捷運月票算嗎", "沒有 駕照考到之後就沒開過了"],
       },
       {
         incoming: { kind: "message", text: "有房嗎" },
