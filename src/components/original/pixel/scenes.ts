@@ -24,8 +24,16 @@ const PHOTO_SRC = {
   weekend: "/left-on-read/scene/weekend.jpg",
   night: "/left-on-read/scene/night.jpg",
   noodle: "/left-on-read/scene/noodle.jpg",
+  dateMovie: "/left-on-read/scene/date-movie.jpg",
+  dateFireworks: "/left-on-read/scene/date-fireworks.jpg",
+  dateTamsui: "/left-on-read/scene/date-tamsui.jpg",
+  epiChiayi: "/left-on-read/scene/epi-chiayi.jpg",
+  epiProposal: "/left-on-read/scene/epi-proposal.jpg",
+  epiWedding: "/left-on-read/scene/epi-wedding.jpg",
+  epiNoodles: "/left-on-read/scene/epi-noodles.jpg",
+  epiBaby: "/left-on-read/scene/epi-baby.jpg",
 } as const;
-type PhotoId = keyof typeof PHOTO_SRC;
+export type PhotoId = keyof typeof PHOTO_SRC;
 const PHOTO_SRC_W = 784;
 const photos = new Map<PhotoId, HTMLImageElement>();
 
@@ -52,6 +60,11 @@ function photoScene(ctx: Ctx, id: PhotoId, top: number, t: number) {
   ctx.imageSmoothingEnabled = true;
   ctx.drawImage(img, (PHOTO_SRC_W - sw) / 2, top + (fullH - sh) / 2, sw, sh, 0, 0, SCENE_W, SCENE_H);
   ctx.restore();
+}
+
+/** 整張 scene/ 橫圖直接當場景用（小晴路線的約會與尾聲） */
+export function photoDraw(id: PhotoId): (ctx: Ctx, t: number) => void {
+  return (ctx, t) => photoScene(ctx, id, 0, t);
 }
 
 export function drawOfficeScene(ctx: Ctx, t: number) {

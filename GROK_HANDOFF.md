@@ -64,7 +64,7 @@ src/lib/left-on-read/               純邏輯，不依賴 React 或 DOM
   storyTypes.ts                     劇情型別
   girl.ts、girlData.ts              女角產生器（seed 決定一切）
   match.ts、swipe.ts、calendar.ts、meals.ts、flavor.ts、dex.ts、save.ts、intro.ts、ladybug.ts、trueEnding.ts
-public/left-on-read/                intro/（開場 4 張）、scene/（eatery、weekend 暫代圖）、heroine/（小晴的 08、09）
+public/left-on-read/                intro/（開場 4 張）、scene/（eatery 與各菜色版本、weekend、小晴路線的 date-*、epi-*）、heroine/（小晴的 08、09）
 assets/heroine/                     真結局女角素材 01～11.jpg，只有 08、09 複製進遊戲，這裡的不會打包進 App
 ```
 
@@ -99,7 +99,7 @@ assets/heroine/                     真結局女角素材 01～11.jpg，只有 0
 | 從 TinyTap 獨立成這個 repo | 完成 |
 | 遊戲內場景換插圖 | 部分完成：吃飯、週末是合成的暫代圖，瓢蟲結局的巷子和鐵門還是像素圖 |
 | 真結局女角素材 | 08、09 已接進遊戲，其他幾張等擁有者決定 |
-| 真結局 | 完成，在 `feat/true-ending` 等審；場景圖還是暫代（`pixel/heroineScenes.ts`，換圖只改一行） |
+| 真結局 | 完成，在 `feat/true-ending` 等審；三次約會和尾聲都已換成 `scene/date-*.jpg`、`scene/epi-*.jpg` 插圖 |
 
 ## 6. 真結局計畫
 
@@ -148,7 +148,7 @@ assets/heroine/                     真結局女角素材 01～11.jpg，只有 0
 >
 > 收尾：煙火放完，她說明年還想來。明年。她用了明年這個詞。
 
-**第三次：板橋耶誕城（NT$300）**，要等假失敗之後才會開放。
+**第三次：淡水漁人碼頭（NT$300）**，要等假失敗之後才會開放。
 
 > 整條路都是燈。她的手很冰，我想了三分鐘要不要講這件事。
 > - 「我喜歡妳。我想了很久要怎麼講，最後還是只有這句。」→ 她：「嗯，我知道。我等你講很久了。」
@@ -170,7 +170,7 @@ assets/heroine/                     真結局女角素材 01～11.jpg，只有 0
 
 隔天早上一開始，手機震動，印章裂開：
 
-> 她：欸，你什麼時候有空？板橋耶誕城我一直想去。這次換我約。
+> 她：欸，你什麼時候有空？淡水漁人碼頭我一直想去看夕陽。這次換我約。
 >
 > 冠宇：這是第二個主動找我的人。第一個要我加 LINE 看盤。
 

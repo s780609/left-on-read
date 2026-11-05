@@ -1,11 +1,11 @@
 /**
- * 真結局路線的場景。插圖還沒生成，先用純色加地名暫代；
- * 圖來了在 scenes.ts 的 PHOTO_SRC 加一筆，再把這裡對應的那一行換掉就好。
+ * 真結局路線的場景：三次約會和尾聲都是 scene/ 底下的插圖，
+ * 只有最後的標題畫面保留純色星空。
  */
 
 import type { TrueEndingScene } from "@/lib/left-on-read/trueEnding";
 import { pixelText, rect, saw, type Ctx } from "./draw";
-import { SCENE_H, SCENE_W, drawNoodleScene, drawSleepScene } from "./scenes";
+import { SCENE_H, SCENE_W, photoDraw } from "./scenes";
 
 type SceneDraw = (ctx: Ctx, t: number) => void;
 
@@ -22,16 +22,16 @@ function captionScene(bg: string, caption: string, light: string): SceneDraw {
 
 /** 第幾次約會的場景 */
 export const DATE_SCENES: readonly SceneDraw[] = [
-  captionScene("#2a2342", "信義威秀", "#ffd27a"),
-  captionScene("#141a3a", "大稻埕", "#ff9fb4"),
-  captionScene("#123028", "板橋耶誕城", "#ffe08a"),
+  photoDraw("dateMovie"),
+  photoDraw("dateFireworks"),
+  photoDraw("dateTamsui"),
 ];
 
 export const TRUE_ENDING_SCENES: Record<TrueEndingScene, SceneDraw> = {
-  noodles: drawNoodleScene,
-  chiayi: captionScene("#3a3322", "嘉義", "#f2b45a"),
-  proposal: captionScene("#2a1f3d", "第十九版", "#ff9fb4"),
-  wedding: captionScene("#3d2733", "婚禮", "#fff1a8"),
-  baby: drawSleepScene,
+  noodles: photoDraw("epiNoodles"),
+  chiayi: photoDraw("epiChiayi"),
+  proposal: photoDraw("epiProposal"),
+  wedding: photoDraw("epiWedding"),
+  baby: photoDraw("epiBaby"),
   title: captionScene("#0f0e20", "", "#ff9fb4"),
 };
