@@ -2,7 +2,8 @@
 
 import { NOODLE_PRICE } from "@/lib/left-on-read/constants";
 import { offeredMeal, type RunState } from "@/lib/left-on-read/game";
-import { drawCommuteScene, drawEateryScene, drawNoodleScene } from "../pixel/scenes";
+import type { MealDish } from "@/lib/left-on-read/meals";
+import { drawCommuteScene, drawNoodleScene, eateryScene } from "../pixel/scenes";
 import { COLOR, DialogBox, PixelButton, Scene, ScreenBody, StatusBar, Typewriter } from "../ui";
 
 interface EveningScreenProps {
@@ -51,6 +52,7 @@ export interface MealNote {
   name: string;
   price: number;
   narration: string;
+  dish: MealDish;
   home: boolean;
 }
 
@@ -69,7 +71,7 @@ export function MealScreen({
   return (
     <>
       <StatusBar run={run} onMenu={onMenu} />
-      <Scene draw={note.home ? drawNoodleScene : drawEateryScene} label={note.home ? "一個人吃泡麵" : "一個人在小吃店吃飯"} />
+      <Scene draw={note.home ? drawNoodleScene : eateryScene(note.dish)} label={note.home ? "一個人吃泡麵" : "一個人在小吃店吃飯"} />
       <ScreenBody
         actions={
           <PixelButton color={COLOR.blue} onClick={onDone}>

@@ -596,6 +596,7 @@ test("eatOut：扣餐費到 night，事件帶名稱、價格和旁白", () => {
   assert.equal(e.name, meal.name);
   assert.equal(e.price, meal.price);
   assert.equal(e.narration, meal.narration);
+  assert.equal(e.dish, meal.dish);
 });
 
 test("錢剛好夠可以吃，錢不夠 eatOut 不合法", () => {

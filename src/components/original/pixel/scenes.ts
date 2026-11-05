@@ -3,6 +3,7 @@
  * 每個都有小動畫，t 是毫秒。
  */
 
+import type { MealDish } from "@/lib/left-on-read/meals";
 import { blink, digits, digitsWidth, glow, pixelText, rain, rect, saw, type Ctx } from "./draw";
 
 export const SCENE_W = 180;
@@ -16,6 +17,10 @@ const PHOTO_SRC = {
   bed: "/left-on-read/intro/bed.jpg",
   phone: "/left-on-read/intro/phone.jpg",
   eatery: "/left-on-read/scene/eatery.jpg",
+  eateryBowl: "/left-on-read/scene/eatery-bowl.jpg",
+  eateryDumplings: "/left-on-read/scene/eatery-dumplings.jpg",
+  eateryHotpot: "/left-on-read/scene/eatery-hotpot.jpg",
+  eateryFastfood: "/left-on-read/scene/eatery-fastfood.jpg",
   weekend: "/left-on-read/scene/weekend.jpg",
   night: "/left-on-read/scene/night.jpg",
   noodle: "/left-on-read/scene/noodle.jpg",
@@ -84,13 +89,32 @@ export function drawSleepScene(ctx: Ctx, t: number) {
   if (blink(t + 350, 700)) pixelText(ctx, "Z", 70, 24, 14, "#cbd5e8");
 }
 
-export function drawEateryScene(ctx: Ctx, t: number) {
-  photoScene(ctx, "eatery", 0, t);
-  // 便當的熱氣
-  for (let i = 0; i < 3; i++) {
-    const p = saw(t + i * 800, 2400);
-    rect(ctx, "#ffffff55", 62 + i * 9 + Math.sin(p * 6 + i) * 2, 102 - p * 16, 1, 2);
-  }
+/** 店裡那張圖：桌上擺的跟點的那道一樣，熱氣從碗口冒出來（速食沒有熱氣） */
+const EATERY: Record<MealDish, { id: PhotoId; steam: readonly [number, number] | null }> = {
+  bento: { id: "eatery", steam: [62, 102] },
+  bowl: { id: "eateryBowl", steam: [60, 98] },
+  dumplings: { id: "eateryDumplings", steam: [60, 110] },
+  hotpot: { id: "eateryHotpot", steam: [58, 102] },
+  fastfood: { id: "eateryFastfood", steam: null },
+};
+
+const eateryDraws = new Map<MealDish, (ctx: Ctx, t: number) => void>();
+
+/** 同一道菜拿到同一個函式，畫面重繪時場景不會重來 */
+export function eateryScene(dish: MealDish) {
+  const cached = eateryDraws.get(dish);
+  if (cached) return cached;
+  const { id, steam } = EATERY[dish];
+  const draw = (ctx: Ctx, t: number) => {
+    photoScene(ctx, id, 0, t);
+    if (!steam) return;
+    for (let i = 0; i < 3; i++) {
+      const p = saw(t + i * 800, 2400);
+      rect(ctx, "#ffffff55", steam[0] + i * 9 + Math.sin(p * 6 + i) * 2, steam[1] - p * 16, 1, 2);
+    }
+  };
+  eateryDraws.set(dish, draw);
+  return draw;
 }
 
 export function drawWeekendScene(ctx: Ctx, t: number) {

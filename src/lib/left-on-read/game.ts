@@ -22,7 +22,7 @@ import { deckSeed, generateGirl } from "./girl.ts";
 import { EDUCATIONS } from "./girlData.ts";
 import { matchProbability, nextStreak, rollMatch } from "./match.ts";
 import { MEALS } from "./meals.ts";
-import type { Meal } from "./meals.ts";
+import type { Meal, MealDish } from "./meals.ts";
 import { createRng, mixSeed, pick, randInt } from "./rng.ts";
 import type { Rng } from "./rng.ts";
 import { HEROINE_STORY_ID, STORY_BY_ID, STUDIO_STORY_ID } from "./stories/index.ts";
@@ -67,7 +67,7 @@ export type GameAction =
 
 export type GameEvent =
   | { type: "payday"; before: number; after: number }
-  | { type: "meal"; name: string; price: number; narration: string }
+  | { type: "meal"; name: string; price: number; narration: string; dish: MealDish }
   | { type: "swiped"; dir: "left" | "right" }
   | { type: "matched"; girlSeed: number }
   | { type: "noMatch" }
@@ -292,7 +292,7 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
       return {
         run: { ...run, phase: "night", money: run.money - meal.price, offeredMealId: null },
         dex,
-        events: [{ type: "meal", name: meal.name, price: meal.price, narration: meal.narration }],
+        events: [{ type: "meal", name: meal.name, price: meal.price, narration: meal.narration, dish: meal.dish }],
       };
     }
 

@@ -178,13 +178,13 @@ export default function LeftOnReadGame() {
   const eatOut = () => {
     const meal = dispatch({ type: "eatOut" }).find((e) => e.type === "meal");
     if (meal?.type === "meal") {
-      setMealNote({ name: meal.name, price: meal.price, narration: meal.narration, home: false });
+      setMealNote({ name: meal.name, price: meal.price, narration: meal.narration, dish: meal.dish, home: false });
     }
   };
 
   const goHome = () => {
     dispatch({ type: "goHome" });
-    setMealNote({ name: NOODLES.name, price: NOODLES.price, narration: NOODLES.narration, home: true });
+    setMealNote({ name: NOODLES.name, price: NOODLES.price, narration: NOODLES.narration, dish: NOODLES.dish, home: true });
   };
 
   // ---------- 畫面 ----------
