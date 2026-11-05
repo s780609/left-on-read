@@ -1,9 +1,10 @@
 /**
- * 隱藏路線：只有配對到個工（個人工作室）才會走，不會被隨機抽到，也不算進 27 種失敗。
+ * 隱藏路線：只有配對到個工（個人工作室）或小晴才會走，不會被隨機抽到，也不算進 27 種失敗。
  */
 
 import { LADYBUG_COST, LADYBUG_ENDING_ID } from "../constants.ts";
 import type { Story } from "../storyTypes.ts";
+import { HEROINE_ALMOST_STORY, HEROINE_STORY } from "./heroine.ts";
 
 export const STUDIO_STORY_ID = "studio";
 
@@ -67,4 +68,6 @@ export const SPECIAL_STORIES: readonly Story[] = [
       },
     ],
   },
+  HEROINE_STORY,
+  HEROINE_ALMOST_STORY,
 ];

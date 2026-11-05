@@ -161,6 +161,13 @@ export const INTERESTS = [
   },
 ] as const;
 
+/** 小晴專用，不放進 INTERESTS，一般女角的抽選結果才不會變 */
+export const HEROINE_INTEREST = {
+  id: "movies",
+  label: "看電影",
+  openerLine: "妳也喜歡看電影喔！我最近在找人一起看，一個人吃一桶爆米花有點多",
+} as const;
+
 /** 學經歷的權重最低：matchMod 只差 ±1% */
 export const EDUCATIONS = [
   { id: "highschool", label: "高中職畢", matchMod: 1 },
@@ -202,5 +209,5 @@ export type AccessoryId = (typeof ACCESSORIES)[number]["id"];
 export type OutfitId = (typeof OUTFITS)[number]["id"];
 export type BodyType = (typeof BODY_TYPES)[number]["id"];
 export type PhotoBgId = (typeof PHOTO_BGS)[number]["id"];
-export type InterestId = (typeof INTERESTS)[number]["id"];
+export type InterestId = (typeof INTERESTS)[number]["id"] | typeof HEROINE_INTEREST.id;
 export type EducationId = (typeof EDUCATIONS)[number]["id"];

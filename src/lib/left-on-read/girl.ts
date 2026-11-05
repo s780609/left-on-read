@@ -9,6 +9,7 @@ import {
   EYES,
   HAIRS,
   HAIR_COLORS,
+  HEROINE_INTEREST,
   INTERESTS,
   JOBS,
   MOUTHS,
@@ -32,7 +33,7 @@ import type {
   PhotoBgId,
   SkinId,
 } from "./girlData.ts";
-import { STUDIO_RATE } from "./constants.ts";
+import { HEROINE_PHOTOS, HEROINE_SEED, STUDIO_RATE } from "./constants.ts";
 import { createRng, mixSeed, pick, randInt } from "./rng.ts";
 
 export type { BodyType } from "./girlData.ts";
@@ -62,7 +63,28 @@ export interface Girl {
   face: GirlFace;
   body: BodyType;
   outfit: OutfitId;
+  /** 有照片就用照片，不畫像素小人 */
+  photos?: readonly string[];
 }
+
+/** 真結局的小晴：卡片固定，不看亂數 */
+const HEROINE: Girl = {
+  seed: HEROINE_SEED,
+  nickname: "小晴",
+  age: 27,
+  distanceKm: 6,
+  bio: "週末喜歡去沒去過的地方，也喜歡待在家。",
+  interest: HEROINE_INTEREST.id,
+  education: "national",
+  job: "研究助理",
+  photoBg: "books",
+  pickiness: 0,
+  studio: false,
+  face: { hair: "long", hairColor: "black", skin: "fair", eyes: "almond", mouth: "small", accessory: "glasses" },
+  body: "average",
+  outfit: "shirt",
+  photos: HEROINE_PHOTOS,
+};
 
 /** 每個變因用自己的亂數，調整某個資料表不會連帶改變其他變因 */
 const ROLL = {
@@ -91,6 +113,7 @@ const MAX_AGE = 38;
 
 export function generateGirl(seed: number): Girl {
   const s = seed >>> 0;
+  if (s === HEROINE_SEED) return HEROINE;
   const roll = (key: keyof typeof ROLL) => createRng(mixSeed(s, ROLL[key]));
   const interest = pick(roll("interest"), INTERESTS);
   const studio = roll("studio")() < STUDIO_RATE;
@@ -121,7 +144,9 @@ export function generateGirl(seed: number): Girl {
 
 /** 每晚牌組：不存游標，由局、天、第幾張決定 */
 export function deckSeed(runSeed: number, dayIndex: number, cardIndex: number): number {
-  return mixSeed(runSeed, dayIndex, cardIndex, 0xca4d);
+  const seed = mixSeed(runSeed, dayIndex, cardIndex, 0xca4d);
+  // 一般的牌不可以剛好撞到她的 seed
+  return seed === HEROINE_SEED ? seed ^ 1 : seed;
 }
 
 /** 只顯示一行的學經歷：「學校類型｜工作」 */
