@@ -1,12 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, type PointerEvent as ReactPointerEvent } from "react";
+import Image from "next/image";
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { audioManager } from "@/lib/audio/AudioManager";
 import { DECK_SIZE } from "@/lib/left-on-read/constants";
 import { STREAK_HINTS } from "@/lib/left-on-read/flavor";
-import type { RunState } from "@/lib/left-on-read/game";
-import { deckSeed, educationLine, generateGirl, type Girl } from "@/lib/left-on-read/girl";
-import { INTERESTS } from "@/lib/left-on-read/girlData";
+import type { Dex } from "@/lib/left-on-read/dex";
+import { deckCardSeed, type RunState } from "@/lib/left-on-read/game";
+import { educationLine, generateGirl, type Girl } from "@/lib/left-on-read/girl";
+import { interestLabel } from "@/lib/left-on-read/story";
 import { resolveSwipe } from "@/lib/left-on-read/swipe";
 import PixelCanvas from "../PixelCanvas";
 import { type Ctx } from "../pixel/draw";
@@ -15,20 +17,36 @@ import { TOP_BAR_CLASS } from "../ui";
 
 const FLY_MS = 240;
 const HINT_FROM_STREAK = 5;
+/** 手指移動不到這個距離就算點一下，不算拖曳 */
+const TAP_PX = 6;
 
 /** 一張卡：照片加資料。拖曳只改外層的 CSS transform，不會重畫 canvas */
-function GirlCard({ girl }: { girl: Girl }) {
+function GirlCard({ girl, photoIndex = 0 }: { girl: Girl; photoIndex?: number }) {
   const draw = useCallback((ctx: Ctx) => drawGirl(ctx, girl), [girl]);
-  const interest = INTERESTS.find((i) => i.id === girl.interest);
+  const photos = girl.photos ?? [];
   return (
     <div className="flex max-h-full w-full flex-col border-[3px] border-black bg-[#f4efe0] text-[#20203c] shadow-[5px_5px_0_#000]">
-      <PixelCanvas
-        width={PHOTO_W}
-        height={PHOTO_H}
-        draw={draw}
-        label={`${girl.nickname}的照片`}
-        className="block min-h-0 w-full shrink bg-[#20203c] object-contain"
-      />
+      {photos.length > 0 ? (
+        // 離線也要能看，不走圖片最佳化
+        <Image
+          src={photos[photoIndex % photos.length]}
+          alt={`${girl.nickname}的照片`}
+          width={PHOTO_W * 4}
+          height={PHOTO_H * 4}
+          unoptimized
+          draggable={false}
+          className="pointer-events-none block min-h-0 w-full shrink bg-[#20203c] object-cover object-top"
+          style={{ aspectRatio: `${PHOTO_W} / ${PHOTO_H}` }}
+        />
+      ) : (
+        <PixelCanvas
+          width={PHOTO_W}
+          height={PHOTO_H}
+          draw={draw}
+          label={`${girl.nickname}的照片`}
+          className="block min-h-0 w-full shrink bg-[#20203c] object-contain"
+        />
+      )}
       <div className="shrink-0 border-t-[3px] border-black px-2.5 py-1.5">
         <div className="flex items-baseline justify-between gap-2">
           <span className="truncate text-lg leading-tight">
@@ -39,7 +57,12 @@ function GirlCard({ girl }: { girl: Girl }) {
         </div>
         <p className="truncate text-xs text-[#5a5a78]">{educationLine(girl)}</p>
         <p className="mt-0.5 text-sm font-normal leading-snug">{girl.bio}</p>
-        <span className="mt-1 inline-block border-2 border-black bg-[#ffe08a] px-1.5 text-xs">{interest?.label}</span>
+        <span className="mt-1 inline-block border-2 border-black bg-[#ffe08a] px-1.5 text-xs">{interestLabel(girl)}</span>
+        {photos.length > 1 ? (
+          <span className="ml-2 text-xs text-[#5a5a78]">
+            點一下換照片 {(photoIndex % photos.length) + 1} / {photos.length}
+          </span>
+        ) : null}
       </div>
     </div>
   );
@@ -58,13 +81,15 @@ interface DragState {
 
 interface SwipeScreenProps {
   run: RunState;
+  dex: Dex;
   onSwipe: (dir: "left" | "right") => void;
   onQuit: () => void;
 }
 
-export function SwipeScreen({ run, onSwipe, onQuit }: SwipeScreenProps) {
-  const girl = useMemo(() => generateGirl(deckSeed(run.runSeed, run.dayIndex, run.deckIndex)), [run]);
-  const nextSeed = deckSeed(run.runSeed, run.dayIndex, run.deckIndex + 1);
+export function SwipeScreen({ run, dex, onSwipe, onQuit }: SwipeScreenProps) {
+  const girl = useMemo(() => generateGirl(deckCardSeed(run, dex, run.deckIndex)), [run, dex]);
+  const nextSeed = deckCardSeed(run, dex, run.deckIndex + 1);
+  const [photoIndex, setPhotoIndex] = useState(0);
   const hasNext = run.deckIndex + 1 < DECK_SIZE;
   const nextGirl = useMemo(() => generateGirl(nextSeed), [nextSeed]);
 
@@ -147,6 +172,7 @@ export function SwipeScreen({ run, onSwipe, onQuit }: SwipeScreenProps) {
     const dir = resolveSwipe(drag.x, drag.vx, cardRef.current?.offsetWidth ?? 320);
     if (dir) flyOut(dir);
     else place(0, 0, 180);
+    if (!dir && Math.abs(drag.x) < TAP_PX && Math.abs(drag.y) < TAP_PX) setPhotoIndex((i) => i + 1);
   };
 
   const hint =
@@ -188,7 +214,7 @@ export function SwipeScreen({ run, onSwipe, onQuit }: SwipeScreenProps) {
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
         >
-          <GirlCard girl={girl} />
+          <GirlCard girl={girl} photoIndex={photoIndex} />
           <div
             ref={likeRef}
             className="pointer-events-none absolute left-3 top-4 -rotate-12 border-4 border-[#3fbf7f] bg-black/30 px-2 text-2xl text-[#7cf0b0] opacity-0"

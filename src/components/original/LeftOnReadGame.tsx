@@ -6,10 +6,12 @@ import { dexProgress } from "@/lib/left-on-read/dex";
 import { advance, createRun, type GameAction, type GameEvent } from "@/lib/left-on-read/game";
 import { generateGirl } from "@/lib/left-on-read/girl";
 import { NOODLES } from "@/lib/left-on-read/meals";
+import { comebackChat, dueDateChat, visibleChats } from "@/lib/left-on-read/story";
 import { useSettings } from "@/lib/settings/SettingsContext";
 import PortraitFrame from "./PortraitFrame";
 import { commitSave, getSaveSnapshot, getServerSaveSnapshot, subscribeSave } from "./saveStore";
-import { ChatList, ChatRoom, EndingScreen, type EndingInfo } from "./screens/ChatScreens";
+import { ChatList, ChatRoom, ComebackScreen, EndingScreen, type EndingInfo } from "./screens/ChatScreens";
+import { DateScreen } from "./screens/DateScreen";
 import { DayScreen, PaydayScreen } from "./screens/DayScreen";
 import { DexScreen } from "./screens/DexScreen";
 import { EveningScreen, MealScreen, type MealNote } from "./screens/EveningScreen";
@@ -20,8 +22,9 @@ import { MatchScreen } from "./screens/MatchScreen";
 import MenuScreen from "./screens/MenuScreen";
 import { NightScreen } from "./screens/NightScreen";
 import { SwipeScreen } from "./screens/SwipeScreen";
+import { TrueEndingScreen } from "./screens/TrueEndingScreen";
 
-type Screen = "menu" | "intro" | "game" | "dex" | "graduation" | "ladybug";
+type Screen = "menu" | "intro" | "game" | "dex" | "graduation" | "ladybug" | "trueEnding";
 
 /** 開場看完要去哪裡：新遊戲接著玩，重看就回選單 */
 type AfterIntro = "game" | "menu";
@@ -40,6 +43,8 @@ export default function LeftOnReadGame() {
   const [phone, setPhone] = useState<"list" | number | null>(null);
   const [ending, setEnding] = useState<EndingInfo | null>(null);
   const [mealNote, setMealNote] = useState<MealNote | null>(null);
+  /** 正在約會畫面上；約會走完才扣錢，中途關掉不會損失 */
+  const [onDate, setOnDate] = useState(false);
   const [graduationDue, setGraduationDue] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -69,6 +74,7 @@ export default function LeftOnReadGame() {
     setPhone(null);
     setEnding(null);
     setMealNote(null);
+    setOnDate(false);
     if (meta.introSeen) {
       setScreen("game");
     } else {
@@ -100,7 +106,25 @@ export default function LeftOnReadGame() {
 
   const reply = (chatId: number, choice: number) => {
     audioManager.bubble();
+    const girlSeed = save.run?.chats.find((c) => c.id === chatId)?.girlSeed;
     const events = dispatch({ type: "reply", chatId, choice });
+    // 假失敗：演得和一般失敗一樣，但圖鑑和聊天都沒有動
+    const fake = events.find((e) => e.type === "fakeEnding");
+    if (fake?.type === "fakeEnding" && girlSeed !== undefined) {
+      audioManager.wrong();
+      const { collected, total } = dexProgress(getSaveSnapshot().meta.dex);
+      setEnding({
+        storyId: fake.storyId,
+        narration: fake.narration,
+        paid: 0,
+        firstTime: false,
+        antiFraud: false,
+        girl: generateGirl(girlSeed),
+        collected,
+        total,
+      });
+      return;
+    }
     if (!events.some((e) => e.type === "gameEnding")) return;
     // 走到結局這一局就結束了，圖鑑留著
     commitSave(null, getSaveSnapshot().meta);
@@ -128,9 +152,20 @@ export default function LeftOnReadGame() {
     if (events.some((e) => e.type === "dexCompleted")) setGraduationDue(true);
   };
 
+  const finishDate = (choice: number) => {
+    const events = dispatch({ type: "goOnDate", choice });
+    setOnDate(false);
+    setPhone(null);
+    if (!events.some((e) => e.type === "gameEnding")) return;
+    // 走到結局這一局就結束了，圖鑑留著
+    commitSave(null, getSaveSnapshot().meta);
+    setScreen("trueEnding");
+  };
+
   const closeEnding = () => {
     setEnding(null);
-    const remaining = getSaveSnapshot().run?.chats.length ?? 0;
+    const { run } = getSaveSnapshot();
+    const remaining = run ? visibleChats(run.chats, run.dayIndex).length : 0;
     setPhone(remaining > 0 ? "list" : null);
     if (graduationDue) {
       setGraduationDue(false);
@@ -177,6 +212,10 @@ export default function LeftOnReadGame() {
           />
         );
       case "daytime": {
+        const returning = comebackChat(run.chats, run.dayIndex);
+        if (returning) return <ComebackScreen chat={returning} onReply={(choice) => reply(returning.id, choice)} />;
+        const dateChat = onDate ? dueDateChat(run.chats, run.dayIndex) : null;
+        if (dateChat) return <DateScreen chat={dateChat} onDone={finishDate} />;
         const chat = typeof phone === "number" ? run.chats.find((c) => c.id === phone) : undefined;
         if (chat) {
           return (
@@ -192,7 +231,7 @@ export default function LeftOnReadGame() {
             />
           );
         }
-        if (phone !== null && run.chats.length > 0) {
+        if (phone !== null && visibleChats(run.chats, run.dayIndex).length > 0) {
           return (
             <ChatList
               run={run}
@@ -209,6 +248,7 @@ export default function LeftOnReadGame() {
             run={run}
             onMenu={toMenu}
             onOpenChats={() => setPhone("list")}
+            onGoDate={() => setOnDate(true)}
             onEndDay={() => {
               setPhone(null);
               dispatch({ type: "endDaytime" });
@@ -233,6 +273,7 @@ export default function LeftOnReadGame() {
         return (
           <SwipeScreen
             run={run}
+            dex={save.meta.dex}
             onSwipe={(dir) => {
               const events = dispatch({ type: "swipe", dir });
               if (events.some((e) => e.type === "matched")) audioManager.success();
@@ -260,10 +301,17 @@ export default function LeftOnReadGame() {
         return <IntroScreen onDone={finishIntro} />;
       case "dex":
         return (
-          <DexScreen dex={save.meta.dex} onBack={() => setScreen("menu")} onLadybug={() => setScreen("ladybug")} />
+          <DexScreen
+            dex={save.meta.dex}
+            onBack={() => setScreen("menu")}
+            onLadybug={() => setScreen("ladybug")}
+            onTrueEnding={() => setScreen("trueEnding")}
+          />
         );
       case "ladybug":
         return <LadybugScreen onDone={() => setScreen("menu")} />;
+      case "trueEnding":
+        return <TrueEndingScreen onDone={() => setScreen("menu")} />;
       case "graduation":
         return (
           <GraduationScreen

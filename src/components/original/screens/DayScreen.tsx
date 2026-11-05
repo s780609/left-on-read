@@ -4,7 +4,8 @@ import { calendarOf, isWorkday } from "@/lib/left-on-read/calendar";
 import { MONTHLY_RENT, MONTHLY_SALARY } from "@/lib/left-on-read/constants";
 import { PAYDAY_LINES, QUIET_PHONE_LINES, WEEKEND_LINES, WORK_LINES, dailyLine } from "@/lib/left-on-read/flavor";
 import type { RunState } from "@/lib/left-on-read/game";
-import { readyChats } from "@/lib/left-on-read/story";
+import { HEROINE_DATES } from "@/lib/left-on-read/stories/index";
+import { dueDateChat, pendingDateStep, readyChats, visibleChats } from "@/lib/left-on-read/story";
 import { drawOfficeScene, drawPaydaySlip, drawWeekendScene } from "../pixel/scenes";
 import { COLOR, DialogBox, PixelButton, Scene, ScreenBody, StatusBar, Typewriter } from "../ui";
 
@@ -13,13 +14,18 @@ interface DayScreenProps {
   onMenu: () => void;
   onOpenChats: () => void;
   onEndDay: () => void;
+  onGoDate: () => void;
 }
 
 /** 白天：平日上班，週末在房間；有訊息可以回時才多一顆按鈕 */
-export function DayScreen({ run, onMenu, onOpenChats, onEndDay }: DayScreenProps) {
+export function DayScreen({ run, onMenu, onOpenChats, onEndDay, onGoDate }: DayScreenProps) {
   const workday = isWorkday(calendarOf(run.dayIndex));
-  const ready = readyChats(run.chats, run.dayIndex).length;
-  const waiting = run.chats.length - ready;
+  const chats = visibleChats(run.chats, run.dayIndex);
+  const ready = readyChats(chats, run.dayIndex).length;
+  const waiting = chats.length - ready;
+  const dateChat = dueDateChat(run.chats, run.dayIndex);
+  const dateStep = dateChat && pendingDateStep(dateChat);
+  const date = dateStep?.date ? HEROINE_DATES[dateStep.date.index] : null;
   const line = dailyLine(workday ? WORK_LINES : WEEKEND_LINES, run.dayIndex);
   const quiet = dailyLine(QUIET_PHONE_LINES, run.dayIndex);
 
@@ -30,7 +36,17 @@ export function DayScreen({ run, onMenu, onOpenChats, onEndDay }: DayScreenProps
       <ScreenBody
         actions={
           <>
-            {run.chats.length > 0 ? (
+            {date ? (
+              <PixelButton
+                color={COLOR.pink}
+                disabled={run.money < date.cost}
+                onClick={onGoDate}
+                sub={run.money < date.cost ? "等發薪" : `${date.place}　NT$${date.cost.toLocaleString("en-US")}`}
+              >
+                出門約會
+              </PixelButton>
+            ) : null}
+            {chats.length > 0 ? (
               <PixelButton
                 color={ready > 0 ? COLOR.pink : COLOR.gray}
                 onClick={onOpenChats}
@@ -48,7 +64,7 @@ export function DayScreen({ run, onMenu, onOpenChats, onEndDay }: DayScreenProps
       >
         <DialogBox>
           <Typewriter key={line} text={line} />
-          {run.chats.length > 0 && ready === 0 ? (
+          {chats.length > 0 && ready === 0 ? (
             <p className="mt-2 text-sm text-[#a9abc9]">{quiet}</p>
           ) : null}
         </DialogBox>
