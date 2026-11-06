@@ -3,7 +3,7 @@
  * 細黑框長方形眼鏡，表情平靜又有點累，穿素面灰色圓領 T 恤。
  */
 
-import { blink, glow, rect, saw, type Ctx } from "./draw";
+import { blink, glow, rect, saw, type Ctx } from "./draw.ts";
 
 const HAIR = "#15121c";
 const HAIR_LIGHT = "#2f2a3c";

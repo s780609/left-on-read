@@ -5,46 +5,9 @@ import { audioManager } from "@/lib/audio/AudioManager";
 import { calendarOf, formatDate } from "@/lib/left-on-read/calendar";
 import { dexProgress, isDexComplete } from "@/lib/left-on-read/dex";
 import PixelCanvas from "../PixelCanvas";
-import { blink, dither, glow, pixelText, rect, saw, type Ctx } from "../pixel/draw";
-import { drawGuanyuBust } from "../pixel/guanyuSprite";
-import { SCENE_H, SCENE_W } from "../pixel/scenes";
+import { TITLE_H, TITLE_W, drawTitleHero, drawTitleHeroStill } from "../pixel/titleHero";
 import type { SaveState } from "../saveStore";
-import { COLOR, PixelButton } from "../ui";
-
-/** 標題畫面：深夜，一張被手機照亮的臉，一則沒有人回的訊息 */
-function drawTitle(ctx: Ctx, t: number) {
-  rect(ctx, "#07081a", 0, 0, SCENE_W, SCENE_H);
-  // 小窗和外面的光
-  rect(ctx, "#1a1c36", 134, 8, 34, 28);
-  rect(ctx, "#0b0e24", 136, 10, 30, 24);
-  for (const [x, y, n] of [[140, 22, 1], [146, 16, 2], [156, 24, 3], [160, 13, 4]] as const) {
-    if (blink(t + n * 900, 2300)) rect(ctx, "#ffe08a", x, y, 2, 2);
-  }
-  rect(ctx, "#1a1c36", 150, 10, 1, 24);
-  const sweep = saw(t, 7000);
-  if (sweep < 0.35) dither(ctx, "#ffeec822", 180 - (sweep / 0.35) * 240, 0, 60, 18);
-
-  pixelText(ctx, "已讀不回", 92, 33, 34, "#000000", "center");
-  pixelText(ctx, "已讀不回", 90, 31, 34, "#f6f1de", "center");
-  rect(ctx, COLOR.pink, 16, 69, 148, 2);
-  rect(ctx, "#7a2c44", 16, 71, 148, 1);
-
-  drawGuanyuBust(ctx, 58, 78, { t, phoneGlow: true });
-  glow(ctx, "#a8e8ff33", 90, 148, 30, t);
-
-  // 左邊：送出去的訊息；右邊：已讀
-  rect(ctx, "#f4efe0", 12, 88, 36, 18);
-  rect(ctx, "#8d8a7c", 12, 106, 36, 2);
-  pixelText(ctx, "妳好", 15, 89, 13, "#1a1a24");
-  if (saw(t, 3600) > 0.35) pixelText(ctx, "已讀", 14, 110, 11, "#a8acc8");
-  // 右邊：不斷被滑掉的小卡片
-  const p = saw(t, 1800);
-  const cx = 132 + p * 40;
-  rect(ctx, "#f4efe0", cx, 96 - p * 8, 22, 28);
-  rect(ctx, "#ff9fb0", cx + 2, 98 - p * 8, 18, 16);
-  rect(ctx, "#4a2f24", cx + 7, 100 - p * 8, 8, 6);
-  rect(ctx, "#f4cfae", cx + 8, 102 - p * 8, 6, 5);
-}
+import { COLOR, PixelButton, useReducedMotion } from "../ui";
 
 interface MenuScreenProps {
   save: SaveState;
@@ -57,16 +20,17 @@ interface MenuScreenProps {
 
 export default function MenuScreen({ save, onContinue, onNewGame, onDex, onIntro, onGraduation }: MenuScreenProps) {
   const [confirming, setConfirming] = useState(false);
+  const still = useReducedMotion();
   const { collected, total } = dexProgress(save.meta.dex);
 
   return (
     <>
       <div className="flex shrink-0 justify-center border-b-[3px] border-black bg-black">
         <PixelCanvas
-          width={SCENE_W}
-          height={SCENE_H}
-          draw={drawTitle}
-          animate
+          width={TITLE_W}
+          height={TITLE_H}
+          draw={still ? drawTitleHeroStill : drawTitleHero}
+          animate={!still}
           label="已讀不回 標題畫面"
           className="block h-auto max-h-[40dvh] w-full object-contain [@media(max-height:500px)]:max-h-[28dvh]"
         />

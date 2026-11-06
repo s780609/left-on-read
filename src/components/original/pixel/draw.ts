@@ -84,21 +84,23 @@ export function digitsWidth(text: string, scale = 1): number {
 }
 
 const FONT_STACK = 'ui-monospace, "Cascadia Mono", Consolas, "Microsoft JhengHei", "PingFang TC", "Noto Sans TC", monospace';
+/** 筆畫多的字在小字級用 normal，粗體二值化後會糊成一團 */
+export type TextWeight = "bold" | "normal";
 const glyphCache = new Map<string, { runs: readonly (readonly [number, number, number])[]; width: number }>();
 
 /**
  * 系統字型的文字轉成硬邊點陣：先畫到暫存 canvas，再用 alpha 門檻二值化。
  * 不新增字型檔，也能在低解析度 canvas 上得到像素字的質感。
  */
-function textRuns(text: string, size: number) {
-  const key = `${size}|${text}`;
+function textRuns(text: string, size: number, weight: TextWeight = "bold") {
+  const key = `${weight}|${size}|${text}`;
   const cached = glyphCache.get(key);
   if (cached) return cached;
   const canvas = document.createElement("canvas");
   const c = canvas.getContext("2d", { willReadFrequently: true });
   const result = { runs: [] as (readonly [number, number, number])[], width: 0 };
   if (c) {
-    const font = `bold ${size}px ${FONT_STACK}`;
+    const font = `${weight} ${size}px ${FONT_STACK}`;
     c.font = font;
     const width = Math.ceil(c.measureText(text).width) + 2;
     const height = size + 6;
@@ -126,8 +128,8 @@ function textRuns(text: string, size: number) {
   return result;
 }
 
-export function textWidth(text: string, size: number): number {
-  return textRuns(text, size).width;
+export function textWidth(text: string, size: number, weight: TextWeight = "bold"): number {
+  return textRuns(text, size, weight).width;
 }
 
 /** 畫一段硬邊文字；align 為 center 時 x 是中心 */
@@ -138,9 +140,10 @@ export function pixelText(
   y: number,
   size: number,
   color: string,
-  align: "left" | "center" = "left"
+  align: "left" | "center" = "left",
+  weight: TextWeight = "bold"
 ) {
-  const { runs, width } = textRuns(text, size);
+  const { runs, width } = textRuns(text, size, weight);
   const ox = Math.round(align === "center" ? x - width / 2 : x);
   const oy = Math.round(y);
   ctx.fillStyle = color;

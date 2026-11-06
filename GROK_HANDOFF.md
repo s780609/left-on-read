@@ -56,6 +56,7 @@ src/components/original/
   screens/                          各畫面；BeatPlayer.tsx 是瓢蟲和真結局共用的播放器，EdScreen.tsx 是片尾
   pixel/scenes.ts                   遊戲內場景（插圖 + 小動畫）
   pixel/introScenes.ts              開場分鏡
+  pixel/titleHero.ts                標題畫面主視覺（360×300）：冠宇、四張 Swipy 卡片、冷回覆和已讀；女生由固定 seed 產生
   pixel/girlSprite.ts               女角照片：背景加人物，裁頭像
   pixel/girlPortrait.ts              女角半身像分層算圖（髮型、臉、表情、服裝、配件），不碰 DOM，可在 Node 測試
   pixel/raster.ts                    逐像素工具：曲線遮罩、自動描邊、色階，最後才轉成 fillRect
