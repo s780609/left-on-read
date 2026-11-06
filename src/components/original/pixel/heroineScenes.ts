@@ -40,21 +40,22 @@ export const TRUE_ENDING_SCENES: Record<TrueEndingScene, SceneDraw> = {
 };
 
 /*
- * Iris 路線：插圖還沒生成，先用純色場景加一行字暫代。
- * 圖來了之後在 scenes.ts 的 PHOTO_SRC 加一筆，把這裡的 captionScene 換成 photoDraw 就好。
+ * Iris 路線：約會與結局插圖已換成 scene/date-xiangshan、date-beitou、iris-*.jpg。
+ * 角色外觀對齊 girl.ts 的 IRIS（栗子色馬尾、榛果笑眼、雀斑、珊瑚唇、苗條、苔綠帽 T；戶外可戴帽）。
+ * 片名畫面仍用純色星空，比照小晴真結局。
  */
 
 /** Iris 第幾次約會的場景 */
 export const IRIS_DATE_SCENES: readonly SceneDraw[] = [
-  captionScene("#14261d", "象山", "#ffe08a"),
-  captionScene("#1e2433", "北投", "#9fd3ff"),
+  photoDraw("dateXiangshan"),
+  photoDraw("dateBeitou"),
 ];
 
 export const IRIS_ENDING_SCENES: Record<IrisEndingScene, SceneDraw> = {
-  morning: captionScene("#2b2440", "早安", "#ffb3c4"),
-  mountains: captionScene("#14261d", "合歡山北峰", "#ffe08a"),
-  fight: captionScene("#101018", "已讀", "#55587a"),
-  makeup: captionScene("#2b2440", "晚餐想吃什麼", "#ffb3c4"),
-  proposal: captionScene("#1e2433", "北投", "#9fd3ff"),
+  morning: photoDraw("irisMorning"),
+  mountains: photoDraw("irisMountains"),
+  fight: photoDraw("irisFight"),
+  makeup: photoDraw("irisMakeup"),
+  proposal: photoDraw("irisProposal"),
   title: captionScene("#0f0e20", "", "#9fd3ff"),
 };

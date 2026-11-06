@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { IRIS_STORY_ID, datesForStory } from "@/lib/left-on-read/stories/index";
 import { pendingDateStep } from "@/lib/left-on-read/story";
 import type { Chat } from "@/lib/left-on-read/storyTypes";
 import { generateGirl } from "@/lib/left-on-read/girl";
 import { DATE_SCENES, IRIS_DATE_SCENES } from "../pixel/heroineScenes";
+import { preloadPhotos } from "../pixel/scenes";
 import { COLOR, DialogBox, PixelButton, Scene, ScreenBody, Typewriter, useAdvanceKeys } from "../ui";
 
 /** 一次約會：一段對白加一個選擇。選擇只影響當下的台詞，走完才真的扣錢、往下走 */
@@ -14,6 +15,9 @@ export function DateScreen({ chat, onDone }: { chat: Chat; onDone: (choice: numb
   const index = pendingDateStep(chat)?.date?.index ?? 0;
   const date = datesForStory(chat.storyId)[index];
   const scenes = chat.storyId === IRIS_STORY_ID ? IRIS_DATE_SCENES : DATE_SCENES;
+  useEffect(() => {
+    if (chat.storyId === IRIS_STORY_ID) preloadPhotos(["dateXiangshan", "dateBeitou"]);
+  }, [chat.storyId]);
   const picked = choice === null ? null : date.options[choice];
   // 她的回應打完才出現收尾；按第一下只把字打完，按第二下才回家
   const [typed, setTyped] = useState(false);

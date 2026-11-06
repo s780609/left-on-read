@@ -38,6 +38,9 @@ export const HEROINE_DATE_COSTS = [800, 500, 300] as const;
 export const HEROINE_SEED = 0x51a0c1e9;
 /** 她的照片：第一張是卡片和聊天頭像，第二張是點卡片看到的第二張照片 */
 export const HEROINE_PHOTOS = ["/left-on-read/heroine/08.jpg", "/left-on-read/heroine/09.jpg"] as const;
+
+/** 第二輪女主 Iris 的配對／聊天室照片 */
+export const IRIS_PHOTOS = ["/left-on-read/iris/01.jpg", "/left-on-read/iris/02.jpg"] as const;
 export const TRUE_ENDING_ID = "true-love";
 
 /** 白天選「回訊息」時最多回幾則（同一段對話當場接著回不算）；回訊息、約會、打理自己三選一 */

@@ -42,6 +42,13 @@ const PHOTO_SRC = {
   ladybugYoshiwaraShop: "/left-on-read/scene/ladybug-yoshiwara-shop.jpg",
   ladybugBangkok: "/left-on-read/scene/ladybug-bangkok.jpg",
   ladybugBangkokShop: "/left-on-read/scene/ladybug-bangkok-shop.jpg",
+  dateXiangshan: "/left-on-read/scene/date-xiangshan.jpg",
+  dateBeitou: "/left-on-read/scene/date-beitou.jpg",
+  irisMorning: "/left-on-read/scene/iris-morning.jpg",
+  irisMountains: "/left-on-read/scene/iris-mountains.jpg",
+  irisFight: "/left-on-read/scene/iris-fight.jpg",
+  irisMakeup: "/left-on-read/scene/iris-makeup.jpg",
+  irisProposal: "/left-on-read/scene/iris-proposal.jpg",
 } as const;
 export type PhotoId = keyof typeof PHOTO_SRC;
 const PHOTO_SRC_W = 784;

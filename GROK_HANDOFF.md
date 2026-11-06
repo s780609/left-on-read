@@ -139,7 +139,7 @@ assets/heroine/                     真結局女角素材 01～11.jpg，只有 0
 | 約會之間的聊天 | 完成：新增 5 步（第 6.9 節），舊存檔會自動遷移 |
 | 片尾動畫 | 完成：真結局、瓢蟲結局走到結局後播放（第 4 節） |
 | 玩法擴展 A～F | 完成：冠宇檔案與付費、業績卡、氣氛提示、傳錯人、夜間消遣效果、節日與白天事件（第 9 節） |
-| 重玩價值 | 完成：Iris 第二條真結局、成就、新遊戲＋（第 9 節）；Iris 的插圖還沒生成，用純色場景暫代 |
+| 重玩價值 | 完成：Iris 第二條真結局、成就、新遊戲＋（第 9 節）；Iris 約會／結局插圖已換成 `scene/date-xiangshan.jpg`、`date-beitou.jpg`、`iris-*.jpg` |
 
 ## 6. 真結局計畫
 
@@ -367,7 +367,7 @@ assets/heroine/                     真結局女角素材 01～11.jpg，只有 0
 - **Iris 路線**（`stories/iris.ts`）：走過任何一個結局（瓢蟲、真結局、Iris）之後才會出現，一晚一半機率，跟小晴排到同一張就往後挪。右滑一定配對。她會先傳、先約、先告白；計分 4 題（門檻 2）→ 象山 → 北投 → 結局 `iris-love`
 - Iris 最討厭已讀不回（`Story.patience`）：她的聊天能回卻連續兩晚沒回，睡一覺她就走了，記一筆隱藏失敗「換她已讀不回」。回了就歸零
 - Iris 的結局（`irisEnding.ts`、`screens/IrisEndingScreen.tsx`）一樣按著看，沒有片尾，從圖鑑可以重看。圖鑑結局改成 n / 3
-- Iris 的約會和結局插圖還沒生成，`pixel/heroineScenes.ts` 的 `IRIS_DATE_SCENES`、`IRIS_ENDING_SCENES` 先用純色加一行字，圖來了只要換成 `photoDraw`
+- Iris 的約會和結局插圖已接上：`IRIS_DATE_SCENES`→`dateXiangshan`／`dateBeitou`；`IRIS_ENDING_SCENES`→`irisMorning`／`irisMountains`／`irisFight`／`irisMakeup`／`irisProposal`（片名仍純色）。外觀對齊 `girl.ts` IRIS：栗子色馬尾、榛果笑眼、雀斑、珊瑚唇、苗條、苔綠帽 T；戶外戴帽、室內可不戴
 - **成就**（`achievements.ts`、`screens/AchievementScreen.tsx`）：14 個，存在 meta 的 `achievements`（id → 解鎖那天）和 `counters`（跨局累計）。`dispatch` 每個動作後用 `progressAchievements` 更新，新解鎖跳 toast
 - **新遊戲＋**：圖鑑有任何結局時，選單多一顆「新遊戲＋」。`createRun(seed, { ngPlus: true })`，開場白多一句 `memory`（好感 +1、小晴計分也算 +1），白天多回一則
 
