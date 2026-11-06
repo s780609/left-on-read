@@ -126,7 +126,15 @@ export interface LadybugEntry {
 }
 
 /** 瓢蟲結局：一段一段按著看，看完這一局就結束了。從聊天室進來時版面相同，看起來還在同一個聊天室 */
-export function LadybugScreen({ entry, onDone }: { entry: LadybugEntry | null; onDone: () => void }) {
+export function LadybugScreen({
+  entry,
+  doneLabel,
+  onDone,
+}: {
+  entry: LadybugEntry | null;
+  doneLabel?: string;
+  onDone: () => void;
+}) {
   return (
     <BeatPlayer
       beats={LADYBUG_BEATS}
@@ -149,6 +157,7 @@ export function LadybugScreen({ entry, onDone }: { entry: LadybugEntry | null; o
       panelFromHeight={entry?.panelHeight}
       // 從圖鑑重看沒有結束任何一局，只有真的走到這裡才講
       lastNote={entry ? "這一局到這裡結束。" : undefined}
+      doneLabel={doneLabel}
       onLast={playEndingSound}
       onDone={onDone}
     />

@@ -53,7 +53,7 @@ src/components/original/
   PortraitFrame.tsx                 直立置中的外框
   PixelCanvas.tsx                   低解析 canvas，effect 裡繪製
   ui.tsx                            按鈕、對話框、狀態列、Scene
-  screens/                          各畫面；BeatPlayer.tsx 是瓢蟲和真結局共用的播放器
+  screens/                          各畫面；BeatPlayer.tsx 是瓢蟲和真結局共用的播放器，EdScreen.tsx 是片尾
   pixel/scenes.ts                   遊戲內場景（插圖 + 小動畫）
   pixel/introScenes.ts              開場分鏡
   pixel/girlSprite.ts               女角照片：背景加人物，裁頭像
@@ -68,7 +68,8 @@ src/lib/left-on-read/               純邏輯，不依賴 React 或 DOM
   nightReply.test.ts                夜間回覆的規則、小晴和個工路線、舊存檔、模糊測試
   match.ts、swipe.ts、calendar.ts、meals.ts、flavor.ts、dex.ts、save.ts、intro.ts、ladybug.ts、trueEnding.ts
   beats.ts                          結局「按著看」的進度規則：沒有時間參數，台詞只會因為玩家按了才換
-public/left-on-read/                intro/（開場 4 張）、scene/（eatery 與各菜色版本、weekend、小晴路線的 date-*、epi-*）、heroine/（小晴的 08、09）
+  ed.ts                             片尾的分鏡表、字幕、停留時間
+public/left-on-read/                ed/（片尾 6 張）、intro/（開場 4 張）、scene/（eatery 與各菜色版本、weekend、小晴路線的 date-*、epi-*）、heroine/（小晴的 08、09）
 assets/heroine/                     真結局女角素材 01～11.jpg，只有 08、09 複製進遊戲，這裡的不會打包進 App
 ```
 
@@ -103,6 +104,16 @@ assets/heroine/                     真結局女角素材 01～11.jpg，只有 0
 
 **結局的呈現規則（`beats.ts`、`screens/BeatPlayer.tsx`）：** 按畫面、按鈕、空白鍵或 Enter 都算一下；字還在打就先打完；同一幕講過的話都留著，換幕才落黑幕，情緒轉折標 `fade: "slow"`。不要用計時器清字。瓢蟲結局的前兩段就是聊天室最後兩句（`beats.test.ts` 會檢查一字不差），改 1h2s 那題要一起改。一般失敗結局、約會、畢業典禮也是：字沒出完時，按第一下只會把字出完。
 
+**片尾（`ed.ts`、`screens/EdScreen.tsx`）：** 真的走到真結局或瓢蟲結局時，片名頁的按鈕變成「繼續」，按下去播片尾，播完回選單。
+
+- 真結局：01-phone → 02-read → 06-morning → 04-walk → 05-title，放著看約 24 秒。瓢蟲：01-phone → 02-read → 03-ladybug → 05-title，約 19 秒
+- 這段是例外：每張圖會自己換，也可以按畫面、空白鍵或 Enter 提早換。上面「不要用計時器清字」的規則只管 `BeatPlayer`
+- 減少動態效果時直接切圖，沒有淡入淡出、推鏡和呼吸光，但一樣會自己換
+- 從圖鑑重看不播片尾，按鈕維持「回選單」。片尾目前沒有單獨重看的入口
+- 畢業典禮不播：它不會結束這一局，還有「繼續過日子」
+- 片尾不碰存檔，這一局在結局那一步就清掉了；播到一半重新整理會直接回選單
+- `02-read.jpg` 對話框裡的字是亂碼，程式用 `message` 蓋上真的訊息；字幕放在圖裡的空框（`captionInArt`）。換圖時這兩個位置要跟著調，或拿掉
+
 ## 5. 進度
 
 | 項目 | 狀態 |
@@ -118,6 +129,7 @@ assets/heroine/                     真結局女角素材 01～11.jpg，只有 0
 | 真結局女角素材 | 08、09 已接進遊戲，其他幾張等擁有者決定 |
 | 真結局 | 完成，在 `feat/true-ending` 等審；三次約會和尾聲都已換成 `scene/date-*.jpg`、`scene/epi-*.jpg` 插圖 |
 | 約會之間的聊天 | 完成：新增 5 步（第 6.9 節），舊存檔會自動遷移 |
+| 片尾動畫 | 完成：真結局、瓢蟲結局走到結局後播放（第 4 節） |
 
 ## 6. 真結局計畫
 
@@ -280,6 +292,7 @@ assets/heroine/                     真結局女角素材 01～11.jpg，只有 0
 
 - [ ] 沒有音量介面，音量固定 70%（`settings/storage.ts`）
 - [ ] 吃飯的圖只有一張，點小火鍋或速食，桌上還是便當
+- [ ] 片尾圖裡有生圖留下的錯字：`02-read.jpg` 的便條署名像「冠字」，`04-walk.jpg` 的旗子文字不成字，要重生圖才能修
 - [ ] 週末房間白天檯燈還亮著
 - [ ] 平日上班標示「白天」，窗外是傍晚
 - [ ] 開場旋律是舊的，沒有配合現在的分鏡調整

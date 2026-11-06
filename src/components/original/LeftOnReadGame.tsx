@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { audioManager } from "@/lib/audio/AudioManager";
 import { dexProgress } from "@/lib/left-on-read/dex";
+import type { EdEnding } from "@/lib/left-on-read/ed";
 import { advance, createRun, settleRun, type GameAction, type GameEvent, type RunState } from "@/lib/left-on-read/game";
 import { generateGirl } from "@/lib/left-on-read/girl";
 import { NOODLES } from "@/lib/left-on-read/meals";
@@ -14,6 +15,7 @@ import { ChatList, ChatRoom, ComebackScreen, EndingScreen, type EndingInfo } fro
 import { DateScreen } from "./screens/DateScreen";
 import { DayScreen, PaydayScreen } from "./screens/DayScreen";
 import { DexScreen } from "./screens/DexScreen";
+import { EdScreen } from "./screens/EdScreen";
 import { EveningScreen, MealScreen, type MealNote } from "./screens/EveningScreen";
 import { GraduationScreen } from "./screens/GraduationScreen";
 import IntroScreen from "./screens/IntroScreen";
@@ -24,7 +26,7 @@ import { NightScreen } from "./screens/NightScreen";
 import { SwipeScreen } from "./screens/SwipeScreen";
 import { TrueEndingScreen } from "./screens/TrueEndingScreen";
 
-type Screen = "menu" | "intro" | "game" | "dex" | "graduation" | "ladybug" | "trueEnding";
+type Screen = "menu" | "intro" | "game" | "dex" | "graduation" | "ladybug" | "trueEnding" | "ed";
 
 /** 開場看完要去哪裡：新遊戲接著玩，重看就回選單 */
 type AfterIntro = "game" | "menu";
@@ -49,6 +51,8 @@ export default function LeftOnReadGame() {
   const [toast, setToast] = useState<string | null>(null);
   /** 從聊天室走進瓢蟲結局時，把聊天紀錄帶過去；從圖鑑重看就沒有 */
   const [ladybugEntry, setLadybugEntry] = useState<LadybugEntry | null>(null);
+  /** 這段結局看完要播哪個片尾；只有真的走到結局才有，從圖鑑重看是 null */
+  const [edEnding, setEdEnding] = useState<EdEnding | null>(null);
 
   useEffect(() => {
     audioManager.init();
@@ -136,6 +140,7 @@ export default function LeftOnReadGame() {
     setPhone(null);
     // 最後一句是 1h2s 那題，結局的第一段會接著顯示
     setLadybugEntry(girl ? { girl, history: history.slice(0, -1), panelHeight } : null);
+    setEdEnding("ladybug");
     setScreen("ladybug");
   };
 
@@ -164,8 +169,18 @@ export default function LeftOnReadGame() {
     setOnDate(false);
     setPhone(null);
     if (!events.some((e) => e.type === "gameEnding")) return;
+    setEdEnding("true");
     setScreen("trueEnding");
   };
+
+  const finishEndingBeats = () => setScreen(edEnding ? "ed" : "menu");
+
+  const finishEd = useCallback(() => {
+    setEdEnding(null);
+    setScreen("menu");
+  }, []);
+
+  const endingDoneLabel = edEnding ? "繼續" : undefined;
 
   const closeEnding = () => {
     setEnding(null);
@@ -333,15 +348,22 @@ export default function LeftOnReadGame() {
             onBack={() => setScreen("menu")}
             onLadybug={() => {
               setLadybugEntry(null);
+              setEdEnding(null);
               setScreen("ladybug");
             }}
-            onTrueEnding={() => setScreen("trueEnding")}
+            onTrueEnding={() => {
+              setEdEnding(null);
+              setScreen("trueEnding");
+            }}
           />
         );
       case "ladybug":
-        return <LadybugScreen entry={ladybugEntry} onDone={() => setScreen("menu")} />;
+        return <LadybugScreen entry={ladybugEntry} doneLabel={endingDoneLabel} onDone={finishEndingBeats} />;
       case "trueEnding":
-        return <TrueEndingScreen onDone={() => setScreen("menu")} />;
+        return <TrueEndingScreen doneLabel={endingDoneLabel} onDone={finishEndingBeats} />;
+      case "ed":
+        if (edEnding) return <EdScreen ending={edEnding} onDone={finishEd} />;
+        break;
       case "graduation":
         return (
           <GraduationScreen

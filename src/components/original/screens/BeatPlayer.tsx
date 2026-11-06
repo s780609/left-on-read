@@ -38,6 +38,8 @@ interface BeatPlayerProps<S extends string> {
   panelFromHeight?: number;
   /** 片名底下的小字 */
   lastNote?: string;
+  /** 片名那一頁的按鈕，後面還有片尾時改字 */
+  doneLabel?: string;
   onLast?: () => void;
   onDone: () => void;
 }
@@ -56,6 +58,7 @@ export function BeatPlayer<S extends string>({
   chatHistory,
   panelFromHeight,
   lastNote,
+  doneLabel = "回選單",
   onLast,
   onDone,
 }: BeatPlayerProps<S>) {
@@ -162,7 +165,7 @@ export function BeatPlayer<S extends string>({
       >
         {last ? (
           <PixelButton color={COLOR.blue} onClick={onDone}>
-            回選單
+            {doneLabel}
           </PixelButton>
         ) : (
           // 按鈕本身不做事，事件冒泡到外層的 tap，才不會一次算兩下
