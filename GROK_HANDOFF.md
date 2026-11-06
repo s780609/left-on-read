@@ -107,7 +107,7 @@ assets/heroine/                     真結局女角素材 01～11.jpg，只有 0
 
 **片尾（`ed.ts`、`screens/EdScreen.tsx`）：** 真的走到真結局或瓢蟲結局時，片名頁的按鈕變成「繼續」，按下去播片尾，播完回選單。
 
-- 真結局：01-phone → 02-read → 06-morning → 04-walk → 05-title，放著看約 24 秒。瓢蟲：01-phone → 02-read → 03-ladybug → 05-title，約 19 秒
+- 真結局：01-phone → 02-read → 06-morning → 04-walk → 05-title，放著看約 24 秒。瓢蟲：01-phone → 02-read → 03-yoshiwara → 03-bangkok → 05-title，約 23 秒
 - 這段是例外：每張圖會自己換，也可以按畫面、空白鍵或 Enter 提早換。上面「不要用計時器清字」的規則只管 `BeatPlayer`
 - 減少動態效果時直接切圖，沒有淡入淡出、推鏡和呼吸光，但一樣會自己換
 - 從圖鑑重看不播片尾，按鈕維持「回選單」。片尾目前沒有單獨重看的入口
@@ -125,7 +125,7 @@ assets/heroine/                     真結局女角素材 01～11.jpg，只有 0
 | 個工路線、瓢蟲結局 | 完成；結局改成冠宇和她有來有回的對話，從聊天室無縫接過去 |
 | 從 TinyTap 獨立成這個 repo | 完成 |
 | Swipy 女角精緻像素化 | 完成：120×150 原寸算圖，所有圖層由 seed 決定；小晴仍然用照片 |
-| 遊戲內場景換插圖 | 部分完成：吃飯、週末是合成的暫代圖；瓢蟲結局的巷口和開門已換成 `scene/ladybug-alley.jpg`、`scene/ladybug-door.jpg` |
+| 遊戲內場景換插圖 | 部分完成：吃飯、週末是合成的暫代圖；瓢蟲結局的巷口、開門、吉原、牛仔街已換成 `scene/ladybug-alley.jpg`、`ladybug-door.jpg`、`ladybug-yoshiwara.jpg`、`ladybug-bangkok.jpg` |
 | 晚上回訊息 | 完成：夜間入口在 `screens/NightScreen.tsx`，手機畫面和白天共用，測試在 `nightReply.test.ts`；沒有新增存檔欄位 |
 | 真結局女角素材 | 08、09 已接進遊戲，其他幾張等擁有者決定 |
 | 真結局 | 完成，在 `feat/true-ending` 等審；三次約會和尾聲都已換成 `scene/date-*.jpg`、`scene/epi-*.jpg` 插圖 |

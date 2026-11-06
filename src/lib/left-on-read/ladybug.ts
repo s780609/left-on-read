@@ -1,6 +1,7 @@
 /**
  * 瓢蟲結局的腳本：答應了 1h2s 之後，從此沉溺於風俗店。
- * 門一關就切黑，只寫他的日子怎麼變了。畫面在 screens/LadybugScreen.tsx。
+ * 門一關就切黑，只寫他的日子怎麼變了；後半飛去吉原與曼谷牛仔街。
+ * 畫面在 screens/LadybugScreen.tsx。
  *
  * 前兩段就是聊天室最後那兩句（1h2s 那題和「好」），畫面接得上才不會硬切。
  * 這段對話不寫露骨內容，兩個人講的都是見面前後的尷尬。
@@ -8,7 +9,17 @@
 
 import { CHAT_SCENE, type Beat } from "./beats.ts";
 
-export type LadybugScene = typeof CHAT_SCENE | "alley" | "door" | "black" | "commute" | "ledger" | "bed" | "title";
+export type LadybugScene =
+  | typeof CHAT_SCENE
+  | "alley"
+  | "door"
+  | "black"
+  | "commute"
+  | "ledger"
+  | "bed"
+  | "yoshiwara"
+  | "bangkok"
+  | "title";
 
 /** 從聊天室進來時已經顯示到這一段，也就是冠宇的「好」 */
 export const LADYBUG_START_INDEX = 1;
@@ -77,8 +88,31 @@ export const LADYBUG_BEATS: readonly Beat<LadybugScene>[] = [
   { scene: "bed", text: "她愣了一下，看了手機。" },
   { scene: "bed", who: "her", text: "哥哥，時間快到了喔。" },
   {
+    scene: "black",
+    fade: "slow",
+    text: "台灣的巷子待膩了。年假我買了便宜機票。護照蓋上第一個章那天，我對自己說：這次是去玩。",
+  },
+  {
+    scene: "yoshiwara",
+    fade: "slow",
+    text: "東京。吉原的燈比台北更亮。店名、時段、價目，我記在同一個 Excel，只是幣別換成日圓。",
+  },
+  {
+    scene: "yoshiwara",
+    text: "這裡的人也叫我哥哥。回訊一樣快。走在提燈底下，我忽然覺得自己很輕，輕到可以一直走下去。",
+  },
+  {
+    scene: "bangkok",
+    fade: "slow",
+    text: "下一站曼谷。牛仔街的霓虹一整排往下燒，熱風裡都是煙味和香水。Nana 的招牌亮得像不會關。",
+  },
+  {
+    scene: "bangkok",
+    text: "我站在那條街上很久。沒有人問我來自哪裡，也沒有人已讀不回。風俗店的門一開一關，我知道自己回不去了。",
+  },
+  {
     scene: "title",
     fade: "slow",
-    text: "瓢蟲結局\n每天都在等一個回覆。\n他等到了。NT$3,000 一次。",
+    text: "瓢蟲結局\n他飛去吉原，也去了牛仔街。\n回訊很快。價錢標好。每天都有人等他。",
   },
 ];

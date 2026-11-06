@@ -5,8 +5,16 @@ import { audioManager } from "@/lib/audio/AudioManager";
 import type { Girl } from "@/lib/left-on-read/girl";
 import { LADYBUG_BEATS, LADYBUG_START_INDEX, type LadybugScene } from "@/lib/left-on-read/ladybug";
 import type { TranscriptLine } from "@/lib/left-on-read/story";
-import { blink, pixelText, rect, saw, type Ctx } from "../pixel/draw";
-import { SCENE_H, SCENE_W, drawCommuteScene, drawLadybugAlleyScene, drawNightScene, photoDraw, preloadPhotos } from "../pixel/scenes";
+import { blink, pixelText, rect, type Ctx } from "../pixel/draw";
+import {
+  SCENE_H,
+  SCENE_W,
+  drawCommuteScene,
+  drawLadybugAlleyScene,
+  drawNightScene,
+  photoDraw,
+  preloadPhotos,
+} from "../pixel/scenes";
 import { BeatPlayer } from "./BeatPlayer";
 import { GirlAvatar } from "./ChatScreens";
 
@@ -21,36 +29,26 @@ function drawLedger(ctx: Ctx, t: number) {
     ["4 月", "3", "9,000"],
     ["5 月", "5", "15,000"],
     ["6 月", "7", "21,000"],
-    ["7 月", "8", "23,500"],
+    ["7 月", "吉原", "¥"],
+    ["8 月", "牛仔", "฿"],
   ];
   const shown = Math.min(rows.length, 1 + Math.floor(t / 650));
   rows.slice(0, shown).forEach(([a, b, c], i) => {
-    const y = 18 + i * 20;
-    rect(ctx, i === 0 ? "#cfd8cc" : "#f6f7f2", 36, y, 138, 18);
-    rect(ctx, "#9aa596", 36, y + 18, 138, 1);
-    const red = i === rows.length - 1;
-    pixelText(ctx, a, 40, y + 1, 13, "#20203c");
-    pixelText(ctx, b, 86, y + 1, 13, "#20203c");
-    pixelText(ctx, c, 124, y + 1, 13, red ? "#c9423a" : "#20203c");
+    const y = 18 + i * 16;
+    rect(ctx, i === 0 ? "#cfd8cc" : "#f6f7f2", 36, y, 138, 15);
+    rect(ctx, "#9aa596", 36, y + 15, 138, 1);
+    const red = i >= rows.length - 2;
+    pixelText(ctx, a, 40, y + 1, 12, "#20203c");
+    pixelText(ctx, b, 86, y + 1, 12, "#20203c");
+    pixelText(ctx, c, 124, y + 1, 12, red ? "#c9423a" : "#20203c");
   });
-  if (shown >= rows.length && blink(t, 500)) rect(ctx, "#c9423a", 36, 136, 138, 2);
+  if (shown >= rows.length && blink(t, 500)) rect(ctx, "#c9423a", 36, 130, 138, 2);
 }
 
 function drawTitle(ctx: Ctx, t: number) {
-  rect(ctx, "#07070f", 0, 0, SCENE_W, SCENE_H);
-  // 一隻紅色瓢蟲慢慢爬過去
-  const x = 24 + saw(t, 9000) * 132;
-  const y = 74 + Math.sin(t / 700) * 2;
-  rect(ctx, "#15121c", x + 11, y + 2, 5, 7);
-  rect(ctx, "#c9231f", x, y, 12, 10);
-  rect(ctx, "#c9231f", x + 1, y - 1, 10, 12);
-  rect(ctx, "#15121c", x, y + 4, 12, 1);
-  for (const [dx, dy] of [[2, 1], [7, 2], [3, 7], [8, 7]] as const) rect(ctx, "#15121c", x + dx, y + dy, 2, 2);
-  const leg = blink(t, 260) ? 0 : 1;
-  for (const dx of [2, 6, 9]) {
-    rect(ctx, "#15121c", x + dx + leg, y - 2, 1, 1);
-    rect(ctx, "#15121c", x + dx - leg, y + 11, 1, 1);
-  }
+  // 最終畫面用牛仔街沉溺圖，不再只剩一隻瓢蟲
+  photoDraw("ladybugBangkok")(ctx, t);
+  rect(ctx, "rgba(7,7,15,0.45)", 0, 0, SCENE_W, SCENE_H);
 }
 
 function drawBlack(ctx: Ctx) {
@@ -64,6 +62,8 @@ const DRAW: Record<Exclude<LadybugScene, "chat">, (ctx: Ctx, t: number) => void>
   commute: drawCommuteScene,
   ledger: drawLedger,
   bed: drawNightScene,
+  yoshiwara: photoDraw("ladybugYoshiwara"),
+  bangkok: photoDraw("ladybugBangkok"),
   title: drawTitle,
 };
 
@@ -87,7 +87,10 @@ export function LadybugScreen({
   doneLabel?: string;
   onDone: () => void;
 }) {
-  useEffect(() => preloadPhotos(["ladybugAlley", "ladybugDoor"]), []);
+  useEffect(
+    () => preloadPhotos(["ladybugAlley", "ladybugDoor", "ladybugYoshiwara", "ladybugBangkok"]),
+    [],
+  );
   return (
     <BeatPlayer
       beats={LADYBUG_BEATS}

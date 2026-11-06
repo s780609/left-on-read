@@ -9,12 +9,15 @@ const ids = (ending: EdEnding) => ED_SEQUENCES[ending].map((f) => f.id);
 describe("片尾分鏡", () => {
   it("兩個結局的順序", () => {
     assert.deepEqual(ids("true"), ["phone", "read", "morning", "walk", "title"]);
-    assert.deepEqual(ids("ladybug"), ["phone", "read", "ladybug", "title"]);
+    assert.deepEqual(ids("ladybug"), ["phone", "read", "yoshiwara", "bangkok", "title"]);
   });
 
-  it("小晴只出現在真結局，瓢蟲只出現在瓢蟲結局", () => {
+  it("小晴只出現在真結局，吉原與牛仔街只出現在瓢蟲結局", () => {
     assert.ok(!ids("ladybug").includes("walk"));
-    assert.ok(!ids("true").includes("ladybug"));
+    assert.ok(!ids("true").includes("yoshiwara"));
+    assert.ok(!ids("true").includes("bangkok"));
+    assert.ok(ids("ladybug").includes("yoshiwara"));
+    assert.ok(ids("ladybug").includes("bangkok"));
   });
 
   for (const ending of ENDINGS) {

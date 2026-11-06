@@ -36,6 +36,8 @@ const PHOTO_SRC = {
   epiBaby: "/left-on-read/scene/epi-baby.jpg",
   ladybugAlley: "/left-on-read/scene/ladybug-alley.jpg",
   ladybugDoor: "/left-on-read/scene/ladybug-door.jpg",
+  ladybugYoshiwara: "/left-on-read/scene/ladybug-yoshiwara.jpg",
+  ladybugBangkok: "/left-on-read/scene/ladybug-bangkok.jpg",
 } as const;
 export type PhotoId = keyof typeof PHOTO_SRC;
 const PHOTO_SRC_W = 784;
