@@ -8,7 +8,7 @@ import type { Dex } from "./dex.ts";
 import { OPENER_KINDS, PHASES, drawMeal, seededRngs } from "./game.ts";
 import type { Phase, RunState } from "./game.ts";
 import { MEALS } from "./meals.ts";
-import { HEROINE_STORY_ID, LEGACY_HEROINE_STORY_ID, STORY_BY_ID, upgradeLegacyHeroineChat } from "./stories/index.ts";
+import { HEROINE_STORY_ID, HEROINE_V2_STORY_ID, LEGACY_HEROINE_STORY_ID, STORY_BY_ID, upgradeHeroineV2Chat, upgradeLegacyHeroineChat } from "./stories/index.ts";
 import type { Chat, OpenerKind, Story } from "./storyTypes.ts";
 
 export interface MetaState {
@@ -46,15 +46,18 @@ function parseMoney(raw: unknown): number {
   return clamp(Math.floor(raw), 0, MAX_MONEY);
 }
 
-/** 小晴路線改版前的存檔：換成新路線的 id 和位置，之後照一般聊天驗證；存回去就是新格式，不會遷移兩次 */
+/** 小晴路線舊 id：換成現行 id 和位置，之後照一般聊天驗證；存回去就是新格式，不會遷移兩次 */
 function upgradeChat(raw: Json): Json {
-  if (raw.storyId !== LEGACY_HEROINE_STORY_ID) return raw;
   const { stepIndex, replies } = raw;
-  return {
-    ...raw,
-    storyId: HEROINE_STORY_ID,
-    ...upgradeLegacyHeroineChat(isCount(stepIndex) ? stepIndex : 0, Array.isArray(replies) ? (replies as unknown[]) : []),
-  };
+  const replyList = Array.isArray(replies) ? (replies as unknown[]) : [];
+  const step = isCount(stepIndex) ? stepIndex : 0;
+  if (raw.storyId === LEGACY_HEROINE_STORY_ID) {
+    return { ...raw, storyId: HEROINE_STORY_ID, ...upgradeLegacyHeroineChat(step, replyList) };
+  }
+  if (raw.storyId === HEROINE_V2_STORY_ID) {
+    return { ...raw, storyId: HEROINE_STORY_ID, ...upgradeHeroineV2Chat(step, replyList) };
+  }
+  return raw;
 }
 
 function parseChat(raw: unknown, dayIndex: number): Chat | null {

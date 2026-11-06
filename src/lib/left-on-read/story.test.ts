@@ -217,7 +217,6 @@ test("validateStory：抓得到每一種壞資料", () => {
     訊息有未知佔位符: withSteps({ ...replyStep, incoming: { kind: "message", text: "{phone}" } }, finalStep),
     回覆有未知佔位符: withSteps({ ...replyStep, replies: ["一", "{phone}"] }, finalStep),
     結局有未知佔位符: withEnding({ narration: "{phone}" }),
-    等待零天: withFinal({ wait: { days: 0 } }),
     等待負數天: withFinal({ wait: { days: -1 } }),
     等待小數天: withFinal({ wait: { days: 1.5 } }),
     星期超出範圍: withFinal({ wait: { weekday: 7 } }),

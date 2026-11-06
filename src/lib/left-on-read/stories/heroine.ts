@@ -6,8 +6,10 @@
 import { HEROINE_DATE_COSTS, HEROINE_PASS_SCORE, TRUE_ENDING_ID } from "../constants.ts";
 import type { ReplyStep, Story } from "../storyTypes.ts";
 
-/** 步驟數變過一次，id 也跟著換：讀到舊 id 就知道是舊存檔的 stepIndex，見 upgradeLegacyHeroineChat */
-export const HEROINE_STORY_ID = "heroine-v2";
+/** 步驟數變過，id 跟著換：讀到舊 id 就遷移 stepIndex，見 upgradeLegacyHeroineChat / upgradeHeroineV2Chat */
+export const HEROINE_STORY_ID = "heroine-v3";
+/** 中間插過約會閒聊與威秀場次確認的版本；讀檔時升到 v3 */
+export const HEROINE_V2_STORY_ID = "heroine-v2";
 export const LEGACY_HEROINE_STORY_ID = "heroine";
 export const HEROINE_ALMOST_STORY_ID = "heroine-almost";
 
@@ -84,7 +86,16 @@ function dateStep(index: number, endingId?: string): ReplyStep {
  * 訊息可能隔好幾天才被回，不要寫「昨天」「明天」這種綁定日子的詞。
  */
 
-/** 威秀之後、大稻埕邀約之前 */
+/** 威秀散場、回到家當晚：先收住這次約會，不要直接跳下一個話題 */
+const AFTER_FIRST_DATE_HOME: ReplyStep = {
+  wait: { days: 0 },
+  lead: ["我到家了。"],
+  incoming: { kind: "message", text: "今天謝謝你。剛洗完澡，有點想睡覺了。" },
+  replies: ["我也是。安全到家就好。晚安。", "嗯。那部片我還在回味。妳先睡。"],
+  answers: ["嗯，晚安。做個好夢。", "好，那明天再吵你。晚安。"],
+};
+
+/** 威秀之後、大稻埕邀約之前（隔天起） */
 const AFTER_FIRST_DATE: readonly ReplyStep[] = [
   {
     lead: ["那天謝謝你，我很開心。"],
@@ -99,6 +110,15 @@ const AFTER_FIRST_DATE: readonly ReplyStep[] = [
     answers: ["有。但我今天頂嘴了，在心裡。", "……你這樣講我要怎麼回啦。好啦，我也是。"],
   },
 ];
+
+/** 大稻埕煙火後、回到家當晚 */
+const AFTER_SECOND_DATE_HOME: ReplyStep = {
+  wait: { days: 0 },
+  lead: ["外套還有一點煙火的味道。"],
+  incoming: { kind: "message", text: "到家了嗎？今天人好多，我腳快斷了。" },
+  replies: ["到了。今天很開心。妳早點休息。", "到了。煙火超好看，尤其是最後那一波。"],
+  answers: ["嗯，你也是。晚安。", "對吧！我還在存照片。你先睡。"],
+};
 
 /** 大稻埕隔天：最後一次這麼自然，假失敗才會痛 */
 const AFTER_SECOND_DATE: ReplyStep = {
@@ -170,18 +190,18 @@ export const HEROINE_STORY: Story = {
     {
       incoming: { kind: "message", text: "週末信義威秀有一部我想看。一起去？" },
       replies: ["好，我查一下場次", "好。我把那天空下來了，雖然本來就是空的"],
-      answers: [
-        "我剛查了，週六下午 14:30 那場評價還不錯。可以嗎？",
-        "那就週六。14:30 那場我看過預告，好像還行？",
-      ],
+      // 冠宇說要查，她就等他回場次，不要自己先講好了
+      answers: ["好～你查完跟我說要哪一場", "嗯，你定時間就好。我都可以。"],
     },
     {
-      // 把場次講死，狀態列「約好了」才接得上
+      // 同一輪就把場次講死，赴約前狀態列「約好了」才接得上
+      wait: { days: 0 },
       incoming: { kind: "none" },
-      replies: ["可以，週六 14:30 信義威秀見", "14:30 沒問題。票我來訂"],
-      answers: ["好～那週六下午見。別遲到喔。", "哇你真的會訂。那我等你傳訂單。"],
+      replies: ["週六下午 14:30 那場評價不錯，可以嗎？", "我看了，週六 14:30。票我來訂"],
+      answers: ["可以！那週六 14:30 信義威秀見。別遲到喔。", "收到～週六下午見。謝謝你訂。"],
     },
     dateStep(0),
+    AFTER_FIRST_DATE_HOME,
     ...AFTER_FIRST_DATE,
     {
       // 至少隔兩天，第二次約會一定是另一個週末
@@ -194,6 +214,7 @@ export const HEROINE_STORY: Story = {
       ],
     },
     dateStep(1),
+    AFTER_SECOND_DATE_HOME,
     AFTER_SECOND_DATE,
     // 假失敗：連續三天，冠宇先傳、她當場回
     { incoming: { kind: "none" }, replies: ["下週末有空嗎？想約妳"], answer: "這週要加班耶" },
@@ -218,25 +239,39 @@ export const HEROINE_STORY: Story = {
   ],
 };
 
-/** 舊路線 14 步，每一步在新路線的位置；中間空出來的是約會之間的聊天，以及威秀場次確認 */
-const LEGACY_STEP_POSITIONS: readonly number[] = [0, 1, 2, 3, 4, 6, 9, 10, 12, 13, 14, 15, 16, 19];
+/** 最初 14 步路線，每一步在 v3 的位置；空出來的是場次確認、當晚收尾、約會之間聊天 */
+const LEGACY_STEP_POSITIONS: readonly number[] = [0, 1, 2, 3, 4, 6, 10, 11, 14, 15, 16, 17, 18, 21];
 
 /**
  * 舊存檔還沒走到這一步時，改從哪裡接：新聊天排在這一步之前，舊存檔也玩得到。
- * 其他情況原地不動，已經約好的約會和演到一半的假失敗不會被往後推。
+ * 已經約好的約會、演到一半的假失敗不往後推；當晚收尾略過（舊存檔通常已隔天）。
  */
-const LEGACY_RESUME_AT: Readonly<Record<number, number>> = { 6: 7, 8: 11 };
+const LEGACY_RESUME_AT: Readonly<Record<number, number>> = { 6: 8, 8: 13 };
+
+/** v2（20 步）→ v3：在兩次約會後各插入一則當晚收尾 */
+const V2_STEP_POSITIONS: readonly number[] = [
+  0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 19, 20, 21,
+];
+
+function remapHeroineSteps(stepIndex: number, replies: readonly unknown[], positions: readonly number[], resumeAt: Readonly<Record<number, number>> = {}) {
+  const oldStep = Math.min(stepIndex, positions.length - 1);
+  const newStep = resumeAt[oldStep] ?? positions[oldStep];
+  const upgraded: unknown[] = new Array<unknown>(newStep).fill(0);
+  for (let i = 0; i < oldStep; i++) upgraded[positions[i]] = replies[i];
+  return { stepIndex: newStep, replies: upgraded };
+}
 
 /**
  * 舊存檔的 stepIndex、replies 換成新路線的位置。
  * 已經跳過的新聊天補第 0 句，對話紀錄才接得起來；這幾步不計分，不影響總分。
  */
 export function upgradeLegacyHeroineChat(stepIndex: number, replies: readonly unknown[]) {
-  const oldStep = Math.min(stepIndex, LEGACY_STEP_POSITIONS.length - 1);
-  const newStep = LEGACY_RESUME_AT[oldStep] ?? LEGACY_STEP_POSITIONS[oldStep];
-  const upgraded: unknown[] = new Array<unknown>(newStep).fill(0);
-  for (let i = 0; i < oldStep; i++) upgraded[LEGACY_STEP_POSITIONS[i]] = replies[i];
-  return { stepIndex: newStep, replies: upgraded };
+  return remapHeroineSteps(stepIndex, replies, LEGACY_STEP_POSITIONS, LEGACY_RESUME_AT);
+}
+
+/** heroine-v2 存檔升到 v3：補上兩次約會的當晚收尾 */
+export function upgradeHeroineV2Chat(stepIndex: number, replies: readonly unknown[]) {
+  return remapHeroineSteps(stepIndex, replies, V2_STEP_POSITIONS);
 }
 
 /** 總分不夠就換到這條：前面的對話一樣，只多一句客氣的告別 */

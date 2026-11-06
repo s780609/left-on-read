@@ -14,7 +14,9 @@ export {
   HEROINE_ALMOST_STORY_ID,
   HEROINE_DATES,
   HEROINE_STORY_ID,
+  HEROINE_V2_STORY_ID,
   LEGACY_HEROINE_STORY_ID,
+  upgradeHeroineV2Chat,
   upgradeLegacyHeroineChat,
 } from "./heroine.ts";
 

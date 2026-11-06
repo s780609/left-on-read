@@ -209,10 +209,11 @@ function placeholderErrors(text: unknown, where: string): string[] {
   return errors;
 }
 
-function waitErrors(wait: StepWait | undefined, where: string, minDays = 1): string[] {
+function waitErrors(wait: StepWait | undefined, where: string): string[] {
   if (wait === undefined) return [];
   if ("days" in wait) {
-    return Number.isInteger(wait.days) && wait.days >= minDays ? [] : [`${where} 的等待天數不合法`];
+    // 0 = 同一輪立刻接（場次確認、約會當晚收尾、假失敗當日）
+    return Number.isInteger(wait.days) && wait.days >= 0 ? [] : [`${where} 的等待天數不合法`];
   }
   return Number.isInteger(wait.weekday) && wait.weekday >= 0 && wait.weekday <= 6
     ? []
@@ -254,7 +255,7 @@ export function validateStory(story: Story): string[] {
     const last = i === story.steps.length - 1;
     const hasReplies = "replies" in step;
     if ("text" in step.incoming) errors.push(...placeholderErrors(step.incoming.text, `${where} 的內容`));
-    errors.push(...waitErrors(step.wait, where, "fakeEnding" in step && step.fakeEnding ? 0 : 1));
+    errors.push(...waitErrors(step.wait, where));
     if (isFinal(step)) {
       if (!last) errors.push(`${where} 不是最後一步卻有結局`);
       if (hasReplies) errors.push(`${where} 同時有結局和回覆`);
