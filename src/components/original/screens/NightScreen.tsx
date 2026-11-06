@@ -5,7 +5,14 @@ import { audioManager } from "@/lib/audio/AudioManager";
 import { NIGHT_DONE_LINES, NIGHT_LINES, NIGHT_UNREAD_LINES, QUIET_PHONE_LINES, dailyLine } from "@/lib/left-on-read/flavor";
 import type { RunState } from "@/lib/left-on-read/game";
 import { readyChats, visibleChats } from "@/lib/left-on-read/story";
-import { drawNightScene, drawPhoneScene, drawSleepScene } from "../pixel/scenes";
+import {
+  drawNightGamesScene,
+  drawNightScene,
+  drawNightSoloScene,
+  drawPhoneScene,
+  drawSleepScene,
+  preloadPhotos,
+} from "../pixel/scenes";
 import { COLOR, DialogBox, PixelButton, Scene, ScreenBody, StatusBar, Typewriter } from "../ui";
 
 const SLEEP_MS = 1400;
@@ -19,10 +26,21 @@ interface NightScreenProps {
   onPlayGames: () => void;
   onSleep: () => void;
   hobbyNote: string | null;
+  hobbyKind: null | "solo" | "games";
 }
 
 /** 深夜的租屋處。睡前都能回訊息；滑完或放棄之後，就不能再開 Swipy 滑卡了 */
-export function NightScreen({ run, onMenu, onOpenApp, onOpenChats, onJerkOff, onPlayGames, onSleep, hobbyNote }: NightScreenProps) {
+export function NightScreen({
+  run,
+  onMenu,
+  onOpenApp,
+  onOpenChats,
+  onJerkOff,
+  onPlayGames,
+  onSleep,
+  hobbyNote,
+  hobbyKind,
+}: NightScreenProps) {
   const [sleeping, setSleeping] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const done = run.phase === "nightDone";
@@ -32,6 +50,8 @@ export function NightScreen({ run, onMenu, onOpenApp, onOpenChats, onJerkOff, on
   const lines = ready > 0 ? NIGHT_UNREAD_LINES : done ? NIGHT_DONE_LINES : NIGHT_LINES;
   const line = dailyLine(lines, run.dayIndex);
   const quiet = dailyLine(QUIET_PHONE_LINES, run.dayIndex);
+
+  useEffect(() => preloadPhotos(["night", "nightSolo", "nightGames"]), []);
 
   useEffect(
     () => () => {
@@ -46,13 +66,26 @@ export function NightScreen({ run, onMenu, onOpenApp, onOpenChats, onJerkOff, on
     timer.current = setTimeout(onSleep, SLEEP_MS);
   };
 
+  const sceneDraw = (() => {
+    if (sleeping) return drawSleepScene;
+    if (hobbyNote && hobbyKind === "solo") return drawNightSoloScene;
+    if (hobbyNote && hobbyKind === "games") return drawNightGamesScene;
+    if (done || ready > 0) return drawPhoneScene;
+    return drawNightScene;
+  })();
+
+  const sceneLabel = sleeping
+    ? "冠宇睡著了"
+    : hobbyNote && hobbyKind === "solo"
+      ? "關上門之後"
+      : hobbyNote && hobbyKind === "games"
+        ? "排位的夜晚"
+        : "深夜的租屋處";
+
   return (
     <>
       <StatusBar run={run} onMenu={onMenu} />
-      <Scene
-        draw={sleeping ? drawSleepScene : done || ready > 0 ? drawPhoneScene : drawNightScene}
-        label={sleeping ? "冠宇睡著了" : "深夜的租屋處"}
-      />
+      <Scene draw={sceneDraw} label={sceneLabel} />
       <ScreenBody
         actions={
           <>

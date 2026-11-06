@@ -47,6 +47,7 @@ export default function LeftOnReadGame() {
   const [ending, setEnding] = useState<EndingInfo | null>(null);
   const [mealNote, setMealNote] = useState<MealNote | null>(null);
   const [hobbyNote, setHobbyNote] = useState<string | null>(null);
+  const [hobbyKind, setHobbyKind] = useState<null | "solo" | "games">(null);
   /** 打開 Swipy 前的拿起手機轉場 */
   const [pickingUpPhone, setPickingUpPhone] = useState(false);
   /** 正在約會畫面上；約會走完才扣錢，中途關掉不會損失 */
@@ -86,6 +87,7 @@ export default function LeftOnReadGame() {
     setEnding(null);
     setMealNote(null);
     setHobbyNote(null);
+    setHobbyKind(null);
     setPickingUpPhone(false);
     setOnDate(false);
     if (meta.introSeen) {
@@ -215,7 +217,10 @@ export default function LeftOnReadGame() {
 
   const doHobby = (type: "jerkOff" | "playGames") => {
     const ev = dispatch({ type }).find((e) => e.type === "hobby");
-    if (ev?.type === "hobby") setHobbyNote(ev.narration);
+    if (ev?.type === "hobby") {
+      setHobbyNote(ev.narration);
+      setHobbyKind(ev.kind);
+    }
   };
 
   // ---------- 畫面 ----------
@@ -328,19 +333,23 @@ export default function LeftOnReadGame() {
             onMenu={toMenu}
             onOpenApp={() => {
               setHobbyNote(null);
+              setHobbyKind(null);
               setPickingUpPhone(true);
             }}
             onOpenChats={() => {
               setHobbyNote(null);
+              setHobbyKind(null);
               setPhone("list");
             }}
             onJerkOff={() => doHobby("jerkOff")}
             onPlayGames={() => doHobby("playGames")}
             onSleep={() => {
               setHobbyNote(null);
+              setHobbyKind(null);
               dispatch({ type: "sleep" });
             }}
             hobbyNote={hobbyNote}
+            hobbyKind={hobbyKind}
           />
         );
       }

@@ -23,6 +23,8 @@ const PHOTO_SRC = {
   eateryFastfood: "/left-on-read/scene/eatery-fastfood.jpg",
   weekend: "/left-on-read/scene/weekend.jpg",
   night: "/left-on-read/scene/night.jpg",
+  nightSolo: "/left-on-read/scene/night-solo.jpg",
+  nightGames: "/left-on-read/scene/night-games.jpg",
   noodle: "/left-on-read/scene/noodle.jpg",
   dateMovie: "/left-on-read/scene/date-movie.jpg",
   dateFireworks: "/left-on-read/scene/date-fireworks.jpg",
@@ -108,6 +110,14 @@ export function drawNoodleScene(ctx: Ctx, t: number) {
 
 export function drawNightScene(ctx: Ctx, t: number) {
   photoScene(ctx, "night", 0, t);
+}
+
+export function drawNightSoloScene(ctx: Ctx, t: number) {
+  photoScene(ctx, "nightSolo", 0, t);
+}
+
+export function drawNightGamesScene(ctx: Ctx, t: number) {
+  photoScene(ctx, "nightGames", 0, t);
 }
 
 export function drawPhoneScene(ctx: Ctx, t: number) {
