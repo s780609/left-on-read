@@ -29,10 +29,10 @@ export const DATE_SCENES: readonly SceneDraw[] = [
 
 export const TRUE_ENDING_SCENES: Record<TrueEndingScene, SceneDraw> = {
   noodles: photoDraw("epiNoodles"),
+  intimate: photoDraw("epiIntimate"),
   chiayi: photoDraw("epiChiayi"),
   proposal: photoDraw("epiProposal"),
   wedding: photoDraw("epiWedding"),
-  intimate: photoDraw("epiIntimate"),
   baby: photoDraw("epiBaby"),
   title: captionScene("#0f0e20", "", "#ff9fb4"),
 };

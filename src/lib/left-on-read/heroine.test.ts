@@ -572,9 +572,17 @@ test("結局進度：瓢蟲和真結局一起算 n / 2", () => {
 });
 
 test("腳本：六段加片名，都有文字", () => {
-  assert.deepEqual(TRUE_ENDING_BEATS.map((b) => b.scene), ["noodles", "chiayi", "proposal", "wedding", "intimate", "baby", "title"]);
+  assert.deepEqual(TRUE_ENDING_BEATS.map((b) => b.scene), ["noodles", "intimate", "chiayi", "proposal", "wedding", "baby", "title"]);
   for (const b of TRUE_ENDING_BEATS) assert.ok(b.text.trim().length > 0);
   assert.equal(TRUE_ENDING_BEATS.at(-1)?.text, "真結局\n已讀。\n然後她回了。");
+});
+
+test("腳本：床邊那段寫明是交往滿兩個月，排在求婚和婚禮之前", () => {
+  const scenes = TRUE_ENDING_BEATS.map((b) => b.scene);
+  const intimate = TRUE_ENDING_BEATS[scenes.indexOf("intimate")];
+  assert.ok(intimate.text.startsWith("交往滿兩個月"));
+  assert.ok(scenes.indexOf("intimate") < scenes.indexOf("proposal"));
+  assert.ok(scenes.indexOf("intimate") < scenes.indexOf("wedding"));
 });
 
 test("validateStory 抓得到她路線的壞資料", () => {
