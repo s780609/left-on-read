@@ -26,7 +26,7 @@ const PHOTO_SRC = {
   noodle: "/left-on-read/scene/noodle.jpg",
   dateMovie: "/left-on-read/scene/date-movie.jpg",
   dateFireworks: "/left-on-read/scene/date-fireworks.jpg",
-  dateTamsui: "/left-on-read/scene/date-tamsui.jpg",
+  dateBanqiao: "/left-on-read/scene/date-banqiao.jpg",
   epiChiayi: "/left-on-read/scene/epi-chiayi.jpg",
   epiProposal: "/left-on-read/scene/epi-proposal.jpg",
   epiWedding: "/left-on-read/scene/epi-wedding.jpg",

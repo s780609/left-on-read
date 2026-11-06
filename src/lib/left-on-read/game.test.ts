@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { calendarOf } from "./calendar.ts";
+import { calendarOf, isPhoneChatDay } from "./calendar.ts";
 import {
   DECK_SIZE,
   MONTHLY_RENT,
@@ -37,6 +37,12 @@ const eventOf = <T extends GameEvent["type"]>(events: readonly GameEvent[], type
   events.find((e): e is Extract<GameEvent, { type: T }> => e.type === type);
 const countOf = (events: readonly GameEvent[], type: GameEvent["type"]) =>
   events.filter((e) => e.type === type).length;
+
+function nextPhoneDay(from: number): number {
+  let d = from;
+  while (!isPhoneChatDay(calendarOf(d))) d++;
+  return d;
+}
 
 const at = (patch: Partial<RunState>): RunState => ({ ...createRun(1), ...patch });
 const fullDex = (): Dex => Object.fromEntries(STORIES.map((s) => [s.id, { count: 1, firstDayIndex: 0 }]));
@@ -112,16 +118,21 @@ const longStories = () => {
 
 /** 把合法動作的類型變成可以送出的動作 */
 function concreteAction(type: GameAction["type"], run: RunState, rng: Rng): GameAction {
-  const ready = readyChats(run.chats, run.dayIndex);
+  const ready = readyChats(run.chats, run.dayIndex, run.phase);
   const stepOf = (chat: Chat) => STORY_BY_ID[chat.storyId].steps[chat.stepIndex];
   switch (type) {
     case "reply": {
-      const chat = pick(rng, ready.filter((c) => !isFinal(stepOf(c))));
+      const candidates = ready.filter((c) => c && STORY_BY_ID[c.storyId] && !isFinal(stepOf(c)));
+      assert.ok(candidates.length > 0, "legal 有 reply 卻沒有可回的聊天");
+      const chat = pick(rng, candidates);
       const step = stepOf(chat) as ReplyStep;
       return { type, chatId: chat.id, choice: randInt(rng, 0, step.replies.length - 1) };
     }
-    case "closeChat":
-      return { type, chatId: pick(rng, ready.filter((c) => isFinal(stepOf(c)))).id };
+    case "closeChat": {
+      const finals = ready.filter((c) => c && STORY_BY_ID[c.storyId] && isFinal(stepOf(c)));
+      assert.ok(finals.length > 0, "legal 有 closeChat 卻沒有可收的聊天");
+      return { type, chatId: pick(rng, finals).id };
+    }
     case "goOnDate":
       return { type, choice: randInt(rng, 0, 1) };
     case "swipe":
@@ -173,7 +184,7 @@ const PHASE_CASES: Record<Phase, { state: RunState; legal: GameAction["type"][] 
     state: at({ phase: "evening", offeredMealId: MEALS[0].id, money: 100_000 }),
     legal: ["eatOut", "goHome"],
   },
-  night: { state: at({ phase: "night" }), legal: ["openApp", "sleep"] },
+  night: { state: at({ phase: "night" }), legal: ["jerkOff", "playGames", "openApp", "sleep"] },
   swiping: { state: at({ phase: "swiping" }), legal: ["swipe", "quitApp"] },
   matched: { state: at({ phase: "matched", pendingMatchSeed: 123, deckIndex: 1 }), legal: ["chooseOpener"] },
   nightDone: { state: at({ phase: "nightDone" }), legal: ["sleep"] },
@@ -192,6 +203,8 @@ const ONE_OF_EACH: GameAction[] = [
   { type: "chooseOpener", opener: "hi" },
   { type: "quitApp" },
   { type: "sleep" },
+  { type: "jerkOff" },
+  { type: "playGames" },
 ];
 
 test("legalActions：每個階段只列出該階段的動作", () => {
@@ -257,14 +270,14 @@ test("reply 會記下選了第幾句", () => {
   const story = longStories()[0];
   const first = story.steps[0] as ReplyStep;
   const choice = first.replies.length - 1;
-  const s = session(at({ phase: "daytime", dayIndex: 30, chats: [chatOf(story)], nextChatId: 2 }));
+  const s = session(at({ phase: "daytime", dayIndex: 32, chats: [chatOf(story)], nextChatId: 2 }));
   s.act({ type: "reply", chatId: 1, choice });
   assert.deepEqual(s.run.chats[0].replies, [choice]);
 });
 
 test("白天不回訊息也能下班", () => {
   const story = longStories()[0];
-  const run = at({ phase: "daytime", dayIndex: 30, chats: [chatOf(story)], nextChatId: 2 });
+  const run = at({ phase: "daytime", dayIndex: 32, chats: [chatOf(story)], nextChatId: 2 });
   assert.ok(legalActions(run).includes("endDaytime"));
   const s = session(run);
   s.act({ type: "endDaytime" });
@@ -274,9 +287,9 @@ test("白天不回訊息也能下班", () => {
 
 test("legalActions：reply 和 closeChat 只在有對應的聊天時出現", () => {
   const story = longStories()[0];
-  const waiting = chatOf(story, { lastAdvancedDay: 30 });
+  const waiting = chatOf(story, { lastAdvancedDay: 32 });
   assert.deepEqual(
-    legalActions(at({ phase: "daytime", dayIndex: 30, chats: [waiting], nextChatId: 2 })),
+    legalActions(at({ phase: "daytime", dayIndex: 32, chats: [waiting], nextChatId: 2 })),
     ["endDaytime"]
   );
   const replyable = at({ phase: "daytime", dayIndex: 60, chats: [chatOf(story)], nextChatId: 2 });
@@ -289,7 +302,7 @@ test("legalActions：reply 和 closeChat 只在有對應的聊天時出現", () 
 
 test("每個聊天每天只推進一步，同日第二次回傳同一參考", () => {
   const story = longStories()[0];
-  const today = 30;
+  const today = 32;
   const s = session(at({ phase: "daytime", dayIndex: today, chats: [chatOf(story)], nextChatId: 2 }));
   s.act({ type: "reply", chatId: 1, choice: 0 });
   const after = s.run;
@@ -303,7 +316,7 @@ test("多個聊天當天各推一步，互不影響", () => {
   const s = session(
     at({
       phase: "daytime",
-      dayIndex: 30,
+      dayIndex: 32,
       chats: [chatOf(a, { id: 1 }), chatOf(b, { id: 2 })],
       nextChatId: 3,
     })
@@ -317,23 +330,24 @@ test("多個聊天當天各推一步，互不影響", () => {
 
 test("推進後，到下一步的等待日才恢復", () => {
   const story = longStories()[0];
-  const today = 30;
+  const today = 32;
   const s = session(at({ phase: "daytime", dayIndex: today, chats: [chatOf(story)], nextChatId: 2 }));
   s.act({ type: "reply", chatId: 1, choice: 0 });
   const nextReady = readyDayOf(s.run.chats[0]);
   assert.ok(nextReady > today);
   assert.equal(isChatReady(s.run.chats[0], today), false);
-  assert.equal(isChatReady(s.run.chats[0], nextReady), true);
-  const later = session({ ...s.run, dayIndex: nextReady });
+  const readyDay = nextPhoneDay(nextReady);
+  assert.equal(isChatReady(s.run.chats[0], readyDay), true);
+  const later = session({ ...s.run, dayIndex: readyDay });
   const step = story.steps[1];
   later.act(isFinal(step) ? { type: "closeChat", chatId: 1 } : { type: "reply", chatId: 1, choice: 0 });
 });
 
 test("還沒 ready 的聊天不能回", () => {
   const story = longStories()[0];
-  const run = at({ phase: "daytime", dayIndex: 30, chats: [chatOf(story, { lastAdvancedDay: 30 })], nextChatId: 2 });
+  const run = at({ phase: "daytime", dayIndex: 32, chats: [chatOf(story, { lastAdvancedDay: 32 })], nextChatId: 2 });
   assert.equal(advance(run, {}, { type: "reply", chatId: 1, choice: 0 }).run, run);
-  const last = at({ phase: "daytime", dayIndex: 30, chats: [{ ...finalChat(story), lastAdvancedDay: 30 }], nextChatId: 2 });
+  const last = at({ phase: "daytime", dayIndex: 32, chats: [{ ...finalChat(story), lastAdvancedDay: 32 }], nextChatId: 2 });
   assert.equal(advance(last, {}, { type: "closeChat", chatId: 1 }).run, last);
 });
 
@@ -343,7 +357,7 @@ test("還沒 ready 的聊天不能回", () => {
 test("另一個聊天還能回時，今天回過的聊天仍然不能再回", () => {
   const [a, b] = longStories();
   const s = session(
-    at({ phase: "daytime", dayIndex: 30, chats: [chatOf(a, { id: 1 }), chatOf(b, { id: 2 })], nextChatId: 3 })
+    at({ phase: "daytime", dayIndex: 32, chats: [chatOf(a, { id: 1 }), chatOf(b, { id: 2 })], nextChatId: 3 })
   );
   s.act({ type: "reply", chatId: 1, choice: 0 });
   assert.ok(legalActions(s.run).includes("reply"));
@@ -402,7 +416,7 @@ test("動作和聊天的步驟不符時不合法，即使另一個聊天可以�
 test("不存在的 chatId、超範圍的 choice 都回傳同一參考", () => {
   const story = longStories()[0];
   const first = story.steps[0] as ReplyStep;
-  const run = at({ phase: "daytime", dayIndex: 30, chats: [chatOf(story)], nextChatId: 2 });
+  const run = at({ phase: "daytime", dayIndex: 32, chats: [chatOf(story)], nextChatId: 2 });
   const dex: Dex = {};
   const bad: GameAction[] = [
     { type: "reply", chatId: 999, choice: 0 },
@@ -504,7 +518,7 @@ test("dexCompleted：只在未滿變已滿時發一次", () => {
   assert.equal(countOf(s.events, "dexCompleted"), 1);
   assert.equal(isDexComplete(s.dex), true);
 
-  const again = session(at({ phase: "daytime", dayIndex: 70, chats: [finalChat(last)], nextChatId: 2 }), undefined, s.dex);
+  const again = session(at({ phase: "daytime", dayIndex: 74, chats: [finalChat(last)], nextChatId: 2 }), undefined, s.dex);
   again.act({ type: "closeChat", chatId: 1 });
   assert.equal(countOf(again.events, "dexCompleted"), 0);
 });
@@ -961,11 +975,14 @@ function botPlayDay(s: Session) {
         s.act({ type: "ackPayday" });
         break;
       case "daytime": {
-        const [chat] = readyChats(run.chats, run.dayIndex);
+        const [chat] = readyChats(run.chats, run.dayIndex, run.phase);
         if (!chat) {
           s.act({ type: "endDaytime" });
         } else if (isFinal(STORY_BY_ID[chat.storyId].steps[chat.stepIndex])) {
           s.act({ type: "closeChat", chatId: chat.id });
+        } else if (!legalActions(run).includes("reply")) {
+          // 白天認真回覆額滿，先下班
+          s.act({ type: "endDaytime" });
         } else {
           s.act({ type: "reply", chatId: chat.id, choice: 0 });
         }
@@ -975,17 +992,25 @@ function botPlayDay(s: Session) {
         s.act({ type: "goHome" });
         break;
       case "night":
-        s.act({ type: "openApp" });
+      case "nightDone": {
+        const [chat] = readyChats(run.chats, run.dayIndex, run.phase);
+        if (chat) {
+          if (isFinal(STORY_BY_ID[chat.storyId].steps[chat.stepIndex])) s.act({ type: "closeChat", chatId: chat.id });
+          else s.act({ type: "reply", chatId: chat.id, choice: 0 });
+        } else if (run.phase === "night") {
+          s.act({ type: "openApp" });
+        } else {
+          s.act({ type: "sleep" });
+        }
         break;
+      }
       case "swiping":
         s.act({ type: "swipe", dir: run.deckIndex % 3 === 2 ? "left" : "right" });
         break;
       case "matched":
         s.act({ type: "chooseOpener", opener: OPENERS[run.nextChatId % OPENERS.length] });
         break;
-      case "nightDone":
-        s.act({ type: "sleep" });
-        break;
+
     }
   }
 }

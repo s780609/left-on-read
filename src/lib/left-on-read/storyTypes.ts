@@ -13,6 +13,13 @@ export type Incoming =
   /** 這一步由冠宇先開口，她沒有先傳東西 */
   | { kind: "none" };
 
+/** 聊天隱性數值：好感／尷尬／已讀壓力 */
+export interface ChatStats {
+  affection: number;
+  awkward: number;
+  pressure: number;
+}
+
 /** 從上一步推進後要等多久，預設 { days: 1 }；等星期時當天不算；days 0 只有假失敗能用 */
 export type StepWait = { days: number } | { weekday: number };
 
@@ -27,6 +34,8 @@ export interface ReplyStep {
   decision?: { choice: number; cost: number; endingId: string };
   /** 每句回覆的分數（+1、0、-1），和 replies 一一對應 */
   scores?: readonly number[];
+  /** 隱性數值變化；沒寫就從 scores 推，再沒有就用預設 */
+  deltas?: readonly Partial<ChatStats>[];
   /** 回完這一步時總分低於 minScore，聊天就換到 failStoryId 這條路線 */
   gate?: { minScore: number; failStoryId: string };
   /** 冠宇傳完，她當場回的那一句 */
@@ -35,6 +44,8 @@ export interface ReplyStep {
   answers?: readonly string[];
   /** 約會：不能在聊天室回，要週末白天付 cost 赴約，replies 是約會裡的選項；有 endingId 就走向這一局的結局 */
   date?: { index: number; cost: number; endingId?: string };
+  /** 冠宇的內心 OS，出現在回覆選項上方（假失敗那步用） */
+  os?: readonly string[];
   /** 假失敗：畫面演得像 storyId 那種失敗，但不記圖鑑，也不結束聊天 */
   fakeEnding?: { storyId: string; narration: string };
   /** 假失敗之後她主動回來：早上一開始就跳出來，stamp 是裂開的印章，aside 是冠宇的旁白 */
@@ -67,4 +78,8 @@ export interface Chat {
   lastAdvancedDay: number;
   /** 每步選了第幾句，一般劇情只影響對話紀錄，她的路線用來計分 */
   replies: number[];
+  /** 小晴：今晚是否已用過「白天回完晚上再回一次」；舊存檔沒有就當 false */
+  heroineNightUsed?: boolean;
+  /** 隱性數值；舊存檔沒有就從 0 起算 */
+  stats?: ChatStats;
 }

@@ -143,4 +143,103 @@ export const PITCH_STORIES: readonly Story[] = [
       },
     ],
   },
+  {
+    id: "health-mlm",
+    dexName: "酵素改變人生",
+    dexQuip: "她關心我的腸道。這是我遇過最深入的關心。",
+    category: "pitch",
+    steps: [
+      {
+        incoming: { kind: "message", text: "你看起來好像很累欸 有在保養身體嗎" },
+        replies: ["沒有 我保養的是程式碼", "有 我每週運動一次 在心裡", "妳怎麼看得出來 我很明顯嗎"],
+      },
+      {
+        incoming: { kind: "message", text: "我自己有在喝一個酵素 睡眠腸胃都有差 要不要介紹給你" },
+        replies: ["聽起來很厲害 成分表可以給我嗎", "多少錢 我先算預算", "好啊 這算約會贈品嗎"],
+      },
+      {
+        incoming: { kind: "message", text: "先買一組體驗就好 我可以幫你申請優惠 順便當我下線也行哈哈" },
+        ending: {
+          narration: "原來「關心」可以有業績編號。我回了謝謝，沒有下單，也沒有成為任何人的下線。",
+        },
+      },
+    ],
+  },
+  {
+    id: "crypto-course",
+    dexName: "財富自由課",
+    dexQuip: "她說想帶我去上課。學費比我月薪還像真心話。",
+    category: "pitch",
+    steps: [
+      {
+        incoming: { kind: "message", text: "你有在看加密貨幣嗎 最近超準的" },
+        replies: ["沒有 我連股票代碼都背不起來", "有一點 但我只用活存", "妳賺多少 方便說區間嗎"],
+      },
+      {
+        incoming: { kind: "message", text: "我有個社團在帶 先上三天體驗營 名額不多" },
+        replies: ["體驗營要錢嗎", "可以先看教材大綱嗎", "等一下 我們不是在聊天嗎"],
+      },
+      {
+        incoming: { kind: "message", text: "學費可以分期 你這種工程師最需要被動收入了啦" },
+        ending: {
+          narration: "被動收入的第一步，是主動匯一筆學費。我沒有匯。對話截圖我存著，165 的號碼也存著。",
+          antiFraud: true,
+        },
+      },
+    ],
+  },
+  {
+    id: "romance-wire",
+    dexName: "先幫我一個忙",
+    dexQuip: "她叫我親愛的。匯款頁面也叫我親愛的。",
+    category: "pitch",
+    steps: [
+      {
+        incoming: { kind: "message", text: "終於配到正常人了 你看起來好溫柔" },
+        replies: ["謝謝 我很努力在當正常人", "妳也是 自介我看了三遍", "溫柔這兩個字我存起來了"],
+      },
+      {
+        incoming: { kind: "message", text: "其實我在國外出差 這邊訊號不太好 但我想多認識你" },
+        replies: ["國外哪裡 時差怎麼算", "好巧 我也想多認識妳", "訊號不好還能秒回 好厲害"],
+      },
+      {
+        incoming: { kind: "message", text: "親愛的 我證件被扣住了 能不能先幫我轉一筆保證金 回來立刻還你" },
+        replies: ["多少 我先看帳戶", "這劇情我在新聞看過", "可以 但妳先視訊一下"],
+      },
+      {
+        incoming: { kind: "message", text: "來不及視訊啦 再遲我要被遣返了 求你" },
+        ending: {
+          narration: "我沒有轉帳。我把對話貼給 165，對方說做得好。這是我第一次因為沒有付錢而被稱讚。",
+          antiFraud: true,
+        },
+      },
+    ],
+  },
+  {
+    id: "ba-jia-jiu",
+    dexName: "照片裡的她",
+    dexQuip: "右滑的是女神。開門的是兄弟。",
+    category: "pitch",
+    steps: [
+      {
+        incoming: { kind: "message", text: "嗨～你長得好像我喜歡的類型欸" },
+        replies: ["真的嗎 我照三餐被稱讚一次", "妳照片好漂亮 是本人嗎", "類型這兩個字好有篩選器的感覺"],
+      },
+      {
+        incoming: { kind: "message", text: "本人啦笨蛋 週末要不要出來喝一杯 我請你" },
+        replies: ["好啊！哪裡", "妳請我 我是不是該準備什麼", "可以 但我不太會喝酒 可以喝無糖茶嗎"],
+      },
+      {
+        incoming: { kind: "message", text: "就那間KTV旁邊的燒烤 你到了傳訊息 我朋友可能也在" },
+        replies: ["好 我六點半到", "朋友也在喔 好熱鬧", "地址發我 我設導航"],
+      },
+      {
+        incoming: { kind: "narration", text: "（週末）門口站的不是她。是戴金鍊的男人，旁邊還有兩個兄弟。" },
+        ending: {
+          narration:
+            "他說：「兄弟怎麼不進來坐，我女朋友叫你來的啊。喝茶錢先算三千。」我轉頭就走。回家把 Swipy 刪了又裝回來，只為了把她封鎖得徹底一點。",
+        },
+      },
+    ],
+  },
 ];

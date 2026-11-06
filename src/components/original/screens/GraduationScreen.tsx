@@ -64,7 +64,7 @@ export function GraduationScreen({ dex, dayIndex, onContinue, onMenu }: Graduati
     () => [
       "陳冠宇　二十五歲",
       "於私立 Swipy 大學　男性困境學系　修業期滿。",
-      "已讀、斷聯、業績、秒殺四大學程，共 27 門，全部修畢。",
+      `已讀、斷聯、業績、秒殺四大學程，共 ${STORIES.length} 門，全部修畢。`,
       `總計失敗 ${total} 次${dayIndex !== null ? `，歷時 ${dayIndex + 1} 天` : ""}。成績全部不及格，學分全部拿到。`,
       "特頒此證，以資證明他還在滑。",
       "校長沒有來。來了大概也會已讀。",

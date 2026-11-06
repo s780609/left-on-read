@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { calendarOf, firstDayIndexOnOrAfter, isPayday, isWorkday } from "./calendar.ts";
+import { calendarOf, firstDayIndexOnOrAfter, isPayday, isPhoneChatDay, isWorkday } from "./calendar.ts";
 import type { CalendarDay } from "./calendar.ts";
 import { START_DATE_UTC } from "./constants.ts";
 
@@ -118,5 +118,13 @@ test("firstDayIndexOnOrAfter：一週內一定找到正確的星期", () => {
       assert.ok(r >= from && r < from + 7, `from ${from} weekday ${weekday} 得到 ${r}`);
       assert.equal(calendarOf(r).weekday, weekday);
     }
+  }
+});
+
+test("平日只有週二週五能回訊息，週末也可以", () => {
+  // dayIndex 0 = 2026-03-02 週一
+  const expect = { 0: false, 1: true, 2: false, 3: false, 4: true, 5: true, 6: true };
+  for (const [i, ok] of Object.entries(expect)) {
+    assert.equal(isPhoneChatDay(calendarOf(Number(i))), ok, `dayIndex ${i}`);
   }
 });

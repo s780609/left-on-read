@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { calendarOf, isPhoneChatDay } from "./calendar.ts";
 import { LADYBUG_COST, LADYBUG_ENDING_ID, START_MONEY } from "./constants.ts";
 import { dexProgress } from "./dex.ts";
 import { advance, checkInvariants, createRun, legalActions, settleRun } from "./game.ts";
@@ -12,6 +13,12 @@ import { storyWeights, validateStory } from "./story.ts";
 import type { Chat } from "./storyTypes.ts";
 
 const STUDIO = "studio";
+function nextPhoneDay(from: number): number {
+  let d = from;
+  while (!isPhoneChatDay(calendarOf(d))) d++;
+  return d;
+}
+
 const forceMatch = () => () => 0;
 
 /** 找一個第一張牌就是個工的局 */
@@ -32,13 +39,14 @@ function atDecision(money = START_MONEY): { run: RunState; chat: Chat; decisionS
   const run = matchStudio();
   const story = STORY_BY_ID[STUDIO];
   const decisionStep = story.steps.findIndex((s) => "decision" in s);
+  const day = nextPhoneDay(Math.max(1, run.dayIndex));
   const chat: Chat = {
     ...run.chats[0],
     stepIndex: decisionStep,
     replies: Array(decisionStep).fill(0),
-    lastAdvancedDay: 0,
+    lastAdvancedDay: day - 1,
   };
-  return { run: { ...run, dayIndex: 1, phase: "daytime", money, chats: [chat] }, chat, decisionStep };
+  return { run: { ...run, dayIndex: day, phase: "daytime", money, chats: [chat] }, chat, decisionStep };
 }
 
 function decisionChoice(): number {
@@ -65,13 +73,13 @@ test("個工的卡片：大約 5%，一樣是成年人，工作寫個人工作�
 });
 
 test("個工路線的劇情資料合法，不算進 27 種失敗，也不會被隨機抽到", () => {
-  assert.equal(STORIES.length, 27);
+  assert.equal(STORIES.length, Object.values({ghost:7,fade:9,pitch:9,quick:8}).reduce((s,n)=>s+n,0));
   assert.ok(SPECIAL_STORIES.some((s) => s.id === STUDIO));
   for (const s of SPECIAL_STORIES) assert.deepEqual(validateStory(s), []);
   for (const s of STORIES) assert.ok(!SPECIAL_STORIES.includes(s));
   assert.ok(!storyWeights("hi", {}, []).some((w) => w.item.id === STUDIO));
   assert.equal(STORY_BY_ID[STUDIO].id, STUDIO);
-  assert.equal(dexProgress({}).total, 27);
+  assert.equal(dexProgress({}).total, STORIES.length);
 });
 
 test("抉擇那一步就是 1h2s 3000，選項裡有去也有不去", () => {
@@ -137,17 +145,17 @@ test("從配對一路聊到 1h2s 再選去：這一局結束，身上還有別�
   let dex = {};
   // 還在聊的另一個人不能讓這一局活下來
   const other: Chat = { ...run.chats[0], id: 99, storyId: STORIES[0].id, lastAdvancedDay: 0 };
-  run = { ...run, phase: "daytime", chats: [...run.chats, other] };
+  run = { ...run, phase: "daytime", chats: [...run.chats, other], dayReplies: 0 };
   const chatId = run.chats[0].id;
   for (let i = 0; i < decisionStep; i++) {
-    run = { ...run, dayIndex: run.dayIndex + 1 };
+    run = { ...run, dayIndex: nextPhoneDay(run.dayIndex + 1), dayReplies: 0 };
     const r = advance(run, dex, { type: "reply", chatId, choice: 0 });
     assert.notEqual(r.run, run);
     assert.notEqual(settleRun(r), null, `還沒到抉擇就結束了（第 ${i} 步）`);
     run = r.run;
     dex = r.dex;
   }
-  run = { ...run, dayIndex: run.dayIndex + 1 };
+  run = { ...run, dayIndex: nextPhoneDay(run.dayIndex + 1), dayReplies: 0 };
   const end = advance(run, dex, { type: "reply", chatId, choice: decisionChoice() });
   assert.equal(end.run.chats.length, 1);
   assert.equal(settleRun(end), null);
@@ -187,7 +195,7 @@ test("選不去：不扣錢，隔天收到結尾，收起來記一筆隱藏失�
   assert.ok(!r.events.some((e) => e.type === "gameEnding"));
   assert.ok(!Object.hasOwn(r.dex, LADYBUG_ENDING_ID));
 
-  const next: RunState = { ...r.run, dayIndex: run.dayIndex + 1 };
+  const next: RunState = { ...r.run, dayIndex: nextPhoneDay(run.dayIndex + 1), dayReplies: 0 };
   assert.ok(legalActions(next).includes("closeChat"));
   const closed = advance(next, r.dex, { type: "closeChat", chatId: chat.id });
   assert.equal(closed.dex[STUDIO].count, 1);

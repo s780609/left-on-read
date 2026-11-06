@@ -40,7 +40,7 @@ const finalChat = (story: Story): Chat => {
 const at = (phase: Phase, chats: Chat[], patch: Partial<RunState> = {}): RunState => ({
   ...createRun(1),
   phase,
-  dayIndex: 30,
+  dayIndex: 32, // 週五：平日可回訊息
   chats,
   nextChatId: chats.reduce((max, c) => Math.max(max, c.id), 0) + 1,
   pendingMatchSeed: phase === "matched" ? 123 : null,
@@ -62,9 +62,9 @@ test("晚上和滑完之後都可以回訊息，而且不會改變階段", () =>
     assert.ok(legalActions(run).includes("reply"), phase);
     const r = act(run, {}, { type: "reply", chatId: 1, choice: 1 });
     assert.equal(r.run.phase, phase);
-    assert.equal(r.run.dayIndex, 30);
+    assert.equal(r.run.dayIndex, 32);
     assert.equal(r.run.chats[0].stepIndex, 1);
-    assert.equal(r.run.chats[0].lastAdvancedDay, 30);
+    assert.equal(r.run.chats[0].lastAdvancedDay, 32);
     assert.deepEqual(r.run.chats[0].replies, [1]);
     assert.deepEqual(r.events, [{ type: "chatAdvanced", chatId: 1 }]);
   }
@@ -72,9 +72,9 @@ test("晚上和滑完之後都可以回訊息，而且不會改變階段", () =>
 
 test("晚上回完還是可以打開 Swipy 或去睡覺", () => {
   const replied = act(at("night", [chatOf(replyStory())]), {}, { type: "reply", chatId: 1, choice: 0 }).run;
-  assert.deepEqual([...legalActions(replied)].sort(), ["openApp", "sleep"]);
+  assert.deepEqual([...legalActions(replied)].sort(), ["jerkOff", "openApp", "playGames", "sleep"]);
   assert.equal(act(replied, {}, { type: "openApp" }).run.phase, "swiping");
-  assert.equal(act(replied, {}, { type: "sleep" }).run.dayIndex, 31);
+  assert.equal(act(replied, {}, { type: "sleep" }).run.dayIndex, 33);
 });
 
 test("晚上也可以看完結局，圖鑑和花費都跟白天一樣", () => {
@@ -114,8 +114,8 @@ test("領薪通知、吃飯、滑卡和配對畫面中不能回", () => {
 
 test("沒有等滿的、不合法的回覆，晚上一樣不接受", () => {
   const story = replyStory();
-  const waiting = at("night", [chatOf(story, { lastAdvancedDay: 30 })]);
-  assert.deepEqual(legalActions(waiting), ["openApp", "sleep"]);
+  const waiting = at("night", [chatOf(story, { lastAdvancedDay: 32 })]);
+  assert.deepEqual([...legalActions(waiting)].sort(), ["jerkOff", "openApp", "playGames", "sleep"]);
   assert.equal(advance(waiting, {}, { type: "reply", chatId: 1, choice: 0 }).run, waiting);
   const ready = at("nightDone", [chatOf(story)]);
   for (const action of [
@@ -132,7 +132,7 @@ test("沒有等滿的、不合法的回覆，晚上一樣不接受", () => {
 test("每個聊天每天還是只推進一步：白天回過，晚上不能再回", () => {
   const replied = act(at("daytime", [chatOf(replyStory())]), {}, { type: "reply", chatId: 1, choice: 0 }).run;
   const night = { ...replied, phase: "night" as const };
-  assert.ok(!isChatReady(night.chats[0], night.dayIndex));
+  assert.ok(!isChatReady(night.chats[0], night.dayIndex, "night"));
   assert.equal(advance(night, {}, { type: "reply", chatId: 1, choice: 0 }).run, night);
 });
 
@@ -218,6 +218,19 @@ const heroineChat = (stepIndex: number, patch: Partial<Chat> = {}): Chat =>
     ...patch,
   });
 const FAKE_STEP = HEROINE.steps.findIndex((s) => "fakeEnding" in s);
+
+test("小晴例外：白天回過，晚上还能再推一步", () => {
+  const run = at("daytime", [heroineChat(0)], { heroineMet: true });
+  const replied = act(run, {}, { type: "reply", chatId: 1, choice: 0 }).run;
+  assert.equal(replied.chats[0].stepIndex, 1);
+  assert.ok(!isChatReady(replied.chats[0], replied.dayIndex, "daytime"), "白天不能連回兩步");
+  const night = { ...replied, phase: "night" as const };
+  assert.ok(isChatReady(night.chats[0], night.dayIndex, "night"), "晚上可以再回小晴");
+  const again = act(night, {}, { type: "reply", chatId: 1, choice: 0 }).run;
+  assert.equal(again.chats[0].stepIndex, 2);
+  assert.equal(again.phase, "night");
+});
+
 const UNLOCKED: Dex = Object.fromEntries(STORIES.slice(0, 10).map((s) => [s.id, { count: 1, firstDayIndex: 0 }]));
 
 test("假失敗在晚上演：不記圖鑑、聊天留著、當晚消失，隔天早上她回來", () => {
@@ -245,7 +258,7 @@ test("約會還是只有週末白天能去，晚上只回得了訊息", () => {
   const dateStep = HEROINE.steps.findIndex((s) => "date" in s && s.date);
   // 第 5 天是週六，晚上不能赴約，也不能拿回訊息繞過約會
   const run = at("night", [heroineChat(dateStep)], { dayIndex: 5, heroineMet: true });
-  assert.deepEqual(legalActions(run), ["openApp", "sleep"]);
+  assert.deepEqual([...legalActions(run)].sort(), ["jerkOff", "openApp", "playGames", "sleep"]);
   assert.equal(advance(run, {}, { type: "goOnDate", choice: 0 }).run, run);
   assert.equal(advance(run, {}, { type: "reply", chatId: 1, choice: 0 }).run, run);
 });
@@ -344,17 +357,27 @@ test("模糊測試：只在晚上回訊息，不變量永遠成立，晚上真�
       assert.ok(legal.length > 0, where);
       // 偏向先回訊息；白天的回覆動作上面已經濾掉
       const type = legal.includes("closeChat") ? "closeChat" : legal.includes("reply") ? "reply" : pick(rng, legal);
-      const ready = readyChats(run.chats, run.dayIndex);
+      const ready = readyChats(run.chats, run.dayIndex, run.phase);
       const stepOf = (c: Chat) => STORY_BY_ID[c.storyId].steps[c.stepIndex];
       let action: GameAction;
       if (type === "reply") {
-        const chat = pick(rng, ready.filter((c) => !isFinal(stepOf(c))));
-        const options = (stepOf(chat) as ReplyStep).replies.length;
-        action = { type, chatId: chat.id, choice: randInt(rng, 0, options - 1) };
-        nightReplies++;
+        const candidates = ready.filter((c) => !isFinal(stepOf(c)));
+        if (candidates.length === 0) {
+          action = { type: pick(rng, legal.filter((t) => t !== "reply" && t !== "closeChat")) } as GameAction;
+        } else {
+          const chat = pick(rng, candidates);
+          const options = (stepOf(chat) as ReplyStep).replies.length;
+          action = { type, chatId: chat.id, choice: randInt(rng, 0, options - 1) };
+          nightReplies++;
+        }
       } else if (type === "closeChat") {
-        action = { type, chatId: pick(rng, ready.filter((c) => isFinal(stepOf(c)))).id };
-        nightEndings++;
+        const finals = ready.filter((c) => isFinal(stepOf(c)));
+        if (finals.length === 0) {
+          action = { type: pick(rng, legal.filter((t) => t !== "closeChat")) } as GameAction;
+        } else {
+          action = { type, chatId: pick(rng, finals).id };
+          nightEndings++;
+        }
       } else if (type === "swipe") {
         action = { type, dir: rng() < 0.3 ? "left" : "right" };
       } else if (type === "chooseOpener") {

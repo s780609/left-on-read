@@ -89,9 +89,10 @@ test("heroine：三次約會邀約都要落到具體時間，不能只說週末"
   const fireworks = steps.find((s) => !("date" in s) && "incoming" in s && s.incoming.kind === "message" && /大稻埕/.test((s.incoming as { text: string }).text)) as ReplyStep;
   assert.ok(fireworks);
   assert.ok(fireworks.replies.every((r) => /六點半|七點半/.test(r)));
-  const tamsui = steps.find((s) => "comeback" in s) as ReplyStep;
-  assert.ok(tamsui.replies.every((r) => /四點|週六/.test(r)));
-  assert.ok(tamsui.answers?.every((a) => /四點/.test(a)));
+  const banqiao = steps.find((s) => "comeback" in s) as ReplyStep;
+  assert.ok(banqiao.replies.every((r) => /七點|週六/.test(r)));
+  assert.ok(banqiao.answers?.every((a) => /七點/.test(a)));
+  assert.match((banqiao.incoming as { text: string }).text, /板橋耶誕城/);
 });
 
 test("heroine：約會後有當晚收尾，且 wait 為 0", () => {

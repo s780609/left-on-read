@@ -196,4 +196,29 @@ export const GHOST_STORIES: readonly Story[] = [
       },
     ],
   },
+  {
+    id: "loan-help",
+    dexName: "急用兩萬",
+    dexQuip: "她說下個月發薪就還。下個月到現在還沒來。",
+    category: "ghost",
+    steps: [
+      {
+        incoming: { kind: "message", text: "跟你聊得好開心 感覺你可以信任" },
+        replies: ["我也是 很少人這樣說", "信任要慢慢累積 但謝謝", "妳這樣講我會当真"],
+      },
+      {
+        incoming: { kind: "message", text: "那個……我這個月房租差一點 能不能先借我兩萬 下個月發薪立刻還" },
+        replies: ["兩萬有點多 我算一下", "可以說一下發生什麼事嗎", "抱歉 我自己也剛好緊"],
+      },
+      {
+        incoming: { kind: "message", text: "沒關係啦 那就當我沒說 你人很好" },
+        replies: ["真的抱歉", "等我發薪看能不能幫一點", "妳還好嗎"],
+      },
+      {
+        incoming: { kind: "read" },
+        wait: { days: 3 },
+        ending: { narration: "已讀之後，她的頭像還在。兩萬沒有借出去，對話也沒有下文。原來「人很好」也可以是句點。" },
+      },
+    ],
+  },
 ];

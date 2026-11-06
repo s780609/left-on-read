@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { calendarOf } from "./calendar.ts";
+import { calendarOf, isPhoneChatDay } from "./calendar.ts";
 import type { Dex } from "./dex.ts";
 import { advance, createRun } from "./game.ts";
 import type { GameEvent, RunState } from "./game.ts";
@@ -58,9 +58,15 @@ const weightOf = (weights: Weights, id: string) => weights.find((w) => w.item.id
 const categoryTotal = (weights: Weights, category: StoryCategory) =>
   weights.filter((w) => w.item.category === category).reduce((sum, w) => sum + w.weight, 0);
 
-/** 規格列的 27 種劇情與分類 */
+function nextPhoneDay(from: number): number {
+  let d = from;
+  while (!isPhoneChatDay(calendarOf(d))) d++;
+  return d;
+}
+
+/** 規格列的失敗劇情與分類 */
 const EXPECTED_IDS: Record<StoryCategory, string[]> = {
-  ghost: ["read-no-reply", "never-read", "morning-image", "sticker-only", "wall-of-text", "friend-photo"],
+  ghost: ["read-no-reply", "never-read", "morning-image", "sticker-only", "wall-of-text", "friend-photo", "loan-help"],
   fade: [
     "match-vanished",
     "what-do-you-do",
@@ -72,8 +78,18 @@ const EXPECTED_IDS: Record<StoryCategory, string[]> = {
     "fading-replies",
     "otaku-monologue",
   ],
-  pitch: ["stock-sister", "insurance", "mlm", "tech-support", "like-for-me"],
-  quick: ["just-bored", "has-boyfriend", "background-check", "split-bill", "zodiac", "coworker", "bot"],
+  pitch: [
+    "stock-sister",
+    "insurance",
+    "mlm",
+    "tech-support",
+    "like-for-me",
+    "health-mlm",
+    "crypto-course",
+    "romance-wire",
+    "ba-jia-jiu",
+  ],
+  quick: ["just-bored", "has-boyfriend", "background-check", "split-bill", "zodiac", "coworker", "bot", "otp-scam"],
 };
 
 const MAX_TOTAL_WAIT_DAYS = 30;
@@ -97,7 +113,7 @@ function walkStory(story: Story, choose: (step: ReplyStep, index: number) => num
   const replies: number[] = [];
   for (let day = startDay; run.chats.length > 0; day++) {
     assert.ok(day <= startDay + 90, `${story.id} 走了 90 天還沒結束`);
-    run = { ...run, dayIndex: day };
+    run = { ...run, dayIndex: day, dayReplies: 0 };
     const chat = run.chats[0];
     if (!isChatReady(chat, day)) continue;
     const step = story.steps[chat.stepIndex];
@@ -121,9 +137,9 @@ function walkStory(story: Story, choose: (step: ReplyStep, index: number) => num
 
 // ---------- 資料完整性 ----------
 
-test("劇情至少 24 種，目標 27 種", () => {
+test("劇情數量與規格表一致", () => {
   assert.ok(STORIES.length >= 24, `只有 ${STORIES.length} 種`);
-  assert.equal(STORIES.length, 27);
+  assert.equal(STORIES.length, Object.values(EXPECTED_IDS).flat().length);
 });
 
 test("id 和圖鑑名稱都不重複", () => {
@@ -131,7 +147,7 @@ test("id 和圖鑑名稱都不重複", () => {
   assert.equal(new Set(STORIES.map((s) => s.dexName)).size, STORIES.length);
 });
 
-test("規格列的 27 個 id 都存在，分類正確", () => {
+test("規格列的 id 都存在，分類正確", () => {
   for (const [category, ids] of Object.entries(EXPECTED_IDS)) {
     for (const id of ids) {
       assert.ok(STORY_BY_ID[id], `缺少劇情 ${id}`);
@@ -139,7 +155,7 @@ test("規格列的 27 個 id 都存在，分類正確", () => {
     }
   }
   const expectedCount = Object.values(EXPECTED_IDS).flat().length;
-  assert.equal(expectedCount, 27);
+  assert.equal(expectedCount, STORIES.length);
   assert.deepEqual([...allIds()].sort(), Object.values(EXPECTED_IDS).flat().sort());
 });
 
@@ -241,7 +257,13 @@ test("每種都會結束：各種選法的步數都等於步驟數，總等待�
     for (const [name, choose] of Object.entries(STRATEGIES)) {
       for (let startDay = 0; startDay < 7; startDay++) {
         const r = walkStory(story, choose, startDay);
-        assert.equal(r.actions, story.steps.length, `${story.id}／${name}`);
+        // 第一句不堆尷尬，步數應走滿；最後一句／交替可能因隱性數值提早跳結局
+        if (name === "第一句") {
+          assert.equal(r.actions, story.steps.length, `${story.id}／${name}`);
+        } else {
+          assert.ok(r.actions <= story.steps.length, `${story.id}／${name} 步數 ${r.actions}`);
+          assert.ok(r.actions >= 2, `${story.id}／${name} 太早結束`);
+        }
         assert.ok(r.days <= MAX_TOTAL_WAIT_DAYS, `${story.id}／${name} 從第 ${startDay} 天起走了 ${r.days} 天`);
       }
     }
@@ -254,7 +276,10 @@ test("第一句和最後一句的結局相同", () => {
     const b = walkStory(story, STRATEGIES.最後一句);
     assert.deepEqual(a.ended, b.ended, story.id);
     assert.equal(a.money, b.money, story.id);
-    assert.deepEqual(a.dex, b.dex, story.id);
+    // 尷尬提早收線只影響哪天進圖鑑，不影響收了哪一種、收了幾次
+    const counts = (dex: typeof a.dex) =>
+      Object.fromEntries(Object.entries(dex).map(([id, e]) => [id, e.count]));
+    assert.deepEqual(counts(a.dex), counts(b.dex), story.id);
   }
 });
 
@@ -351,8 +376,8 @@ test("isChatReady：配對當天不算，到了等待日才算，之後都算", 
     assert.ok(ready > 20, story.id);
     assert.equal(isChatReady(chat, 20), false, story.id);
     assert.equal(isChatReady(chat, ready - 1), false, story.id);
-    assert.equal(isChatReady(chat, ready), true, story.id);
-    assert.equal(isChatReady(chat, ready + 10), true, story.id);
+    assert.equal(isChatReady(chat, nextPhoneDay(ready)), true, story.id);
+    assert.equal(isChatReady(chat, nextPhoneDay(ready) + 14), true, story.id);
   }
 });
 
@@ -362,7 +387,7 @@ test("isChatReady：看的是目前這一步的等待", () => {
     const chat = makeChat(story, { stepIndex, lastAdvancedDay: 40, replies: new Array<number>(stepIndex).fill(0) });
     const ready = firstReadyDay(40, step.wait);
     assert.equal(isChatReady(chat, ready - 1), false, `第 ${stepIndex} 步`);
-    assert.equal(isChatReady(chat, ready), true, `第 ${stepIndex} 步`);
+    assert.equal(isChatReady(chat, nextPhoneDay(ready)), true, `第 ${stepIndex} 步`);
   });
 });
 
@@ -525,7 +550,7 @@ function incomingLine(incoming: Incoming, girl: Girl): TranscriptLine {
     case "narration":
       return { who: "narration", text: renderLine(incoming.text, girl) };
     case "none":
-      throw new Error("27 種失敗不會用到 none");
+      throw new Error("一般失敗不會用到 none");
     default:
       return { who: "status", status: incoming.kind };
   }

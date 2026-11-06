@@ -15,16 +15,19 @@ interface NightScreenProps {
   onMenu: () => void;
   onOpenApp: () => void;
   onOpenChats: () => void;
+  onJerkOff: () => void;
+  onPlayGames: () => void;
   onSleep: () => void;
+  hobbyNote: string | null;
 }
 
 /** 深夜的租屋處。睡前都能回訊息；滑完或放棄之後，就不能再開 Swipy 滑卡了 */
-export function NightScreen({ run, onMenu, onOpenApp, onOpenChats, onSleep }: NightScreenProps) {
+export function NightScreen({ run, onMenu, onOpenApp, onOpenChats, onJerkOff, onPlayGames, onSleep, hobbyNote }: NightScreenProps) {
   const [sleeping, setSleeping] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const done = run.phase === "nightDone";
   const chats = visibleChats(run.chats, run.dayIndex);
-  const ready = readyChats(chats, run.dayIndex).length;
+  const ready = readyChats(chats, run.dayIndex, run.phase).length;
   const waiting = chats.length - ready;
   const lines = ready > 0 ? NIGHT_UNREAD_LINES : done ? NIGHT_DONE_LINES : NIGHT_LINES;
   const line = dailyLine(lines, run.dayIndex);
@@ -69,6 +72,16 @@ export function NightScreen({ run, onMenu, onOpenApp, onOpenChats, onSleep }: Ni
                 打開 Swipy
               </PixelButton>
             ) : null}
+            {!done && !run.nightHobby.solo ? (
+              <PixelButton color={COLOR.blue} disabled={sleeping} onClick={onJerkOff} sub="消磨一下">
+                打手槍
+              </PixelButton>
+            ) : null}
+            {!done && !run.nightHobby.games ? (
+              <PixelButton color={COLOR.blue} disabled={sleeping} onClick={onPlayGames} sub="排位之類的">
+                打電動
+              </PixelButton>
+            ) : null}
             <PixelButton color={COLOR.gray} disabled={sleeping} silent onClick={goSleep}>
               {sleeping ? "晚安" : "去睡覺"}
             </PixelButton>
@@ -77,7 +90,8 @@ export function NightScreen({ run, onMenu, onOpenApp, onOpenChats, onSleep }: Ni
       >
         <DialogBox>
           <Typewriter key={line} text={line} />
-          {chats.length > 0 && ready === 0 && !sleeping ? (
+          {hobbyNote ? <p className="mt-2 text-sm text-[#c8cae0]">{hobbyNote}</p> : null}
+          {chats.length > 0 && ready === 0 && !sleeping && !hobbyNote ? (
             <p className="mt-2 text-sm text-[#a9abc9]">{quiet}</p>
           ) : null}
         </DialogBox>

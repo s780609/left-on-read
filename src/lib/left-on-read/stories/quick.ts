@@ -153,4 +153,27 @@ export const QUICK_STORIES: readonly Story[] = [
       },
     ],
   },
+  {
+    id: "otp-scam",
+    dexName: "驗證碼情人",
+    dexQuip: "她要的不是我的心，是簡訊裡那六位數字。",
+    category: "quick",
+    steps: [
+      {
+        incoming: { kind: "message", text: "嗨嗨 你有在用某某銀行App嗎 我這邊綁定出問題" },
+        replies: ["有 怎麼了", "我剛好是客戶 或許我懂", "銀行問題不是該打客服嗎"],
+      },
+      {
+        incoming: { kind: "message", text: "客服叫我找朋友幫忙收驗證碼 你幫我看一下簡訊好不好 拜託嘛" },
+        replies: ["幾點會寄來", "不行 這不能給別人", "好 但妳先告訴我全名"],
+      },
+      {
+        incoming: { kind: "message", text: "就是六位數字啦 快過期了" },
+        ending: {
+          narration: "我沒有回那六位數字。我回了 165。簡訊還在收件匣裡，像一顆沒拆的炸彈。",
+          antiFraud: true,
+        },
+      },
+    ],
+  },
 ];

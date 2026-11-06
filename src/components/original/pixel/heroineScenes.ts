@@ -24,7 +24,7 @@ function captionScene(bg: string, caption: string, light: string): SceneDraw {
 export const DATE_SCENES: readonly SceneDraw[] = [
   photoDraw("dateMovie"),
   photoDraw("dateFireworks"),
-  photoDraw("dateTamsui"),
+  photoDraw("dateBanqiao"),
 ];
 
 export const TRUE_ENDING_SCENES: Record<TrueEndingScene, SceneDraw> = {

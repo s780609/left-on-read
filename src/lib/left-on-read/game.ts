@@ -8,6 +8,7 @@ import {
   DECK_SIZE,
   HEROINE_NIGHT_RATE,
   HEROINE_SEED,
+  DAYTIME_REPLY_LIMIT,
   HEROINE_UNLOCK_FAILURES,
   MAX_MONEY,
   MONTHLY_RENT,
@@ -25,8 +26,9 @@ import { MEALS } from "./meals.ts";
 import type { Meal, MealDish } from "./meals.ts";
 import { createRng, mixSeed, pick, randInt } from "./rng.ts";
 import type { Rng } from "./rng.ts";
-import { HEROINE_STORY_ID, STORY_BY_ID, STUDIO_STORY_ID } from "./stories/index.ts";
+import { HEROINE_STORY_ID, STORIES, STORY_BY_ID, STUDIO_STORY_ID } from "./stories/index.ts";
 import { chatScore, dueDateChat, isChatReady, isFinal, pendingDateStep, pickStory, renderLine } from "./story.ts";
+import { applyDelta, jumpToEnding, replyDelta, shouldSoftEnd, statsOf } from "./chatStats.ts";
 import type { Chat, OpenerKind } from "./storyTypes.ts";
 
 export type Phase = "payday" | "daytime" | "evening" | "night" | "swiping" | "matched" | "nightDone";
@@ -49,6 +51,10 @@ export interface RunState {
   nextChatId: number;
   /** 這一局已經右滑過小晴（不管還在走還是走回失敗），她就不會再出現 */
   heroineMet: boolean;
+  /** 今天白天已認真回過幾則；睡覺歸零 */
+  dayReplies: number;
+  /** 今晚是否已打手槍／打電動（各一次） */
+  nightHobby: { solo: boolean; games: boolean };
 }
 
 export type GameAction =
@@ -63,6 +69,8 @@ export type GameAction =
   | { type: "swipe"; dir: "left" | "right" }
   | { type: "chooseOpener"; opener: OpenerKind }
   | { type: "quitApp" }
+  | { type: "jerkOff" }
+  | { type: "playGames" }
   | { type: "sleep" };
 
 export type GameEvent =
@@ -78,7 +86,8 @@ export type GameEvent =
   | { type: "fakeEnding"; storyId: string; narration: string }
   | { type: "dateFinished"; index: number; cost: number }
   /** 這一局走到結局了，存檔要用 settleRun 清掉 */
-  | { type: "gameEnding"; endingId: string };
+  | { type: "gameEnding"; endingId: string }
+  | { type: "hobby"; kind: "solo" | "games"; narration: string };
 
 export type RngFactory = (purpose: "meal" | "match" | "story", ...keys: number[]) => Rng;
 
@@ -109,6 +118,8 @@ export function createRun(runSeed: number): RunState {
     chats: [],
     nextChatId: 1,
     heroineMet: false,
+    dayReplies: 0,
+    nightHobby: { solo: false, games: false },
   };
 }
 
@@ -192,9 +203,12 @@ export function canUsePhone(phase: Phase): boolean {
 }
 
 function chatActions(run: RunState): GameAction["type"][] {
-  const steps = run.chats.filter((c) => isChatReady(c, run.dayIndex)).map(storyStep);
+  const steps = run.chats.filter((c) => isChatReady(c, run.dayIndex, run.phase)).map(storyStep);
   const actions: GameAction["type"][] = [];
-  if (steps.some((s) => s && !isFinal(s))) actions.push("reply");
+  const canReply =
+    steps.some((s) => s && !isFinal(s)) &&
+    (run.phase !== "daytime" || run.dayReplies < DAYTIME_REPLY_LIMIT);
+  if (canReply) actions.push("reply");
   if (steps.some((s) => s && isFinal(s))) actions.push("closeChat");
   return actions;
 }
@@ -213,8 +227,12 @@ export function legalActions(run: RunState): GameAction["type"][] {
       const meal = offeredMeal(run);
       return meal && run.money >= meal.price ? ["eatOut", "goHome"] : ["goHome"];
     }
-    case "night":
-      return [...chatActions(run), "openApp", "sleep"];
+    case "night": {
+      const actions = [...chatActions(run), "openApp", "sleep"];
+      if (!run.nightHobby.solo) actions.splice(actions.length - 1, 0, "jerkOff");
+      if (!run.nightHobby.games) actions.splice(actions.length - 1, 0, "playGames");
+      return actions;
+    }
     case "swiping":
       return ["swipe", "quitApp"];
     case "matched":
@@ -241,8 +259,9 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
 
     case "reply": {
       if (!canUsePhone(run.phase)) return same;
+      if (run.phase === "daytime" && run.dayReplies >= DAYTIME_REPLY_LIMIT) return same;
       const chat = run.chats.find((c) => c.id === action.chatId);
-      if (!chat || !isChatReady(chat, run.dayIndex)) return same;
+      if (!chat || !isChatReady(chat, run.dayIndex, run.phase)) return same;
       const step = storyStep(chat);
       if (!step || isFinal(step)) return same;
       if (!Number.isInteger(action.choice) || action.choice < 0 || action.choice >= step.replies.length) return same;
@@ -255,18 +274,40 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
           events: [{ type: "gameEnding", endingId }],
         };
       }
-      const next: Chat = {
-        ...chat,
+      const { heroineNightUsed: _ignored, ...chatRest } = chat;
+      const delta = replyDelta(step, action.choice);
+      const stats = applyDelta(statsOf(chat), delta);
+      let next: Chat = {
+        ...chatRest,
         stepIndex: chat.stepIndex + 1,
         lastAdvancedDay: run.dayIndex,
         replies: [...chat.replies, action.choice],
+        stats,
+        // 小晴：白天回完清掉標記；晚上回過（含加成）就設 true，避免同一晚連推
+        ...(chat.girlSeed === HEROINE_SEED
+          ? { heroineNightUsed: run.phase === "night" || run.phase === "nightDone" }
+          : {}),
       };
       // 總分不夠就換到失敗路線；兩條路線前面的對話相同，對話紀錄接得起來
       if (step.gate && chatScore(next) < step.gate.minScore) next.storyId = step.gate.failStoryId;
+      const story = STORY_BY_ID[next.storyId];
+      // 一般失敗線才提早收：隱藏路線／小晴不套這套
+      const isNormalFailure = STORIES.some((s) => s.id === next.storyId);
+      if (isNormalFailure && story && !step.fakeEnding && !step.date && !step.decision && shouldSoftEnd(stats)) {
+        const last = story.steps[story.steps.length - 1];
+        if (last && isFinal(last) && next.stepIndex < story.steps.length - 1) {
+          next = jumpToEnding(next, story, action.choice);
+          next.stats = stats;
+        }
+      }
       const events: GameEvent[] = [{ type: "chatAdvanced", chatId: chat.id }];
       if (step.fakeEnding) events.push({ type: "fakeEnding", ...step.fakeEnding });
       return {
-        run: { ...run, chats: run.chats.map((c) => (c === chat ? next : c)) },
+        run: {
+          ...run,
+          dayReplies: run.phase === "daytime" ? run.dayReplies + 1 : run.dayReplies,
+          chats: run.chats.map((c) => (c === chat ? next : c)),
+        },
         dex,
         events,
       };
@@ -287,11 +328,16 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
           events: [finished, { type: "gameEnding", endingId: date.endingId }],
         };
       }
+      const { heroineNightUsed: _ignored, ...chatRest } = chat;
       const next: Chat = {
-        ...chat,
+        ...chatRest,
         stepIndex: chat.stepIndex + 1,
         lastAdvancedDay: run.dayIndex,
         replies: [...chat.replies, action.choice],
+        // 小晴：白天回完清掉標記；晚上回過（含加成）就設 true，避免同一晚連推
+        ...(chat.girlSeed === HEROINE_SEED
+          ? { heroineNightUsed: run.phase === "night" || run.phase === "nightDone" }
+          : {}),
       };
       // 約會佔掉一整天，回到家已經是深夜，晚餐也吃過了
       return {
@@ -304,7 +350,7 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
     case "closeChat": {
       if (!canUsePhone(run.phase)) return same;
       const chat = run.chats.find((c) => c.id === action.chatId);
-      if (!chat || !isChatReady(chat, run.dayIndex)) return same;
+      if (!chat || !isChatReady(chat, run.dayIndex, run.phase)) return same;
       const step = storyStep(chat);
       if (!step || !isFinal(step)) return same;
       const { narration, cost = 0, antiFraud } = step.ending;
@@ -416,6 +462,7 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
         stepIndex: 0,
         lastAdvancedDay: run.dayIndex,
         replies: [],
+        stats: { affection: action.opener === "interest" ? 1 : 0, awkward: 0, pressure: 0 },
       };
       return {
         run: {
@@ -437,15 +484,56 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
     case "sleep": {
       if (run.phase !== "night" && run.phase !== "nightDone") return same;
       const dayIndex = run.dayIndex + 1;
+      // 已讀壓力：今天能回卻沒回的聊天，隔天壓力 +1
+      const chats = run.chats.map((chat) => {
+        if (!isChatReady(chat, run.dayIndex, run.phase)) return chat;
+        const step = storyStep(chat);
+        if (!step || isFinal(step)) return chat;
+        const stats = applyDelta(statsOf(chat), { affection: 0, awkward: 0, pressure: 1 });
+        return { ...chat, stats };
+      });
       return {
         run: {
           ...run,
           dayIndex,
           deckIndex: 0,
+          dayReplies: 0,
+          nightHobby: { solo: false, games: false },
           phase: isPayday(calendarOf(dayIndex)) ? "payday" : "daytime",
+          chats,
         },
         dex,
         events: [],
+      };
+    }
+
+    case "jerkOff": {
+      if (run.phase !== "night" || run.nightHobby.solo) return same;
+      return {
+        run: { ...run, nightHobby: { ...run.nightHobby, solo: true } },
+        dex,
+        events: [
+          {
+            type: "hobby",
+            kind: "solo",
+            narration: "門鎖好。耳機開著。三分鐘後我盯著天花板，突然很想知道她讀了沒有。",
+          },
+        ],
+      };
+    }
+
+    case "playGames": {
+      if (run.phase !== "night" || run.nightHobby.games) return same;
+      return {
+        run: { ...run, nightHobby: { ...run.nightHobby, games: true } },
+        dex,
+        events: [
+          {
+            type: "hobby",
+            kind: "games",
+            narration: "開了一局排位。打輸的時候我沒罵隊友，只是把手機翻過來又翻過去。",
+          },
+        ],
       };
     }
 
@@ -469,6 +557,10 @@ export function checkInvariants(run: RunState): string[] {
   if (run.phase !== "matched" && run.pendingMatchSeed !== null) errors.push("不是配對階段卻有對象");
   if (run.phase === "evening" && !offeredMeal(run)) errors.push(`晚上的餐點無效：${run.offeredMealId}`);
   if (!run.heroineMet && run.chats.some((c) => c.girlSeed === HEROINE_SEED)) errors.push("和小晴在聊天卻沒有遇過她");
+  if (!Number.isInteger(run.dayReplies) || run.dayReplies < 0) errors.push(`白天回覆數不合法：${run.dayReplies}`);
+  if (!run.nightHobby || typeof run.nightHobby.solo !== "boolean" || typeof run.nightHobby.games !== "boolean") {
+    errors.push("今晚消遣狀態不合法");
+  }
 
   const ids = new Set<number>();
   for (const chat of run.chats) {

@@ -89,7 +89,7 @@ export function ChatList({ run, onOpen, onClose }: ChatListProps) {
       <div className="min-h-0 flex-1 overflow-y-auto">
         {visibleChats(run.chats, run.dayIndex).map((chat) => {
           const girl = generateGirl(chat.girlSeed);
-          const ready = isChatReady(chat, run.dayIndex);
+          const ready = isChatReady(chat, run.dayIndex, run.phase);
           const lines = chatTranscript(chat, girl, run.dayIndex);
           return (
             <button
@@ -211,7 +211,7 @@ export function ChatRoom({ run, chat, onReply, onFinish, onBack }: ChatRoomProps
   const girl = useMemo(() => generateGirl(chat.girlSeed), [chat.girlSeed]);
   const story = STORY_BY_ID[chat.storyId];
   const step = story.steps[chat.stepIndex];
-  const ready = isChatReady(chat, run.dayIndex);
+  const ready = isChatReady(chat, run.dayIndex, run.phase);
   const allLines = chatTranscript(chat, girl, run.dayIndex);
   const dateIsNext = pendingDateStep(chat) !== null;
   const panelRef = useRef<HTMLDivElement>(null);
@@ -272,6 +272,15 @@ export function ChatRoom({ run, chat, onReply, onFinish, onBack }: ChatRoomProps
           </PixelButton>
         ) : (
           <>
+            {step.os && step.os.length > 0 && !revealing ? (
+              <div className="mb-1 space-y-1 px-1">
+                {step.os.map((line) => (
+                  <p key={line} className="text-center text-sm italic leading-relaxed text-[#a9abc9]">
+                    {renderLine(line, girl)}
+                  </p>
+                ))}
+              </div>
+            ) : null}
             <div
               className="flex flex-col gap-2"
               style={revealing ? { visibility: "hidden" } : leadTotal > 0 ? newLineStyle(0) : undefined}

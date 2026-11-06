@@ -69,9 +69,9 @@ function parseChat(raw: unknown, dayIndex: number): Chat | null {
   const story: Story = STORY_BY_ID[storyId];
   const step = isCount(stepIndex) ? Math.min(stepIndex, story.steps.length - 1) : 0;
   const rawReplies = Array.isArray(replies) ? (replies as unknown[]) : [];
-  return {
+  const chat: Chat = {
     id: id as number,
-    girlSeed,
+    girlSeed: girlSeed as number,
     storyId,
     opener: OPENER_KINDS.includes(opener as OpenerKind) ? (opener as OpenerKind) : "hi",
     stepIndex: step,
@@ -83,6 +83,14 @@ function parseChat(raw: unknown, dayIndex: number): Chat | null {
       return isCount(choice) && choice < options ? choice : 0;
     }),
   };
+  if (raw.heroineNightUsed === true) chat.heroineNightUsed = true;
+  if (isObject(raw.stats)) {
+    const a = raw.stats.affection, k = raw.stats.awkward, p = raw.stats.pressure;
+    if ([a, k, p].every((n) => typeof n === "number" && Number.isFinite(n))) {
+      chat.stats = { affection: a as number, awkward: k as number, pressure: p as number };
+    }
+  }
+  return chat;
 }
 
 function parseChats(raw: unknown, dayIndex: number): Chat[] {
@@ -141,6 +149,13 @@ export function parseRun(raw: string | null): RunState | null {
       // 舊存檔沒有這個欄位；她已經在聊天或配對畫面裡，就算遇過
       heroineMet:
         data.heroineMet === true || pendingMatchSeed === HEROINE_SEED || chats.some((c) => c.girlSeed === HEROINE_SEED),
+      dayReplies: isCount(data.dayReplies) ? data.dayReplies : 0,
+      nightHobby: isObject(data.nightHobby)
+        ? {
+            solo: data.nightHobby.solo === true,
+            games: data.nightHobby.games === true,
+          }
+        : { solo: false, games: false },
     };
   } catch {
     return null;

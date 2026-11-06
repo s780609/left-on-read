@@ -2,8 +2,8 @@
  * 聊天的規則：開場白、抽劇情的權重、等待與 ready、對話紀錄、劇情資料驗證。
  */
 
-import { calendarOf, isWorkday } from "./calendar.ts";
-import { HEROINE_INTEREST_OPENER_SCORE } from "./constants.ts";
+import { calendarOf, isPhoneChatDay, isWorkday } from "./calendar.ts";
+import { HEROINE_SEED, HEROINE_INTEREST_OPENER_SCORE } from "./constants.ts";
 import type { Dex } from "./dex.ts";
 import type { Girl } from "./girl.ts";
 import { HEROINE_INTEREST, INTERESTS } from "./girlData.ts";
@@ -100,14 +100,37 @@ export function firstReadyDay(lastAdvancedDay: number, wait: StepWait = DEFAULT_
   return lastAdvancedDay + (delta === 0 ? 7 : delta);
 }
 
-export function isChatReady(chat: Chat, dayIndex: number): boolean {
+/** 夜晚階段：小晴可以在白天回過之後，當晚再推一步 */
+export type ChatPhase = "daytime" | "night" | "nightDone" | string;
+
+/** 只看等待時間（和小晴夜間加成）；對話紀錄用這個，平日不能回時仍看得到訊息 */
+export function isWaitReady(chat: Chat, dayIndex: number, phase?: ChatPhase): boolean {
   const step = STORY_BY_ID[chat.storyId]?.steps[chat.stepIndex];
   if (step === undefined || ("date" in step && step.date)) return false;
-  return dayIndex >= firstReadyDay(chat.lastAdvancedDay, step.wait);
+  const wait = step.wait ?? { days: 1 };
+  const readyDay = firstReadyDay(chat.lastAdvancedDay, wait);
+  if (dayIndex >= readyDay) return true;
+  // 小晴專用：白天已回（等一天），晚上同一天再給一步
+  if (
+    chat.girlSeed === HEROINE_SEED &&
+    !chat.heroineNightUsed &&
+    (phase === "night" || phase === "nightDone") &&
+    dayIndex === chat.lastAdvancedDay &&
+    "days" in wait &&
+    wait.days >= 1
+  ) {
+    return true;
+  }
+  return false;
 }
 
-export function readyChats(chats: readonly Chat[], dayIndex: number): Chat[] {
-  return chats.filter((chat) => isChatReady(chat, dayIndex));
+/** 現在能不能回：等滿 + 今天是可回訊息日（平日僅週二／五） */
+export function isChatReady(chat: Chat, dayIndex: number, phase?: ChatPhase): boolean {
+  return isWaitReady(chat, dayIndex, phase) && isPhoneChatDay(calendarOf(dayIndex));
+}
+
+export function readyChats(chats: readonly Chat[], dayIndex: number, phase?: ChatPhase): Chat[] {
+  return chats.filter((chat) => isChatReady(chat, dayIndex, phase));
 }
 
 /** 開場白挑興趣句有加分，再加上每句回覆的分數；不存在狀態裡，舊存檔和壞資料都算得出來 */
@@ -142,7 +165,8 @@ export function dueDateChat(chats: readonly Chat[], dayIndex: number): Chat | nu
 export function comebackChat(chats: readonly Chat[], dayIndex: number): Chat | null {
   const due = chats.find((chat) => {
     const step = STORY_BY_ID[chat.storyId]?.steps[chat.stepIndex];
-    return step && "comeback" in step && step.comeback && isChatReady(chat, dayIndex);
+    // 回來那天就要看得到她；能不能回仍看 isChatReady（平日僅週二／五）
+    return step && "comeback" in step && step.comeback && isWaitReady(chat, dayIndex);
   });
   return due ?? null;
 }
@@ -151,7 +175,7 @@ export function comebackChat(chats: readonly Chat[], dayIndex: number): Chat | n
 export function visibleChats(chats: readonly Chat[], dayIndex: number): Chat[] {
   return chats.filter((chat) => {
     const step = STORY_BY_ID[chat.storyId]?.steps[chat.stepIndex];
-    return !(step && "comeback" in step && step.comeback) || isChatReady(chat, dayIndex);
+    return !(step && "comeback" in step && step.comeback) || isWaitReady(chat, dayIndex);
   });
 }
 
@@ -191,10 +215,11 @@ export function chatTranscript(chat: Chat, girl: Girl, dayIndex: number): Transc
     const answer = step.answers?.[chat.replies[i]] ?? step.answer;
     if (answer) lines.push({ who: "her", text: renderLine(answer, girl) });
   }
-  if (isChatReady(chat, dayIndex)) {
+  if (isWaitReady(chat, dayIndex)) {
     const current = story.steps[chat.stepIndex];
     pushLead(current);
     pushIncoming(current.incoming);
+    if ("os" in current) for (const text of current.os ?? []) lines.push({ who: "narration", text: renderLine(text, girl) });
   }
   return lines;
 }
@@ -243,6 +268,7 @@ function routeFieldErrors(step: ReplyStep, where: string): string[] {
     if (!STORY_BY_ID[fakeEnding.storyId]) errors.push(`${where} 的假結局劇情不存在`);
   }
   if (comeback) errors.push(...placeholderErrors(comeback.aside, `${where} 的旁白`));
+    if ("os" in step) for (const [i, line] of (step.os ?? []).entries()) errors.push(...placeholderErrors(line, `${where} 的內心 OS ${i}`));
   return errors;
 }
 

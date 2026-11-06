@@ -45,6 +45,7 @@ export default function LeftOnReadGame() {
   const [phone, setPhone] = useState<"list" | number | null>(null);
   const [ending, setEnding] = useState<EndingInfo | null>(null);
   const [mealNote, setMealNote] = useState<MealNote | null>(null);
+  const [hobbyNote, setHobbyNote] = useState<string | null>(null);
   /** 正在約會畫面上；約會走完才扣錢，中途關掉不會損失 */
   const [onDate, setOnDate] = useState(false);
   const [graduationDue, setGraduationDue] = useState(false);
@@ -207,6 +208,11 @@ export default function LeftOnReadGame() {
     setMealNote({ name: NOODLES.name, price: NOODLES.price, narration: NOODLES.narration, dish: NOODLES.dish, home: true });
   };
 
+  const doHobby = (type: "jerkOff" | "playGames") => {
+    const ev = dispatch({ type }).find((e) => e.type === "hobby");
+    if (ev?.type === "hobby") setHobbyNote(ev.narration);
+  };
+
   // ---------- 畫面 ----------
 
   /** 手機開著的時候蓋住當下的畫面，白天和晚上共用；沒開就回傳 null */
@@ -305,9 +311,21 @@ export default function LeftOnReadGame() {
             key={run.dayIndex}
             run={run}
             onMenu={toMenu}
-            onOpenApp={() => dispatch({ type: "openApp" })}
-            onOpenChats={() => setPhone("list")}
-            onSleep={() => dispatch({ type: "sleep" })}
+            onOpenApp={() => {
+              setHobbyNote(null);
+              dispatch({ type: "openApp" });
+            }}
+            onOpenChats={() => {
+              setHobbyNote(null);
+              setPhone("list");
+            }}
+            onJerkOff={() => doHobby("jerkOff")}
+            onPlayGames={() => doHobby("playGames")}
+            onSleep={() => {
+              setHobbyNote(null);
+              dispatch({ type: "sleep" });
+            }}
+            hobbyNote={hobbyNote}
           />
         );
       }

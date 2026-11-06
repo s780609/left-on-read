@@ -32,10 +32,18 @@ export const HEROINE_NIGHT_RATE = 1;
 /** 第一階段聊天總分要到多少才會進入約會；開場白挑興趣句加的分 */
 export const HEROINE_PASS_SCORE = 2;
 export const HEROINE_INTEREST_OPENER_SCORE = 1;
-/** 三次約會的花費：信義威秀、大稻埕、淡水漁人碼頭 */
+/** 三次約會的花費：信義威秀、大稻埕、板橋耶誕城 */
 export const HEROINE_DATE_COSTS = [800, 500, 300] as const;
 /** 她的卡片不靠亂數產生，用這個固定 seed 代表她；牌組的 seed 會避開這個值 */
 export const HEROINE_SEED = 0x51a0c1e9;
 /** 她的照片：第一張是卡片和聊天頭像，第二張是點卡片看到的第二張照片 */
 export const HEROINE_PHOTOS = ["/left-on-read/heroine/08.jpg", "/left-on-read/heroine/09.jpg"] as const;
 export const TRUE_ENDING_ID = "true-love";
+
+/** 白天認真回訊息的上限；逼玩家選要養哪幾條線 */
+export const DAYTIME_REPLY_LIMIT = 3;
+/** 聊天隱性數值：尷尬到這個值會提早結束 */
+export const AWKWARD_END = 3;
+/** 好感不夠又壓力太高時，也會提早冷掉 */
+export const PRESSURE_SOFT_END = 4;
+export const AFFECTION_SOFT_MIN = 1;

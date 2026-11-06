@@ -53,9 +53,10 @@ export const HEROINE_DATES: readonly HeroineDate[] = [
     closing: "煙火放完，她說明年還想來。明年。她用了明年這個詞。",
   },
   {
-    place: "淡水漁人碼頭",
+    place: "板橋耶誕城",
+    activity: "看燈、擠人潮。",
     cost: HEROINE_DATE_COSTS[2],
-    opening: "情人橋的燈一盞一盞亮起來。海風很大，她的手很冰，我想了三分鐘要不要講這件事。",
+    opening: "聖誕樹上的燈一層一層亮起來。人潮把我們擠得很近，她的手很冰，我想了三分鐘要不要講這件事。",
     options: [
       {
         text: "「我喜歡妳。我想了很久要怎麼講，最後還是只有這句。」",
@@ -70,13 +71,14 @@ export const HEROINE_DATES: readonly HeroineDate[] = [
   },
 ];
 
-function dateStep(index: number, endingId?: string): ReplyStep {
+function dateStep(index: number, endingId?: string, wait?: ReplyStep["wait"]): ReplyStep {
   const date = HEROINE_DATES[index];
   return {
     // 約會完才會出現在對話紀錄
     incoming: { kind: "narration", text: `（${date.place}）` },
     replies: date.options.map((o) => o.text),
     date: { index, cost: date.cost, endingId },
+    ...(wait ? { wait } : {}),
   };
 }
 
@@ -128,17 +130,17 @@ const AFTER_SECOND_DATE: ReplyStep = {
   answers: ["嗯，明年。", "三百六十天也太早了吧。好啦，你提醒我。"],
 };
 
-/** 她回來之後、淡水之前：把假失敗那段講開，不要讓它不了了之 */
+/** 她回來之後、板橋耶誕城之前：把假失敗那段講開，不要讓它不了了之 */
 const AFTER_COMEBACK: readonly ReplyStep[] = [
   {
-    lead: ["前陣子對不起。加班和回老家都是真的，但我回得很敷衍。"],
+    lead: ["前陣子對不起。加班是真的，但我回得很敷衍。"],
     incoming: { kind: "message", text: "你是不是以為我不想理你了" },
     replies: ["有一點。我還幫這件事取了名字，叫「下次吧」", "沒有啊。好啦，有。"],
-    answers: ["這名字也太慘了吧。對不起啦。這次是我約的，不會是下次。", "你真的很不會說謊。我回老家那幾天，一直在想煙火的事。"],
+    answers: ["這名字也太慘了吧。對不起啦。這次是我約的，不會是下次。", "你真的很不會說謊。加班那幾天，我一直在想煙火的事。"],
   },
   {
-    incoming: { kind: "message", text: "那天穿厚一點，淡水海風很大。" },
-    replies: ["好。我查了日落時間，提早一小時到，留一點誤差", "好。那妳也穿厚一點"],
+    incoming: { kind: "message", text: "那天多穿一件，耶誕城人很多又很冷。" },
+    replies: ["好。我查了點燈時間，提早半小時到，留一點誤差", "好。那妳也穿厚一點"],
     answers: ["你是要發射火箭嗎。好啦，聽你的。", "我才不要，我要穿好看的。冷再說。"],
   },
 ];
@@ -216,26 +218,31 @@ export const HEROINE_STORY: Story = {
     dateStep(1),
     AFTER_SECOND_DATE_HOME,
     AFTER_SECOND_DATE,
-    // 假失敗：連續三天，冠宇先傳、她當場回
-    { incoming: { kind: "none" }, replies: ["下週末有空嗎？想約妳"], answer: "這週要加班耶" },
-    { incoming: { kind: "none" }, replies: ["那再下週呢"], answer: "下週要回老家" },
-    { incoming: { kind: "none" }, replies: ["好，那妳有空再說"], answer: "最近真的比較忙" },
+    // 假失敗：連續三天，冠宇先傳、她當場回（忙到下週末之後，回來才約「再下個週末」）
+    { incoming: { kind: "none" }, replies: ["最近有空嗎？想約妳"], answer: "這週專案爆了，天天加班" },
+    { incoming: { kind: "none" }, replies: ["好，那妳先忙"], answer: "大概要忙到下週末之後才鬆一點" },
+    { incoming: { kind: "none" }, replies: ["好，那妳有空再說"], answer: "嗯，忙完第一個找你" },
     {
       // 第三天她回完，當天就可以按「……就這樣了」
       wait: { days: 0 },
       incoming: { kind: "none" },
+      os: [
+        "還是 GG 了嗎？",
+        "約了兩次都被打槍。",
+        "我看還是別約了，免得變成性騷擾。",
+      ],
       replies: ["……就這樣了"],
       fakeEnding: { storyId: FAKE_ENDING_STORY_ID, narration: "下次是一個地名，很遠，沒有車到。" },
     },
     {
-      incoming: { kind: "message", text: "欸，你什麼時候有空？淡水漁人碼頭我一直想去看夕陽。這次換我約。" },
-      // 中間還有兩天聊天；具體鐘點可以講，但不要寫死「這週末」害時間軸打架
-      replies: ["週六下午四點。趕得上夕陽。", "我看一下行事曆……週六四點可以。"],
-      answers: ["好，四點漁人碼頭。記得穿厚一點。", "週六四點見。我等你。"],
+      incoming: { kind: "message", text: "對不住讓你等。我忙完了。再下個週末，板橋耶誕城一起去看燈？這次換我約。" },
+      // 中間還有兩天聊天；約的是「再下個週末」，不要講成這個週六
+      replies: ["好。就再下週六晚上七點。", "可以。再下週六七點，我記行事曆。"],
+      answers: ["好，再下週六七點板橋車站見。記得穿厚一點。", "再下週六七點見。我等你。"],
       comeback: { stamp: "下次吧", aside: "這是第二個主動找我的人。第一個要我加 LINE 看盤。" },
     },
     ...AFTER_COMEBACK,
-    dateStep(2, TRUE_ENDING_ID),
+    dateStep(2, TRUE_ENDING_ID, { days: 5 }),
   ],
 };
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { calendarOf, isWorkday } from "@/lib/left-on-read/calendar";
-import { MONTHLY_RENT, MONTHLY_SALARY } from "@/lib/left-on-read/constants";
+import { DAYTIME_REPLY_LIMIT, MONTHLY_RENT, MONTHLY_SALARY } from "@/lib/left-on-read/constants";
 import { PAYDAY_LINES, QUIET_PHONE_LINES, WEEKEND_LINES, WORK_LINES, dailyLine } from "@/lib/left-on-read/flavor";
 import type { RunState } from "@/lib/left-on-read/game";
 import { HEROINE_DATES } from "@/lib/left-on-read/stories/index";
@@ -21,7 +21,7 @@ interface DayScreenProps {
 export function DayScreen({ run, onMenu, onOpenChats, onEndDay, onGoDate }: DayScreenProps) {
   const workday = isWorkday(calendarOf(run.dayIndex));
   const chats = visibleChats(run.chats, run.dayIndex);
-  const ready = readyChats(chats, run.dayIndex).length;
+  const ready = readyChats(chats, run.dayIndex, run.phase).length;
   const waiting = chats.length - ready;
   const dateChat = dueDateChat(run.chats, run.dayIndex);
   const dateStep = dateChat && pendingDateStep(dateChat);
@@ -50,7 +50,12 @@ export function DayScreen({ run, onMenu, onOpenChats, onEndDay, onGoDate }: DayS
               <PixelButton
                 color={ready > 0 ? COLOR.pink : COLOR.gray}
                 onClick={onOpenChats}
-                sub={ready > 0 ? (waiting > 0 ? `另外 ${waiting} 個還沒回` : undefined) : "沒有新訊息"}
+                sub={
+                  ready > 0
+                    ? `今天還能認真回 ${Math.max(0, DAYTIME_REPLY_LIMIT - run.dayReplies)} 則` +
+                      (waiting > 0 ? `｜另外 ${waiting} 個還沒回` : "")
+                    : "沒有新訊息"
+                }
               >
                 {workday ? "偷偷拿手機回訊息" : "看手機回訊息"}
                 {ready > 0 ? `（${ready}）` : ""}
