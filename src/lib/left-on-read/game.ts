@@ -369,12 +369,35 @@ export function canUsePhone(phase: Phase): boolean {
   return phase === "daytime" || phase === "night" || phase === "nightDone";
 }
 
+/**
+ * 同一輪接著回：這一步是「同一天接著聊」（wait 0），而且今天已經跟她聊過。
+ * 白天的則數上限算的是今天認真經營了幾段聊天，同一段對話接著回不另外算，不然聊到一半會被切斷。
+ */
+export function isContinuation(run: RunState, chat: Chat): boolean {
+  const step = storyStep(chat);
+  return (
+    step !== undefined &&
+    !isFinal(step) &&
+    step.wait !== undefined &&
+    "days" in step.wait &&
+    step.wait.days === 0 &&
+    chat.lastAdvancedDay === run.dayIndex
+  );
+}
+
+/** 這個聊天現在能不能回（不看等待時間，只看則數上限） */
+export function hasReplyQuota(run: RunState, chat: Chat): boolean {
+  return repliesLeft(run) > 0 || isContinuation(run, chat);
+}
+
 function chatActions(run: RunState): GameAction["type"][] {
-  const steps = run.chats.filter((c) => isChatReady(c, run.dayIndex, run.phase)).map(storyStep);
+  const ready = run.chats.filter((c) => isChatReady(c, run.dayIndex, run.phase));
+  const steps = ready.map(storyStep);
   const actions: GameAction["type"][] = [];
-  const canReply =
-    steps.some((s) => s && !isFinal(s)) &&
-    repliesLeft(run) > 0;
+  const canReply = ready.some((c) => {
+    const s = storyStep(c);
+    return s !== undefined && !isFinal(s) && hasReplyQuota(run, c);
+  });
   if (canReply) actions.push("reply");
   if (steps.some((s) => s && isFinal(s))) actions.push("closeChat");
   if (run.chats.some((c) => c.closed)) actions.push("deleteChat");
@@ -455,9 +478,10 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
 
     case "reply": {
       if (!canUsePhone(run.phase)) return same;
-      if (repliesLeft(run) <= 0) return same;
       const chat = run.chats.find((c) => c.id === action.chatId);
       if (!chat || !isChatReady(chat, run.dayIndex, run.phase)) return same;
+      if (!hasReplyQuota(run, chat)) return same;
+      const continuation = isContinuation(run, chat);
       const step = storyStep(chat);
       if (!step || isFinal(step)) return same;
       if (!Number.isInteger(action.choice) || action.choice < 0 || action.choice >= step.replies.length) return same;
@@ -533,7 +557,7 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
       return {
         run: {
           ...run,
-          dayReplies: run.phase === "daytime" ? run.dayReplies + 1 : run.dayReplies,
+          dayReplies: run.phase === "daytime" && !continuation ? run.dayReplies + 1 : run.dayReplies,
           nightHobby: calm ? { ...run.nightHobby, calm: false } : run.nightHobby,
           chats,
         },

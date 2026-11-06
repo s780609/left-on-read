@@ -13,6 +13,9 @@ export const HEROINE_V2_STORY_ID = "heroine-v2";
 export const LEGACY_HEROINE_STORY_ID = "heroine";
 export const HEROINE_ALMOST_STORY_ID = "heroine-almost";
 
+/** 假失敗之後她消失幾天才主動回來 */
+export const COMEBACK_DAYS = 4;
+
 /** 假失敗要演成這一種失敗的樣子 */
 const FAKE_ENDING_STORY_ID = "rain-check";
 
@@ -235,12 +238,15 @@ export const HEROINE_STORY: Story = {
     dateStep(1),
     AFTER_SECOND_DATE_HOME,
     AFTER_SECOND_DATE,
-    // 假失敗：連續三天，冠宇先傳、她當場回（忙到下週末之後，回來才約「再下個週末」）
+    /*
+     * 假失敗：同一段對話一口氣聊完（冠宇的每一句都是在接她剛回的那句，隔天才接很怪），
+     * 聊完當下就按「……就這樣了」，然後她消失 COMEBACK_DAYS 天才回來
+     */
     { incoming: { kind: "none" }, replies: ["最近有空嗎？想約妳"], answer: "這週專案爆了，天天加班" },
-    { incoming: { kind: "none" }, replies: ["好，那妳先忙"], answer: "大概要忙到下週末之後才鬆一點" },
-    { incoming: { kind: "none" }, replies: ["好，那妳有空再說"], answer: "嗯，忙完第一個找你" },
+    { wait: { days: 0 }, incoming: { kind: "none" }, replies: ["好，那妳先忙"], answer: "這陣子大概都會很忙" },
+    { wait: { days: 0 }, incoming: { kind: "none" }, replies: ["好，那妳有空再說"], answer: "嗯，忙完第一個找你" },
     {
-      // 第三天她回完，當天就可以按「……就這樣了」
+      // 她回完，當下就可以按「……就這樣了」
       wait: { days: 0 },
       incoming: { kind: "none" },
       os: [
@@ -252,7 +258,9 @@ export const HEROINE_STORY: Story = {
       fakeEnding: { storyId: FAKE_ENDING_STORY_ID, narration: "下次是一個地名，很遠，沒有車到。" },
     },
     {
-      incoming: { kind: "message", text: "對不住讓你等。我忙完了。再下個週末，板橋耶誕城一起去看燈？這次換我約。" },
+      // 消失幾天才回來，玩家才會真的以為斷了；她說「這陣子」，幾天後忙完說得通
+      wait: { days: COMEBACK_DAYS },
+      incoming: { kind: "message", text: "對不住讓你等。這幾天終於忙完了。再下個週末，板橋耶誕城一起去看燈？這次換我約。" },
       // 中間還有兩天聊天；約的是「再下個週末」，不要講成這個週六
       replies: ["好。就再下週六晚上七點。", "可以。再下週六七點，我記行事曆。"],
       answers: ["好，再下週六七點板橋車站見。記得穿厚一點。", "再下週六七點見。我等你。"],

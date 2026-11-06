@@ -22,6 +22,7 @@ import { INTERESTS } from "./girlData.ts";
 import { createRng, pick, randInt } from "./rng.ts";
 import { parseMeta, parseRun, serializeMeta, serializeRun } from "./save.ts";
 import { HEROINE_ALMOST_STORY_ID, HEROINE_DATES, HEROINE_STORY_ID, LEGACY_HEROINE_STORY_ID, SPECIAL_STORIES, STORIES, STORY_BY_ID } from "./stories/index.ts";
+import { COMEBACK_DAYS } from "./stories/heroine.ts";
 import {
   chatScore,
   chatTranscript,
@@ -45,7 +46,7 @@ const stepAt = (i: number) => STORY.steps[i] as ReplyStep;
 const dateStepIndex = (index: number) => STORY.steps.findIndex((s) => "date" in s && s.date?.index === index);
 const FAKE_STEP = STORY.steps.findIndex((s) => "fakeEnding" in s);
 const COMEBACK_STEP = STORY.steps.findIndex((s) => "comeback" in s);
-/** 假失敗的第一天：「……就這樣了」往前三步 */
+/** 假失敗的第一句：「……就這樣了」往前三步 */
 const GHOST_STEP = FAKE_STEP - 3;
 
 /** 第一個週六（第 0 天是週一） */
@@ -453,7 +454,7 @@ test("威秀之後：當晚先收尾，隔天再聊，回完才收到大稻埕�
 
 test("她回來之後：聊完才約得到板橋耶誕城，假失敗那段她有講開", () => {
   const girl = generateGirl(HEROINE_SEED);
-  let run = runWith(chatAt(COMEBACK_STEP), { dayIndex: 1 });
+  let run = runWith(chatAt(COMEBACK_STEP), { dayIndex: COMEBACK_DAYS });
   run = act(run, {}, { type: "reply", chatId: 1, choice: 0 }).run;
   for (let i = COMEBACK_STEP + 1; i < dateStepIndex(2); i++) {
     assert.equal(run.chats[0].stepIndex, i);
@@ -490,23 +491,24 @@ function throughGhosting() {
   run = act(run, dex, { type: "reply", chatId: 1, choice: 0 }).run;
   run = { ...run, phase: "daytime", dayIndex: nextPhoneDay(run.dayIndex + 1), dayReplies: 0 };
   run = act(run, dex, { type: "reply", chatId: 1, choice: 0 }).run;
-  const days: number[] = [];
+  // 假失敗那段同一天聊完：三句都在同一個白天回
+  run = { ...run, phase: "daytime", dayIndex: nextPhoneDay(run.dayIndex + 1), dayReplies: 0 };
+  const day = run.dayIndex;
   for (let i = 0; i < 3; i++) {
-    run = { ...run, phase: "daytime", dayIndex: nextPhoneDay(run.dayIndex + 1), dayReplies: 0 };
-    assert.ok(legalActions(run).includes("reply"), `假失敗第 ${i + 1} 天`);
+    assert.ok(legalActions(run).includes("reply"), `假失敗第 ${i + 1} 句`);
     run = act(run, dex, { type: "reply", chatId: 1, choice: 0 }).run;
-    days.push(run.dayIndex);
   }
-  return { run, dex, days };
+  assert.equal(run.dayIndex, day);
+  return { run, dex };
 }
 
-test("第二次約會聊完之後自動觸發：連續三天，每天一步，對白和規格一樣", () => {
+test("第二次約會聊完之後自動觸發：同一段對話一口氣聊完", () => {
   const { run } = throughGhosting();
   assert.equal(GHOST_STEP, dateStepIndex(1) + 3);
   const start = GHOST_STEP;
   assert.deepEqual([start, start + 1, start + 2].map((i) => [stepAt(i).replies[0], stepAt(i).answer]), [
     ["最近有空嗎？想約妳", "這週專案爆了，天天加班"],
-    ["好，那妳先忙", "大概要忙到下週末之後才鬆一點"],
+    ["好，那妳先忙", "這陣子大概都會很忙"],
     ["好，那妳有空再說", "嗯，忙完第一個找你"],
   ]);
   assert.equal(run.chats[0].stepIndex, FAKE_STEP);
@@ -519,14 +521,14 @@ test("第二次約會聊完之後自動觸發：連續三天，每天一步，�
   ]);
 });
 
-test("假失敗一天只有一步，今天傳完就要等明天", () => {
-  let run = runWith(chatAt(GHOST_STEP), { phase: "daytime" });
-  run = act(run, UNLOCKED, { type: "reply", chatId: 1, choice: 0 }).run;
-  assert.ok(!legalActions(run).includes("reply"));
-  assert.equal(advance(run, UNLOCKED, { type: "reply", chatId: 1, choice: 0 }).run, run);
+test("假失敗：她回完馬上就能接下一句，不用等到隔天", () => {
+  let run = runWith(chatAt(GHOST_STEP), { phase: "night" });
+  for (let i = 0; i < 3; i++) run = act(run, UNLOCKED, { type: "reply", chatId: 1, choice: 0 }).run;
+  assert.equal(run.chats[0].stepIndex, FAKE_STEP);
+  assert.ok(isChatReady(run.chats[0], run.dayIndex, "night"));
 });
 
-test("第 3 天當天就能按「……就這樣了」", () => {
+test("聊完當下就能按「……就這樣了」", () => {
   const { run } = throughGhosting();
   assert.ok(isChatReady(run.chats[0], run.dayIndex));
   assert.deepEqual(stepAt(FAKE_STEP).replies, ["……就這樣了"]);
@@ -551,20 +553,24 @@ test("圖鑑本來就有「下次吧」時，次數也不會增加", () => {
   assert.equal(act(run, dex, { type: "reply", chatId: 1, choice: 0 }).dex["rain-check"].count, 2);
 });
 
-test("隔天一定會收到她的訊息；當晚她從手機上消失，資料還在", () => {
+test(`消失 ${COMEBACK_DAYS} 天後一定會收到她的訊息；這幾天她不在手機上，資料還在`, () => {
   const { run, dex } = throughGhosting();
   const after = act(run, dex, { type: "reply", chatId: 1, choice: 0 }).run;
   assert.equal(after.chats[0].stepIndex, COMEBACK_STEP);
   assert.equal(comebackChat(after.chats, after.dayIndex), null);
   assert.deepEqual(visibleChats(after.chats, after.dayIndex), []);
 
-  const tomorrow: RunState = { ...after, phase: "daytime", dayIndex: after.dayIndex + 1, dayReplies: 0 };
+  for (let d = 1; d < COMEBACK_DAYS; d++) {
+    assert.equal(comebackChat(after.chats, after.dayIndex + d), null, `第 ${d} 天還沒回來`);
+    assert.deepEqual(visibleChats(after.chats, after.dayIndex + d), []);
+  }
+  const tomorrow: RunState = { ...after, phase: "daytime", dayIndex: after.dayIndex + COMEBACK_DAYS, dayReplies: 0 };
   assert.equal(comebackChat(tomorrow.chats, tomorrow.dayIndex), tomorrow.chats[0]);
   assert.deepEqual(visibleChats(tomorrow.chats, tomorrow.dayIndex), tomorrow.chats);
   const lines = chatTranscript(tomorrow.chats[0], generateGirl(HEROINE_SEED), tomorrow.dayIndex);
   assert.deepEqual(lines.at(-1), {
     who: "her",
-    text: "對不住讓你等。我忙完了。再下個週末，板橋耶誕城一起去看燈？這次換我約。",
+    text: "對不住讓你等。這幾天終於忙完了。再下個週末，板橋耶誕城一起去看燈？這次換我約。",
   });
   assert.match(stepAt(COMEBACK_STEP).comeback?.aside ?? "", /第二個主動找我的人/);
   // 重新載入也一樣

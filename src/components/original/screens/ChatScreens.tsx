@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { audioManager } from "@/lib/audio/AudioManager";
-import { repliesLeft, type RunState } from "@/lib/left-on-read/game";
+import { hasReplyQuota, type RunState } from "@/lib/left-on-read/game";
 import { generateGirl, type Girl } from "@/lib/left-on-read/girl";
 import { STORIES, STORY_BY_ID } from "@/lib/left-on-read/stories/index";
 import {
@@ -306,7 +306,7 @@ export function ChatRoom({ run, chat, onReply, onFinish, onDelete, onBack }: Cha
             </p>
             <PixelButton onClick={onBack}>回列表</PixelButton>
           </>
-        ) : !isFinal(step) && repliesLeft(run) <= 0 ? (
+        ) : !isFinal(step) && !hasReplyQuota(run, chat) ? (
           <>
             {/* 白天認真回訊息有上限：選項按了也送不出去，乾脆不要擺出來 */}
             <p className="text-center text-sm text-[#a9abc9]">

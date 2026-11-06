@@ -7,7 +7,7 @@ import {
   PRESSURE_SOFT_END,
 } from "./constants.ts";
 import { applyDelta, replyDelta, shouldSoftEnd, statsOf, ZERO_STATS } from "./chatStats.ts";
-import { advance, createRun, dayReplyLimit, legalActions, repliesLeft } from "./game.ts";
+import { advance, createRun, dayReplyLimit, isContinuation, legalActions, repliesLeft } from "./game.ts";
 import type { RunState } from "./game.ts";
 import { STORIES, STORY_BY_ID } from "./stories/index.ts";
 import { isChatReady } from "./story.ts";
@@ -197,4 +197,38 @@ test("白天回滿上限：還沒回的聊天選項送不出去，聊天室要�
   const night: RunState = { ...full, phase: "night" };
   assert.equal(repliesLeft(night), Infinity);
   assert.notEqual(advance(night, {}, { type: "reply", chatId: chat.id, choice: 0 }).run, night);
+});
+
+test("同一段對話接著回不算白天則數：上限用完，wait 0 的下一句照樣能回", () => {
+  // 找一條有「同一天接著聊」步驟的劇情
+  const story = [...STORIES, ...Object.values(STORY_BY_ID)].find((s) =>
+    s.steps.some((st, i) => i > 0 && "replies" in st && st.wait && "days" in st.wait && st.wait.days === 0)
+  )!;
+  const i = story.steps.findIndex((st, k) => k > 0 && "replies" in st && st.wait && "days" in st.wait && st.wait.days === 0);
+  const day = nextPhoneDay(3);
+  const chat: Chat = {
+    id: 1,
+    girlSeed: 9,
+    storyId: story.id,
+    opener: "hi",
+    stepIndex: i,
+    lastAdvancedDay: day,
+    replies: Array<number>(i).fill(0),
+  };
+  const run: RunState = {
+    ...createRun(1),
+    phase: "daytime",
+    dayIndex: day,
+    chats: [chat],
+    nextChatId: 2,
+    heroineMet: true,
+    dayReplies: dayReplyLimit({ ...createRun(1), phase: "daytime", dayIndex: day }),
+  };
+  assert.ok(isContinuation(run, chat));
+  assert.ok(legalActions(run).includes("reply"));
+  const r = advance(run, {}, { type: "reply", chatId: 1, choice: 0 });
+  assert.notEqual(r.run, run);
+  assert.equal(r.run.dayReplies, run.dayReplies, "接著回不算則數");
+  // 隔天才回就不算接著回
+  assert.ok(!isContinuation({ ...run, dayIndex: day + 1 }, chat));
 });

@@ -7,6 +7,7 @@ import type { GameAction, GameEvent, Phase, RunState } from "./game.ts";
 import { createRng, pick, randInt } from "./rng.ts";
 import { parseRun, serializeRun } from "./save.ts";
 import { HEROINE_STORY_ID, STORIES, STORY_BY_ID, STUDIO_STORY_ID } from "./stories/index.ts";
+import { COMEBACK_DAYS } from "./stories/heroine.ts";
 import { chatTranscript, comebackChat, isChatReady, isFinal, readyChats, visibleChats } from "./story.ts";
 import { generateGirl } from "./girl.ts";
 import type { Chat, ReplyStep, Story } from "./storyTypes.ts";
@@ -234,7 +235,7 @@ test("小晴例外：白天回過，晚上还能再推一步", () => {
 
 const UNLOCKED: Dex = Object.fromEntries(STORIES.slice(0, 10).map((s) => [s.id, { count: 1, firstDayIndex: 0 }]));
 
-test("假失敗在晚上演：不記圖鑑、聊天留著、當晚消失，隔天早上她回來", () => {
+test("假失敗在晚上演：不記圖鑑、聊天留著、當晚消失，幾天後的早上她回來", () => {
   const chat = heroineChat(FAKE_STEP);
   const run = at("night", [chat], { heroineMet: true });
   const r = act(run, UNLOCKED, { type: "reply", chatId: 1, choice: 0 });
@@ -243,8 +244,11 @@ test("假失敗在晚上演：不記圖鑑、聊天留著、當晚消失，隔�
   assert.equal(r.run.chats.length, 1);
   assert.deepEqual(visibleChats(r.run.chats, r.run.dayIndex), [], "當晚她要從手機上消失");
   assert.equal(comebackChat(r.run.chats, r.run.dayIndex), null);
-  const morning = act(r.run, r.dex, { type: "sleep" }).run;
-  assert.equal(comebackChat(morning.chats, morning.dayIndex)?.id, 1, "隔天早上一定會收到她的訊息");
+  let morning = r.run;
+  for (let d = 0; d < COMEBACK_DAYS; d++) {
+    morning = act({ ...morning, phase: "night" }, r.dex, { type: "sleep" }).run;
+  }
+  assert.equal(comebackChat(morning.chats, morning.dayIndex)?.id, 1, "一定會收到她的訊息");
 });
 
 test("假失敗第三句晚上回完，當晚就能按「……就這樣了」", () => {
