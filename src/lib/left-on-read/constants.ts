@@ -104,6 +104,11 @@ export const IRIS_PASS_SCORE = 2;
 export const IRIS_PATIENCE = 2;
 export const IRIS_DATE_COSTS = [200, 450] as const;
 export const IRIS_ENDING_ID = "iris-love";
+/** 約會錢不夠、跟她借的時候，好感和尷尬的變化 */
+export const BORROW_DELTA = { affection: -1, awkward: 1, pressure: 0 } as const;
+/** 放鳥她：記進隱藏失敗的 id */
+export const NO_SHOW_STORY_ID = "no-show";
+
 /** 存款到這裡算「有錢但沒有人可以請」 */
 export const RICH_ALONE_MONEY = 100_000;
 export const DRY_SPELL_DAYS = 30;

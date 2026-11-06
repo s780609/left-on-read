@@ -2,7 +2,7 @@
  * 聊天的規則：開場白、抽劇情的權重、等待與 ready、對話紀錄、劇情資料驗證。
  */
 
-import { calendarOf, isPhoneChatDay, isWorkday } from "./calendar.ts";
+import { calendarOf, firstDayIndexOnOrAfter, isPhoneChatDay } from "./calendar.ts";
 import { HEROINE_SEED, HEROINE_INTEREST_OPENER_SCORE, NON_LURE_PITCH_MULT } from "./constants.ts";
 import type { Dex } from "./dex.ts";
 import type { Girl } from "./girl.ts";
@@ -190,13 +190,25 @@ export function pendingDateStep(chat: Chat): ReplyStep | null {
 
 /** 今天可以赴約的聊天：週末，而且已經等滿這一步的等待時間 */
 export function dueDateChat(chats: readonly Chat[], dayIndex: number): Chat | null {
-  if (isWorkday(calendarOf(dayIndex))) return null;
-  const due = chats.find((chat) => {
-    if (chat.closed) return false;
-    const step = pendingDateStep(chat);
-    return step !== null && dayIndex >= firstReadyDay(chat.lastAdvancedDay, step.wait);
-  });
+  // 約好的那一天才能去；早到不行，過了就是放鳥
+  const due = chats.find((chat) => !chat.closed && scheduledDateDay(chat) === dayIndex);
   return due ?? null;
+}
+
+/**
+ * 約會那天：約好之後（等滿這一步的等待）的第一個週六。
+ * 由 lastAdvancedDay 和等待推出來，約好之後就不會變，不用另外存。
+ */
+export function scheduledDateDay(chat: Chat): number | null {
+  const step = pendingDateStep(chat);
+  if (!step) return null;
+  return firstDayIndexOnOrAfter(firstReadyDay(chat.lastAdvancedDay, step.wait), 6);
+}
+
+/** 約會那天已經過了還沒去：放鳥 */
+export function missedDate(chat: Chat, dayIndex: number): boolean {
+  const day = scheduledDateDay(chat);
+  return !chat.closed && day !== null && dayIndex > day;
 }
 
 /** 假失敗之後，她今天主動回來了的聊天 */

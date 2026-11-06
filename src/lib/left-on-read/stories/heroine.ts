@@ -27,6 +27,8 @@ export interface HeroineDate {
   opening: string;
   options: readonly { text: string; response: string }[];
   closing: string;
+  /** 錢不夠、跟她借了錢才來的時候，收尾前多的那一句 */
+  brokeNote?: string;
 }
 
 export const HEROINE_DATES: readonly HeroineDate[] = [
@@ -40,6 +42,7 @@ export const HEROINE_DATES: readonly HeroineDate[] = [
       { text: "「那我們 AA？我有準備零錢。」", response: "她愣了一下，也笑了：「你真的準備了。」" },
     ],
     closing: "我第一次沒有在散場後查回家最快的路線。",
+    brokeNote: "說完我才想到，我要請的錢，是剛剛跟她借的。她好像也想到了，沒有說破。",
   },
   {
     place: "大稻埕",

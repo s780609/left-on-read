@@ -5,7 +5,8 @@ import { audioManager } from "@/lib/audio/AudioManager";
 import { NIGHT_DONE_LINES, NIGHT_LINES, NIGHT_UNREAD_LINES, QUIET_PHONE_LINES, dailyLine } from "@/lib/left-on-read/flavor";
 import { nightActionsLeft, type RunState } from "@/lib/left-on-read/game";
 import { holidayOf } from "@/lib/left-on-read/holidays";
-import { readyChats, visibleChats } from "@/lib/left-on-read/story";
+import { generateGirl } from "@/lib/left-on-read/girl";
+import { readyChats, scheduledDateDay, visibleChats } from "@/lib/left-on-read/story";
 import {
   drawNightGamesScene,
   drawNightScene,
@@ -59,6 +60,8 @@ export function NightScreen({
   const quiet = dailyLine(QUIET_PHONE_LINES, run.dayIndex);
   /** 晚上能做兩件事：滑 Swipy、打手槍、打電動任選；回訊息不算 */
   const left = nightActionsLeft(run);
+  /** 今天約好卻沒去的人：睡一覺她就封鎖你 */
+  const stoodUp = run.chats.filter((c) => !c.closed && scheduledDateDay(c) === run.dayIndex);
 
   useEffect(() => preloadPhotos(["night", "nightSolo", "nightGames"]), []);
 
@@ -141,6 +144,11 @@ export function NightScreen({
         <DialogBox>
           {holiday ? <p className="mb-1 text-xs text-[#ff9fb4]">今天是{holiday.name}</p> : null}
           <Typewriter key={line} text={line} />
+          {stoodUp.map((c) => (
+            <p key={c.id} className="mt-2 text-sm text-[#ff9a8f]">
+              今天和{generateGirl(c.girlSeed).nickname}約好了，我沒有去。手機很安靜，安靜得很可怕。
+            </p>
+          ))}
           {hobbyNote ? <p className="mt-2 text-sm text-[#c8cae0]">{hobbyNote}</p> : null}
           {!sleeping ? (
             <p className="mt-2 text-sm text-[#ffe08a]">

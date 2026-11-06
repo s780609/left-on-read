@@ -434,7 +434,7 @@ export default function LeftOnReadGame() {
           );
         }
         const dateChat = onDate ? dueDateChat(run.chats, run.dayIndex) : null;
-        if (dateChat) return <DateScreen chat={dateChat} onDone={finishDate} />;
+        if (dateChat) return <DateScreen chat={dateChat} money={run.money} onDone={finishDate} />;
         const phoneScreen = renderPhone(run);
         if (phoneScreen) return phoneScreen;
         return (

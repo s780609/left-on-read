@@ -1,13 +1,13 @@
 "use client";
 
-import { calendarOf, isWorkday } from "@/lib/left-on-read/calendar";
+import { calendarOf, formatDate, isWorkday } from "@/lib/left-on-read/calendar";
 import { MONTHLY_RENT, MONTHLY_SALARY } from "@/lib/left-on-read/constants";
 import { PAYDAY_LINES, QUIET_PHONE_LINES, WEEKEND_LINES, WORK_LINES, dailyLine } from "@/lib/left-on-read/flavor";
 import { dayReplyLimit, pendingDayEvent, repliesLeft, type DayAction, type RunState } from "@/lib/left-on-read/game";
 import { generateGirl } from "@/lib/left-on-read/girl";
 import { holidayOf } from "@/lib/left-on-read/holidays";
 import { datesForStory } from "@/lib/left-on-read/stories/index";
-import { dueDateChat, pendingDateStep, readyChats, visibleChats } from "@/lib/left-on-read/story";
+import { dueDateChat, pendingDateStep, readyChats, scheduledDateDay, visibleChats } from "@/lib/left-on-read/story";
 import { drawOfficeScene, drawPaydaySlip, drawWeekendScene } from "../pixel/scenes";
 import { COLOR, DialogBox, PixelButton, Scene, ScreenBody, StatusBar, Typewriter } from "../ui";
 
@@ -45,7 +45,17 @@ export function DayScreen({ run, eventNote, onMenu, onOpenChats, onEndDay, onGoD
   /** 今天白天已經拿去做別的事：這顆按鈕停用 */
   const usedOtherThan = (action: DayAction) => chosen !== null && chosen !== action;
   const usedSub = chosen ? `今天白天已經拿去${DAY_ACTION_LABEL[chosen]}了` : "";
-
+  /** 之後已經約好的約會：提醒是哪一天、跟誰、在哪 */
+  const upcoming = run.chats.flatMap((c) => {
+    const day = c.closed ? null : scheduledDateDay(c);
+    const step = pendingDateStep(c);
+    if (day === null || day <= run.dayIndex || !step?.date) return [];
+    const place = datesForStory(c.storyId)[step.date.index].place;
+    return [`已約好：${formatDate(calendarOf(day))}｜和${generateGirl(c.girlSeed).nickname}在${place}`];
+  });
+  /** 今天有約卻拿去做別的事：今晚就會被封鎖 */
+  const standingUp = date !== null && chosen !== null && chosen !== "date";
+  const dateWarning = date && chosen === null ? `｜今天跟${dateWith}有約！` : "";
   return (
     <>
       <StatusBar run={run} onMenu={onMenu} />
@@ -72,13 +82,13 @@ export function DayScreen({ run, eventNote, onMenu, onOpenChats, onEndDay, onGoD
             {date ? (
               <PixelButton
                 color={COLOR.pink}
-                disabled={run.money < date.cost || usedOtherThan("date")}
+                disabled={usedOtherThan("date")}
                 onClick={onGoDate}
                 sub={
                   usedOtherThan("date")
                     ? usedSub
                     : run.money < date.cost
-                      ? `${date.place}｜等發薪`
+                      ? `${date.place}｜錢不夠，差的 NT$${(date.cost - run.money).toLocaleString("en-US")} 要跟她借`
                       : `${date.place}　NT$${date.cost.toLocaleString("en-US")}`
                 }
               >
@@ -95,7 +105,7 @@ export function DayScreen({ run, eventNote, onMenu, onOpenChats, onEndDay, onGoD
                     : ready > 0
                       ? (chosen === "reply"
                           ? `今天還能認真回 ${repliesLeft(run)} 則`
-                          : `白天做這件事｜最多回 ${dayReplyLimit(run)} 則`) +
+                          : `白天做這件事｜最多回 ${dayReplyLimit(run)} 則${dateWarning}`) +
                         (waiting > 0 ? `｜另外 ${waiting} 個還沒回` : "")
                       : "沒有新訊息"
                 }
@@ -109,7 +119,7 @@ export function DayScreen({ run, eventNote, onMenu, onOpenChats, onEndDay, onGoD
                 color={COLOR.green}
                 disabled={usedOtherThan("shop")}
                 onClick={onShop}
-                sub={usedOtherThan("shop") ? usedSub : "剪頭髮、買衣服、拍形象照"}
+                sub={usedOtherThan("shop") ? usedSub : `剪頭髮、買衣服、拍形象照${dateWarning}`}
               >
                 出門打理自己
               </PixelButton>
@@ -135,6 +145,14 @@ export function DayScreen({ run, eventNote, onMenu, onOpenChats, onEndDay, onGoD
           ) : null}
           {event ? <p className="mt-2 border-t-2 border-dashed border-[#55587a] pt-2">{event.text}</p> : null}
           {!event && eventNote ? <p className="mt-2 text-sm text-[#c8cae0]">{eventNote}</p> : null}
+          {standingUp ? (
+            <p className="mt-2 text-sm text-[#ff9a8f]">今天和{dateWith}約好了，我沒有去。不去就是放她鳥。</p>
+          ) : null}
+          {upcoming.map((u) => (
+            <p key={u} className="mt-2 text-sm text-[#ffb3c4]">
+              {u}
+            </p>
+          ))}
           {!event && run.today.tired ? (
             <p className="mt-2 text-sm text-[#a9abc9]">昨晚打電動打太晚，今天一直在打哈欠。</p>
           ) : null}

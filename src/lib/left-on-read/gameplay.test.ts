@@ -249,7 +249,8 @@ test("白天只能做一件事：回了訊息就不能約會或打理自己；�
     storyId: HEROINE_STORY_ID,
     opener: "hi",
     stepIndex: dateIdx,
-    lastAdvancedDay: 0,
+    // 第 6 天約好：約會日是之後第一個週六，也就是第 11 天
+    lastAdvancedDay: 6,
     replies: Array<number>(dateIdx).fill(0),
   };
   const other = chatAt(0, { id: 2, lastAdvancedDay: sat - 2 });

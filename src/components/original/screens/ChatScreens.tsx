@@ -6,8 +6,10 @@ import { audioManager } from "@/lib/audio/AudioManager";
 import { hasReplyQuota, type RunState } from "@/lib/left-on-read/game";
 import { generateGirl, type Girl } from "@/lib/left-on-read/girl";
 import { STORIES, STORY_BY_ID } from "@/lib/left-on-read/stories/index";
+import { calendarOf, formatDate } from "@/lib/left-on-read/calendar";
 import {
   chatTranscript,
+  scheduledDateDay,
   isChatReady,
   isFinal,
   pendingDateStep,
@@ -298,7 +300,7 @@ export function ChatRoom({ run, chat, onReply, onFinish, onDelete, onBack }: Cha
           <>
             <p className="text-center text-sm text-[#a9abc9]">
               {dateIsNext
-                ? "約好了。週末白天才能出門赴約。"
+                ? `約好了：${formatDate(calendarOf(scheduledDateDay(chat) ?? run.dayIndex))}白天出門赴約。錯過就是放她鳥。`
                 : allLines[allLines.length - 1]?.who === "her"
                   ? // 她剛回完：不是卡住，是今天先聊到這裡（每個聊天一天推進一步）
                     "她回完了。今天就聊到這裡，下一則明天才會來。"

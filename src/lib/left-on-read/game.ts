@@ -17,6 +17,8 @@ import {
   MAX_MONEY,
   MIXUP_MIN_CHATS,
   MIXUP_P,
+  BORROW_DELTA,
+  NO_SHOW_STORY_ID,
   NIGHT_ACTION_LIMIT,
   MONTHLY_RENT,
   MONTHLY_SALARY,
@@ -67,6 +69,7 @@ import {
   isChatReady,
   isFinal,
   isWarmOpener,
+  missedDate,
   pendingDateStep,
   pickStory,
   renderLine,
@@ -199,7 +202,8 @@ export type GameEvent =
   | { type: "dexCompleted" }
   /** 演得像失敗結局，但沒有記圖鑑，聊天也還在 */
   | { type: "fakeEnding"; storyId: string; narration: string }
-  | { type: "dateFinished"; index: number; cost: number }
+  /** borrowed：錢不夠，跟她借了多少（0 就是自己付清） */
+  | { type: "dateFinished"; index: number; cost: number; borrowed: number }
   /** 這一局走到結局了，存檔要用 settleRun 清掉 */
   | { type: "gameEnding"; endingId: string }
   | { type: "hobby"; kind: "solo" | "games"; narration: string };
@@ -381,11 +385,12 @@ export function deckCardSeed(run: RunState, dex: Dex, cardIndex: number): number
 }
 
 /** 今天付得起、可以出門赴約的那一場 */
+/** 今天可以出門赴約的那一場；錢不夠也能去，差的跟她借 */
 function affordableDate(run: RunState) {
   if (!canDoDayAction(run, "date")) return null;
   const chat = dueDateChat(run.chats, run.dayIndex);
   const step = chat && pendingDateStep(chat);
-  return chat && step?.date && run.money >= step.date.cost ? { chat, step, date: step.date } : null;
+  return chat && step?.date ? { chat, step, date: step.date } : null;
 }
 
 /** 手機拿得起來的階段：白天，還有回到家之後；吃飯、滑卡、配對的畫面中不行 */
@@ -601,8 +606,10 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
       if (!due) return same;
       const { chat, step, date } = due;
       if (!Number.isInteger(action.choice) || action.choice < 0 || action.choice >= step.replies.length) return same;
-      const money = run.money - date.cost;
-      const finished: GameEvent = { type: "dateFinished", index: date.index, cost: date.cost };
+      // 錢不夠：身上有多少先付多少，差的跟她借，好感下降
+      const borrowed = Math.max(0, date.cost - run.money);
+      const money = Math.max(0, run.money - date.cost);
+      const finished: GameEvent = { type: "dateFinished", index: date.index, cost: date.cost, borrowed };
       if (date.endingId) {
         return {
           run: { ...run, money, chats: run.chats.filter((c) => c !== chat) },
@@ -616,6 +623,7 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
         stepIndex: chat.stepIndex + 1,
         lastAdvancedDay: run.dayIndex,
         replies: [...chat.replies, action.choice],
+        ...(borrowed > 0 ? { stats: applyDelta(statsOf(chat), BORROW_DELTA) } : {}),
         // 約會走白天：回完清掉小晴夜間標記（晚上才會再設）
         ...(chat.girlSeed === HEROINE_SEED ? { heroineNightUsed: false } : {}),
       };
@@ -834,6 +842,24 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
       });
       const events: GameEvent[] = [{ type: "slept", fromDay: run.dayIndex }];
       let nextDex = dex;
+      // 約好的那天沒去：放她鳥，她直接封鎖
+      for (const chat of chats) {
+        if (!missedDate(chat, dayIndex)) continue;
+        const noShow = STORY_BY_ID[NO_SHOW_STORY_ID];
+        const last = noShow.steps[noShow.steps.length - 1];
+        if (!isFinal(last)) continue;
+        chats = chats.map((c) => (c === chat ? { ...c, closed: true } : c));
+        events.push({
+          type: "chatEnded",
+          girlSeed: chat.girlSeed,
+          storyId: NO_SHOW_STORY_ID,
+          narration: renderLine(last.ending.narration, generateGirl(chat.girlSeed)),
+          paid: 0,
+          firstTime: !Object.hasOwn(nextDex, NO_SHOW_STORY_ID),
+          antiFraud: false,
+        });
+        nextDex = recordFailure(nextDex, NO_SHOW_STORY_ID, run.dayIndex);
+      }
       // 最討厭已讀不回的她：壓力滿了，睡一覺起來她就走了
       for (const chat of chats) {
         const patience = STORY_BY_ID[chat.storyId]?.patience;

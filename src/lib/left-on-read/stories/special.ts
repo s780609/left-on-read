@@ -2,7 +2,7 @@
  * 隱藏路線：只有配對到個工（個人工作室）或小晴才會走，不會被隨機抽到，也不算進一般失敗圖鑑。
  */
 
-import { LADYBUG_COST, LADYBUG_ENDING_ID } from "../constants.ts";
+import { LADYBUG_COST, LADYBUG_ENDING_ID, NO_SHOW_STORY_ID } from "../constants.ts";
 import type { Story } from "../storyTypes.ts";
 import { HEROINE_ALMOST_STORY, HEROINE_STORY } from "./heroine.ts";
 import { IRIS_ALMOST_STORY, IRIS_LEFT_STORY, IRIS_STORY } from "./iris.ts";
@@ -107,4 +107,19 @@ export const SPECIAL_STORIES: readonly Story[] = [
   IRIS_STORY,
   IRIS_ALMOST_STORY,
   IRIS_LEFT_STORY,
+  {
+    id: NO_SHOW_STORY_ID,
+    dexName: "放鳥",
+    dexQuip: "約好的那天我沒有出現。這次不是她已讀不回，是我先不見的。",
+    category: "ghost",
+    steps: [
+      {
+        incoming: { kind: "message", text: "我在約好的地方等了一個小時。你連一句都沒有。" },
+        ending: {
+          narration:
+            "等我想好要怎麼道歉，聊天室只剩一行字：對方已封鎖你。{name}的頭像變成一個灰色的圓圈。原來被放鳥的那一方，不用等我解釋。",
+        },
+      },
+    ],
+  },
 ];
