@@ -744,7 +744,8 @@ test("配對回覆開場白後，下一張卡是不同的人（seed 與暱稱都
         const beforeSeed = deckCardSeed(s.run, s.dex, s.run.deckIndex);
         const beforeNick = generateGirl(beforeSeed).nickname;
         s.act({ type: "swipe", dir: "right" });
-        if (s.run.phase !== "matched") continue;
+        // act() 會把 phase 改成 matched；字串比較避開 while 窄化成 swiping
+        if ((s.run.phase as string) !== "matched") continue;
         assert.equal(s.run.pendingMatchSeed, beforeSeed);
         s.act({ type: "chooseOpener", opener: "hi" });
         assert.equal(s.run.pendingMatchSeed, null);

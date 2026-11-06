@@ -300,10 +300,12 @@ test("查完場次當場確認 14:30，之後才是約會步驟", () => {
   assert.ok(isChatReady(run.chats[0], run.dayIndex), "場次確認 wait:0");
   assert.ok(stepAt(5).replies.every((r) => /14:30/.test(r)));
   const lines = chatTranscript(run.chats[0], generateGirl(HEROINE_SEED), run.dayIndex);
-  assert.equal(lines.at(-2)?.who, "me");
-  assert.match(String(lines.at(-2) && "text" in lines.at(-2)! ? lines.at(-2).text : ""), /查一下場次/);
-  assert.equal(lines.at(-1)?.who, "her");
-  assert.match(String(lines.at(-1) && "text" in lines.at(-1)! ? lines.at(-1).text : ""), /查完跟我說|定時間/);
+  const penultimate = lines.at(-2);
+  const last = lines.at(-1);
+  assert.equal(penultimate?.who, "me");
+  assert.match(penultimate && "text" in penultimate ? penultimate.text : "", /查一下場次/);
+  assert.equal(last?.who, "her");
+  assert.match(last && "text" in last ? last.text : "", /查完跟我說|定時間/);
   run = act(run, {}, { type: "reply", chatId: 1, choice: 0 }).run;
   assert.equal(run.chats[0].stepIndex, dateStepIndex(0));
   assert.equal(dueDateChat(run.chats, SATURDAY)?.id, 1);

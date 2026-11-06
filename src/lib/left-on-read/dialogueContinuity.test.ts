@@ -82,7 +82,7 @@ test("heroine：三次約會邀約都要落到具體時間，不能只說週末"
   assert.match((movie.incoming as { text: string }).text, /信義威秀/);
   // 邀約當下她先等冠宇查；下一輪（wait:0）才把 14:30 講死，而且一定在 dateStep 之前
   const confirm = steps[5] as ReplyStep;
-  assert.equal(confirm.wait?.days, 0);
+  assert.ok(confirm.wait && "days" in confirm.wait && confirm.wait.days === 0);
   assert.ok(confirm.replies.every((r) => /14:30|週六/.test(r)));
   assert.ok(confirm.answers?.every((a) => /14:30|週六/.test(a)));
   assert.ok("date" in steps[6] && steps[6].date?.index === 0);
@@ -101,7 +101,7 @@ test("heroine：約會後有當晚收尾，且 wait 為 0", () => {
   const afterSecond = steps.findIndex((s) => "date" in s && s.date?.index === 1) + 1;
   for (const i of [afterFirst, afterSecond]) {
     const step = steps[i] as ReplyStep;
-    assert.equal(step.wait?.days, 0, `第 ${i} 步`);
+    assert.ok(step.wait && "days" in step.wait && step.wait.days === 0, `第 ${i} 步`);
     assert.ok(step.answers?.length === step.replies.length);
     assert.match(JSON.stringify(step), /到家|晚安|謝謝/);
   }
