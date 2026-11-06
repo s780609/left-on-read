@@ -1,12 +1,14 @@
 /**
  * 真結局：小晴的路線。第一條選項會影響結果的路線，只有右滑她才會走。
- * 聊天計分 → 三次約會，第二次之後有假失敗 → 第三次約會走向真結局（腳本在 ../trueEnding.ts）。
+ * 聊天計分 → 三次約會，約會之間有日常聊天，第二次之後有假失敗 → 第三次約會走向真結局（腳本在 ../trueEnding.ts）。
  */
 
 import { HEROINE_DATE_COSTS, HEROINE_PASS_SCORE, TRUE_ENDING_ID } from "../constants.ts";
 import type { ReplyStep, Story } from "../storyTypes.ts";
 
-export const HEROINE_STORY_ID = "heroine";
+/** 步驟數變過一次，id 也跟著換：讀到舊 id 就知道是舊存檔的 stepIndex，見 upgradeLegacyHeroineChat */
+export const HEROINE_STORY_ID = "heroine-v2";
+export const LEGACY_HEROINE_STORY_ID = "heroine";
 export const HEROINE_ALMOST_STORY_ID = "heroine-almost";
 
 /** 假失敗要演成這一種失敗的樣子 */
@@ -76,6 +78,51 @@ function dateStep(index: number, endingId?: string): ReplyStep {
   };
 }
 
+/*
+ * 約會之間的聊天：這些回覆不計分，也不會改變結局。
+ * 她不知道冠宇在約會裡選了哪一句，對白要兩個選項都接得上；
+ * 訊息可能隔好幾天才被回，不要寫「昨天」「明天」這種綁定日子的詞。
+ */
+
+/** 威秀之後、大稻埕邀約之前 */
+const AFTER_FIRST_DATE: readonly ReplyStep[] = [
+  {
+    lead: ["那天謝謝你，我很開心。"],
+    incoming: { kind: "message", text: "欸，那部片的結局你看懂了嗎？我回家想了好久" },
+    replies: ["老實說沒有。但當場不敢講，怕妳覺得我很笨", "我查了三篇影評，現在懂了。要我解釋嗎"],
+    answers: ["我也沒看懂啦！我還以為只有我這樣", "不用，我想繼續不懂。不過你真的去查了三篇喔"],
+  },
+  {
+    // 這次換冠宇先開口
+    incoming: { kind: "none" },
+    replies: ["今天主管還有念妳嗎？", "我今天午休突然想到妳。就這樣，沒有別的事"],
+    answers: ["有。但我今天頂嘴了，在心裡。", "……你這樣講我要怎麼回啦。好啦，我也是。"],
+  },
+];
+
+/** 大稻埕隔天：最後一次這麼自然，假失敗才會痛 */
+const AFTER_SECOND_DATE: ReplyStep = {
+  lead: ["我的外套現在還有雞排味。"],
+  incoming: { kind: "message", text: "明年要記得早點去占位子，這次差點看不到" },
+  replies: ["好，我記下來了。明年。", "我開個行事曆提醒，提前三百六十天通知妳"],
+  answers: ["嗯，明年。", "三百六十天也太早了吧。好啦，你提醒我。"],
+};
+
+/** 她回來之後、淡水之前：把假失敗那段講開，不要讓它不了了之 */
+const AFTER_COMEBACK: readonly ReplyStep[] = [
+  {
+    lead: ["前陣子對不起。加班和回老家都是真的，但我回得很敷衍。"],
+    incoming: { kind: "message", text: "你是不是以為我不想理你了" },
+    replies: ["有一點。我還幫這件事取了名字，叫「下次吧」", "沒有啊。好啦，有。"],
+    answers: ["這名字也太慘了吧。對不起啦。這次是我約的，不會是下次。", "你真的很不會說謊。我回老家那幾天，一直在想煙火的事。"],
+  },
+  {
+    incoming: { kind: "message", text: "那天穿厚一點，淡水海風很大。" },
+    replies: ["好。我查了日落時間，提早一小時到，留一點誤差", "好。那妳也穿厚一點"],
+    answers: ["你是要發射火箭嗎。好啦，聽你的。", "我才不要，我要穿好看的。冷再說。"],
+  },
+];
+
 /** 第一階段：分數順序刻意打散，不能每題都選同一個位置 */
 const CHAT_STEPS: readonly ReplyStep[] = [
   {
@@ -125,6 +172,7 @@ export const HEROINE_STORY: Story = {
       replies: ["好，我查一下場次", "好。我把那天空下來了，雖然本來就是空的"],
     },
     dateStep(0),
+    ...AFTER_FIRST_DATE,
     {
       // 至少隔兩天，第二次約會一定是另一個週末
       wait: { days: 2 },
@@ -132,6 +180,7 @@ export const HEROINE_STORY: Story = {
       replies: ["好啊，我去", "煙火幾點？我先查捷運末班車"],
     },
     dateStep(1),
+    AFTER_SECOND_DATE,
     // 假失敗：連續三天，冠宇先傳、她當場回
     { incoming: { kind: "none" }, replies: ["下週末有空嗎？想約妳"], answer: "這週要加班耶" },
     { incoming: { kind: "none" }, replies: ["那再下週呢"], answer: "下週要回老家" },
@@ -145,12 +194,35 @@ export const HEROINE_STORY: Story = {
     },
     {
       incoming: { kind: "message", text: "欸，你什麼時候有空？淡水漁人碼頭我一直想去看夕陽。這次換我約。" },
-      replies: ["這週末。我這週末有空。", "我看一下行事曆……這週末有空。"],
+      // 中間還有兩天的聊天，赴約不一定趕得上這個週末，不要寫「這週末」
+      replies: ["週末。我週末有空。", "我看一下行事曆……週末有空。"],
       comeback: { stamp: "下次吧", aside: "這是第二個主動找我的人。第一個要我加 LINE 看盤。" },
     },
+    ...AFTER_COMEBACK,
     dateStep(2, TRUE_ENDING_ID),
   ],
 };
+
+/** 舊路線 14 步，每一步在新路線的位置；中間空出來的 6、7、10、16、17 是約會之間的聊天 */
+const LEGACY_STEP_POSITIONS: readonly number[] = [0, 1, 2, 3, 4, 5, 8, 9, 11, 12, 13, 14, 15, 18];
+
+/**
+ * 舊存檔還沒走到這一步時，改從哪裡接：新聊天排在這一步之前，舊存檔也玩得到。
+ * 其他情況原地不動，已經約好的約會和演到一半的假失敗不會被往後推。
+ */
+const LEGACY_RESUME_AT: Readonly<Record<number, number>> = { 6: 6, 8: 10 };
+
+/**
+ * 舊存檔的 stepIndex、replies 換成新路線的位置。
+ * 已經跳過的新聊天補第 0 句，對話紀錄才接得起來；這幾步不計分，不影響總分。
+ */
+export function upgradeLegacyHeroineChat(stepIndex: number, replies: readonly unknown[]) {
+  const oldStep = Math.min(stepIndex, LEGACY_STEP_POSITIONS.length - 1);
+  const newStep = LEGACY_RESUME_AT[oldStep] ?? LEGACY_STEP_POSITIONS[oldStep];
+  const upgraded: unknown[] = new Array<unknown>(newStep).fill(0);
+  for (let i = 0; i < oldStep; i++) upgraded[LEGACY_STEP_POSITIONS[i]] = replies[i];
+  return { stepIndex: newStep, replies: upgraded };
+}
 
 /** 總分不夠就換到這條：前面的對話一樣，只多一句客氣的告別 */
 export const HEROINE_ALMOST_STORY: Story = {

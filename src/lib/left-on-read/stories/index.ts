@@ -10,7 +10,13 @@ import { QUICK_STORIES } from "./quick.ts";
 import { SPECIAL_STORIES } from "./special.ts";
 
 export { SPECIAL_STORIES, STUDIO_STORY_ID } from "./special.ts";
-export { HEROINE_ALMOST_STORY_ID, HEROINE_DATES, HEROINE_STORY_ID } from "./heroine.ts";
+export {
+  HEROINE_ALMOST_STORY_ID,
+  HEROINE_DATES,
+  HEROINE_STORY_ID,
+  LEGACY_HEROINE_STORY_ID,
+  upgradeLegacyHeroineChat,
+} from "./heroine.ts";
 
 export const STORIES: readonly Story[] = [
   ...GHOST_STORIES,

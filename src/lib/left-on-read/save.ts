@@ -8,7 +8,7 @@ import type { Dex } from "./dex.ts";
 import { OPENER_KINDS, PHASES, drawMeal, seededRngs } from "./game.ts";
 import type { Phase, RunState } from "./game.ts";
 import { MEALS } from "./meals.ts";
-import { STORY_BY_ID } from "./stories/index.ts";
+import { HEROINE_STORY_ID, LEGACY_HEROINE_STORY_ID, STORY_BY_ID, upgradeLegacyHeroineChat } from "./stories/index.ts";
 import type { Chat, OpenerKind, Story } from "./storyTypes.ts";
 
 export interface MetaState {
@@ -46,9 +46,20 @@ function parseMoney(raw: unknown): number {
   return clamp(Math.floor(raw), 0, MAX_MONEY);
 }
 
+/** 小晴路線改版前的存檔：換成新路線的 id 和位置，之後照一般聊天驗證；存回去就是新格式，不會遷移兩次 */
+function upgradeChat(raw: Json): Json {
+  if (raw.storyId !== LEGACY_HEROINE_STORY_ID) return raw;
+  const { stepIndex, replies } = raw;
+  return {
+    ...raw,
+    storyId: HEROINE_STORY_ID,
+    ...upgradeLegacyHeroineChat(isCount(stepIndex) ? stepIndex : 0, Array.isArray(replies) ? (replies as unknown[]) : []),
+  };
+}
+
 function parseChat(raw: unknown, dayIndex: number): Chat | null {
   if (!isObject(raw)) return null;
-  const { id, girlSeed, storyId, opener, stepIndex, lastAdvancedDay, replies } = raw;
+  const { id, girlSeed, storyId, opener, stepIndex, lastAdvancedDay, replies } = upgradeChat(raw);
   if (!Number.isSafeInteger(id) || (id as number) < 1) return null;
   if (typeof girlSeed !== "number" || !Number.isFinite(girlSeed)) return null;
   if (typeof storyId !== "string" || !STORY_BY_ID[storyId]) return null;
