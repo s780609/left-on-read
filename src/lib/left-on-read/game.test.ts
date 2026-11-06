@@ -10,7 +10,7 @@ import {
 } from "./constants.ts";
 import { isDexComplete } from "./dex.ts";
 import type { Dex } from "./dex.ts";
-import { advance, applyCost, checkInvariants, createRun, legalActions, seededRngs } from "./game.ts";
+import { advance, applyCost, checkInvariants, createRun, deckCardSeed, legalActions, seededRngs } from "./game.ts";
 import type { GameAction, GameEvent, Phase, RngFactory, RunState } from "./game.ts";
 import { deckSeed, generateGirl } from "./girl.ts";
 import { EDUCATIONS } from "./girlData.ts";
@@ -718,6 +718,56 @@ test("chooseOpener：建立聊天，配對當晚不算 ready，然後回 swiping
   assert.equal(isChatReady(chat, day), false);
   assert.deepEqual(readyChats(s.run.chats, day), []);
   assert.equal(isChatReady(chat, readyDayOf(chat)), true);
+});
+
+test("配對回覆開場白後，下一張卡是不同的人（seed 與暱稱都不重複）", () => {
+  const MATCH_ALL: RngFactory = () => () => 0;
+  let collisions = 0;
+  for (let runSeed = 1; runSeed <= 200; runSeed++) {
+    for (let dayIndex = 0; dayIndex < 5; dayIndex++) {
+      const s = session(at({ phase: "swiping", runSeed, dayIndex, heroineMet: true }), MATCH_ALL);
+      while (s.run.phase === "swiping" && s.run.deckIndex < DECK_SIZE) {
+        const beforeSeed = deckCardSeed(s.run, s.dex, s.run.deckIndex);
+        const beforeNick = generateGirl(beforeSeed).nickname;
+        s.act({ type: "swipe", dir: "right" });
+        if (s.run.phase !== "matched") continue;
+        assert.equal(s.run.pendingMatchSeed, beforeSeed);
+        s.act({ type: "chooseOpener", opener: "hi" });
+        assert.equal(s.run.pendingMatchSeed, null);
+        if (s.run.phase !== "swiping") break;
+        const nextSeed = deckCardSeed(s.run, s.dex, s.run.deckIndex);
+        const nextNick = generateGirl(nextSeed).nickname;
+        assert.notEqual(nextSeed, beforeSeed, `runSeed=${runSeed} day=${dayIndex} 下一張 seed 撞了`);
+        assert.notEqual(nextNick, beforeNick, `runSeed=${runSeed} day=${dayIndex} 下一張暱稱撞了（${beforeNick}）`);
+        // 下一張也不該是已在聊的人
+        assert.ok(!s.run.chats.some((c) => c.girlSeed === nextSeed));
+      }
+    }
+  }
+  assert.equal(collisions, 0);
+});
+
+test("同晚牌組暱稱不重複，已在聊的人也不再出現", () => {
+  for (let runSeed = 1; runSeed <= 100; runSeed++) {
+    const run = at({ phase: "swiping", runSeed, dayIndex: runSeed % 20, heroineMet: true });
+    const dex = {};
+    const nicks = new Set<string>();
+    const seeds = new Set<number>();
+    for (let i = 0; i < DECK_SIZE; i++) {
+      const seed = deckCardSeed(run, dex, i);
+      assert.ok(!seeds.has(seed), `seed 重複 runSeed=${runSeed} i=${i}`);
+      seeds.add(seed);
+      const nick = generateGirl(seed).nickname;
+      assert.ok(!nicks.has(nick), `暱稱重複 ${nick} runSeed=${runSeed} i=${i}`);
+      nicks.add(nick);
+    }
+    // 假裝已經在和第一張聊天，重算後面的牌不應再抽到她
+    const chatting = { ...run, chats: [{ id: 1, girlSeed: deckCardSeed(run, dex, 0), storyId: "bot", opener: "hi" as const, stepIndex: 0, lastAdvancedDay: 0, replies: [] }] };
+    for (let i = 1; i < DECK_SIZE; i++) {
+      assert.notEqual(deckCardSeed(chatting, dex, i), chatting.chats[0].girlSeed);
+      assert.notEqual(generateGirl(deckCardSeed(chatting, dex, i)).nickname, generateGirl(chatting.chats[0].girlSeed).nickname);
+    }
+  }
 });
 
 test("第 10 張配對時，選完開場白到 nightDone", () => {

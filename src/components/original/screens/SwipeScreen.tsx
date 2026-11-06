@@ -109,9 +109,10 @@ export function SwipeScreen({ run, dex, onSwipe, onQuit }: SwipeScreenProps) {
     []
   );
 
-  // 換一張新卡（key 換了之後舊的 DOM 已經卸載）就可以再滑
+  // 換一張新卡（key 換了之後舊的 DOM 已經卸載）就可以再滑；照片頁也要歸零
   useEffect(() => {
     flyingRef.current = false;
+    setPhotoIndex(0);
   }, [run.deckIndex]);
 
   const place = (x: number, y: number, ms: number) => {
@@ -216,7 +217,7 @@ export function SwipeScreen({ run, dex, onSwipe, onQuit }: SwipeScreenProps) {
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
         >
-          <GirlCard girl={girl} photoIndex={photoIndex} />
+          <GirlCard key={girl.seed} girl={girl} photoIndex={photoIndex} />
           <div
             ref={likeRef}
             className="pointer-events-none absolute left-3 top-4 -rotate-12 border-4 border-[#3fbf7f] bg-black/30 px-2 text-2xl text-[#7cf0b0] opacity-0"

@@ -140,9 +140,43 @@ export function heroineCardIndex(run: RunState, dex: Dex): number | null {
   return rng() < HEROINE_NIGHT_RATE ? randInt(rng, 0, DECK_SIZE - 1) : null;
 }
 
-/** 今晚牌組第幾張是誰 */
+/**
+ * 今晚牌組第幾張是誰。
+ * 避開已經在聊的 girlSeed，同晚暱稱也不重複——配對回覆完回到下一張時，
+ * 才不會因為 40 個暱稱撞名看起來還是同一個人。
+ */
 export function deckCardSeed(run: RunState, dex: Dex, cardIndex: number): number {
-  return heroineCardIndex(run, dex) === cardIndex ? HEROINE_SEED : deckSeed(run.runSeed, run.dayIndex, cardIndex);
+  if (heroineCardIndex(run, dex) === cardIndex) return HEROINE_SEED;
+
+  const takenSeeds = new Set<number>();
+  const takenNicks = new Set<string>();
+  for (const chat of run.chats) {
+    takenSeeds.add(chat.girlSeed);
+    takenNicks.add(generateGirl(chat.girlSeed).nickname);
+  }
+  for (let i = 0; i < cardIndex; i++) {
+    const prev = deckCardSeed(run, dex, i);
+    takenSeeds.add(prev);
+    takenNicks.add(generateGirl(prev).nickname);
+  }
+
+  for (let salt = 0; salt < 64; salt++) {
+    const raw =
+      salt === 0
+        ? deckSeed(run.runSeed, run.dayIndex, cardIndex)
+        : mixSeed(run.runSeed, run.dayIndex, cardIndex, 0xca4d, salt);
+    const seed = raw === HEROINE_SEED ? raw ^ 1 : raw;
+    if (takenSeeds.has(seed)) continue;
+    if (takenNicks.has(generateGirl(seed).nickname)) continue;
+    return seed;
+  }
+  // 暱稱池幾乎用盡時至少保證 seed 不跟已聊的重複
+  for (let salt = 64; salt < 320; salt++) {
+    const raw = mixSeed(run.runSeed, run.dayIndex, cardIndex, 0xca4d, salt);
+    const seed = raw === HEROINE_SEED ? raw ^ 1 : raw;
+    if (!takenSeeds.has(seed)) return seed;
+  }
+  return deckSeed(run.runSeed, run.dayIndex, cardIndex);
 }
 
 /** 今天付得起、可以出門赴約的那一場 */
