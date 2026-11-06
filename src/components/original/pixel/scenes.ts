@@ -32,6 +32,8 @@ const PHOTO_SRC = {
   epiWedding: "/left-on-read/scene/epi-wedding.jpg",
   epiNoodles: "/left-on-read/scene/epi-noodles.jpg",
   epiBaby: "/left-on-read/scene/epi-baby.jpg",
+  ladybugAlley: "/left-on-read/scene/ladybug-alley.jpg",
+  ladybugDoor: "/left-on-read/scene/ladybug-door.jpg",
 } as const;
 export type PhotoId = keyof typeof PHOTO_SRC;
 const PHOTO_SRC_W = 784;
@@ -45,6 +47,11 @@ function photoOf(id: PhotoId): HTMLImageElement {
     photos.set(id, img);
   }
   return img;
+}
+
+/** 先把圖載好，換幕時才不會黑一下 */
+export function preloadPhotos(ids: readonly PhotoId[]) {
+  ids.forEach(photoOf);
 }
 
 /** 把圖裡從 top 開始的一段畫滿場景，鏡頭像呼吸一樣微微推拉；還沒載好就先黑著 */
@@ -65,6 +72,21 @@ function photoScene(ctx: Ctx, id: PhotoId, top: number, t: number) {
 /** 整張 scene/ 橫圖直接當場景用（小晴路線的約會與尾聲） */
 export function photoDraw(id: PhotoId): (ctx: Ctx, t: number) => void {
   return (ctx, t) => photoScene(ctx, id, 0, t);
+}
+
+/** 瓢蟲結局的巷口：圖上的霓虹招牌會閃，用沒有邊的柔光疊上去，鏡頭推拉時才不會對不準 */
+export function drawLadybugAlleyScene(ctx: Ctx, t: number) {
+  photoScene(ctx, "ladybugAlley", 0, t);
+  const stutter = saw(t, 3100) > 0.92 && blink(t, 90);
+  const alpha = stutter ? 0 : 0.2 + 0.08 * Math.sin(t / 700);
+  const sign = ctx.createRadialGradient(132, 24, 4, 132, 24, 38);
+  sign.addColorStop(0, `rgba(255, 111, 145, ${alpha})`);
+  sign.addColorStop(1, "rgba(255, 111, 145, 0)");
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  ctx.fillStyle = sign;
+  ctx.fillRect(90, 0, 84, 66);
+  ctx.restore();
 }
 
 export function drawOfficeScene(ctx: Ctx, t: number) {

@@ -124,7 +124,7 @@ assets/heroine/                     真結局女角素材 01～11.jpg，只有 0
 | 個工路線、瓢蟲結局 | 完成；結局改成冠宇和她有來有回的對話，從聊天室無縫接過去 |
 | 從 TinyTap 獨立成這個 repo | 完成 |
 | Swipy 女角精緻像素化 | 完成：120×150 原寸算圖，所有圖層由 seed 決定；小晴仍然用照片 |
-| 遊戲內場景換插圖 | 部分完成：吃飯、週末是合成的暫代圖，瓢蟲結局的巷子和鐵門還是像素圖 |
+| 遊戲內場景換插圖 | 部分完成：吃飯、週末是合成的暫代圖；瓢蟲結局的巷口和開門已換成 `scene/ladybug-alley.jpg`、`scene/ladybug-door.jpg` |
 | 晚上回訊息 | 完成：夜間入口在 `screens/NightScreen.tsx`，手機畫面和白天共用，測試在 `nightReply.test.ts`；沒有新增存檔欄位 |
 | 真結局女角素材 | 08、09 已接進遊戲，其他幾張等擁有者決定 |
 | 真結局 | 完成，在 `feat/true-ending` 等審；三次約會和尾聲都已換成 `scene/date-*.jpg`、`scene/epi-*.jpg` 插圖 |
@@ -285,8 +285,9 @@ assets/heroine/                     真結局女角素材 01～11.jpg，只有 0
 擁有者覺得程式畫的像素小人怪怪的，正在用生圖工具做圖，圖來了要換上：
 
 - 6:5 橫圖用在遊戲內場景，2:3 直圖用在開場和結局
+- `photoScene` 是照寬 784 的原圖裁切，新圖要先裁成 6:5、縮到 784×653 才放進來，不然只會畫到左上角
 - 新增圖片：放進 `public/left-on-read/`，在 `pixel/scenes.ts` 的 `PHOTO_SRC` 加一筆，再用 `photoScene(ctx, id, top, t)` 畫
-- 目前要換的：`scene/eatery.jpg`、`scene/weekend.jpg`（合成的暫代圖）、瓢蟲結局的巷子與鐵門、畢業典禮、標題和配對畫面的主角大頭
+- 目前要換的：`scene/eatery.jpg`、`scene/weekend.jpg`（合成的暫代圖）、畢業典禮、標題和配對畫面的主角大頭
 
 ### 已知問題
 
