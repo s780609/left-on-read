@@ -7,6 +7,7 @@
 import type { Beat } from "./beats.ts";
 
 export type TrueEndingScene =
+  | "train"
   | "noodles"
   | "intimate"
   | "intimateSex"
@@ -17,6 +18,11 @@ export type TrueEndingScene =
   | "title";
 
 export const TRUE_ENDING_BEATS: readonly Beat<TrueEndingScene>[] = [
+  {
+    scene: "train",
+    fade: "slow",
+    text: "告白之後的回程捷運，她靠在我肩上睡著了。我坐過了三站，沒有叫她。她醒來說：「你怎麼不叫我。」我說：「我也睡著了。」我沒有。",
+  },
   { scene: "noodles", fade: "slow", text: "泡麵要等三分鐘。以前這是一天裡最確定會有結果的事。現在她在旁邊，一直問好了沒。" },
   {
     scene: "intimate",

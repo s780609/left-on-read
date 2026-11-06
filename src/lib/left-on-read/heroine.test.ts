@@ -482,6 +482,7 @@ test("威秀之後：當晚先收尾，隔天再聊，回完才收到大稻埕�
     { who: "me", text: "我也是。安全到家就好。晚安。" },
     { who: "her", text: "嗯，晚安。做個好夢。" },
     { who: "her", text: "那天謝謝你，我很開心。" },
+    { who: "her", text: "我把票根夾在書裡了。不要問為什麼。" },
     { who: "her", text: "欸，那部片的結局你看懂了嗎？我回家想了好久" },
     { who: "me", text: "我查了三篇影評，現在懂了。要我解釋嗎" },
     { who: "her", text: "不用，我想繼續不懂。不過你真的去查了三篇喔，好認真。" },
@@ -662,8 +663,9 @@ test("結局進度：瓢蟲、真結局、Iris 一起算 n / 3", () => {
   );
 });
 
-test("腳本：六段加片名，都有文字", () => {
+test("腳本：回程捷運、六段加片名，都有文字", () => {
   assert.deepEqual(TRUE_ENDING_BEATS.map((b) => b.scene), [
+    "train",
     "noodles",
     "intimate",
     "intimate",

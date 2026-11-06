@@ -26,6 +26,7 @@ export const PITCH_STORIES: readonly Story[] = [
           "聽起來很厲害 可是我只有兩萬三",
           "等一下 我們不是在聊天嗎",
         ],
+        answers: ["回測是給不相信的人看的啦", "兩萬三也可以開始啊 老師說小資更要投資", "對啊 我們在聊財富自由"],
       },
       {
         incoming: { kind: "message", text: "群裡很多人都財富自由了喔 名額不多，要快" },
@@ -50,6 +51,7 @@ export const PITCH_STORIES: readonly Story[] = [
       {
         incoming: { kind: "message", text: "那你有沒有想過 萬一生病怎麼辦" },
         replies: ["妳好關心我", "多喝熱水吧", "我算過 存款可以撐 41 天"],
+        answers: ["我是關心你的未來", "熱水不能理賠喔", "那第 42 天呢"],
       },
       {
         incoming: { kind: "message", text: "所以你有規劃保單嗎？我幫你看一下，不用錢" },
@@ -76,6 +78,7 @@ export const PITCH_STORIES: readonly Story[] = [
       {
         incoming: { kind: "message", text: "這週六有一場分享會，有位老師很厲害，我帶你去" },
         replies: ["好啊 這算約會嗎", "要穿什麼 我只有 T 恤", "會場有提供便當嗎"],
+        answers: ["算是人生的約會", "穿你最有自信的那件", "有茶點喔 還有老師的簽名書"],
       },
       {
         incoming: { kind: "narration", text: "（週六）她說下次帶朋友一起來，效果更好。" },
@@ -202,6 +205,7 @@ export const PITCH_STORIES: readonly Story[] = [
       {
         incoming: { kind: "message", text: "其實我在國外出差 這邊訊號不太好 但我想多認識你" },
         replies: ["國外哪裡 時差怎麼算", "好巧 我也想多認識妳", "訊號不好還能秒回 好厲害"],
+        answers: ["時差七小時 但我願意配合你", "我們真的很有緣", "我……用飯店的 wifi"],
       },
       {
         incoming: { kind: "message", text: "親愛的 我證件被扣住了 能不能先幫我轉一筆保證金 回來立刻還你" },
@@ -229,6 +233,7 @@ export const PITCH_STORIES: readonly Story[] = [
       {
         incoming: { kind: "message", text: "本人啦笨蛋 週末要不要出來喝一杯 我請你" },
         replies: ["好啊！哪裡", "妳請我 我是不是該準備什麼", "可以 但我不太會喝酒 可以喝無糖茶嗎"],
+        answers: ["等等傳給你", "人來就好啦", "可以啊 茶錢我朋友會算"],
       },
       {
         incoming: { kind: "message", text: "週六晚上六點半 那間KTV旁邊的燒烤 你到了傳訊息 我朋友可能也在" },

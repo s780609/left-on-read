@@ -5,7 +5,7 @@ import { IRIS_STORY_ID, datesForStory } from "@/lib/left-on-read/stories/index";
 import { pendingDateStep } from "@/lib/left-on-read/story";
 import type { Chat } from "@/lib/left-on-read/storyTypes";
 import { generateGirl } from "@/lib/left-on-read/girl";
-import { DATE_SCENES, IRIS_DATE_SCENES } from "../pixel/heroineScenes";
+import { DATE_MOMENT_SCENES, DATE_SCENES, IRIS_DATE_SCENES } from "../pixel/heroineScenes";
 import { preloadPhotos } from "../pixel/scenes";
 import { COLOR, DialogBox, PixelButton, Scene, ScreenBody, Typewriter, useAdvanceKeys } from "../ui";
 
@@ -42,6 +42,43 @@ export function DateScreen({ chat, money, onDone }: { chat: Chat; money: number;
     else setTyped(true);
   };
   useAdvanceKeys(goHome, choice !== null);
+
+  // 選擇之前的曖昧片段：一段一段按著看，看完才到結帳、做選擇
+  const moments = date.moments ?? [];
+  const [moment, setMoment] = useState(0);
+  const inMoments = moment < moments.length;
+  const nextMoment = useCallback(() => setMoment((m) => m + 1), []);
+  useAdvanceKeys(nextMoment, inMoments);
+  const current = inMoments ? moments[moment] : null;
+  const sceneDraw = (current?.scene && DATE_MOMENT_SCENES[current.scene]) || scenes[index];
+
+  if (current) {
+    return (
+      <div className="flex h-full flex-col">
+        <Scene key={`m${moment}`} draw={sceneDraw} label={`和${name}在${date.place}`} />
+        <ScreenBody
+          actions={
+            <PixelButton color={COLOR.pink} onClick={nextMoment}>
+              繼續
+            </PixelButton>
+          }
+        >
+          <p className="mb-2 flex justify-between text-sm text-[#f2d675]">
+            <span>
+              {date.place}｜和{name}
+            </span>
+            <span className="text-xs text-[#a9abc9]">
+              {moment + 1} / {moments.length + 1}
+            </span>
+          </p>
+          <DialogBox>
+            {moment === 0 && date.activity ? <p className="mb-2 text-sm text-[#a9abc9]">{date.activity}</p> : null}
+            <Typewriter key={current.text} text={current.text} cps={20} />
+          </DialogBox>
+        </ScreenBody>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-full flex-col" onClick={choice === null ? undefined : finishTyping}>

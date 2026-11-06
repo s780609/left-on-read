@@ -111,6 +111,8 @@ export const GHOST_STORIES: readonly Story[] = [
           "所以這個讚是指我哪一句",
           "（回傳貼圖：一隻柴犬九十度鞠躬）",
         ],
+        // 她只用貼圖回，連回應都是兔子
+        answers: ["（貼圖：兔子歪頭）", "（貼圖：兔子聳肩）", "（貼圖：兔子往後退三步）"],
       },
       {
         incoming: { kind: "message", text: "（貼圖：兔子躺著睡覺）" },

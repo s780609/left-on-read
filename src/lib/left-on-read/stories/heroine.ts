@@ -29,6 +29,11 @@ export interface HeroineDate {
   closing: string;
   /** 錢不夠、跟她借了錢才來的時候，收尾前多的那一句 */
   brokeNote?: string;
+  /**
+   * 選擇之前的幾段曖昧，一段一段按著看。scene 是這一段要用的插圖 id（pixel/heroineScenes.ts 的 DATE_MOMENT_SCENES），
+   * 沒寫就用這次約會的主圖
+   */
+  moments?: readonly { text: string; scene?: string }[];
 }
 
 export const HEROINE_DATES: readonly HeroineDate[] = [
@@ -36,6 +41,13 @@ export const HEROINE_DATES: readonly HeroineDate[] = [
     place: "信義威秀",
     activity: "看電影，然後吃美食街。",
     cost: HEROINE_DATE_COSTS[0],
+    moments: [
+      {
+        scene: "movieHands",
+        text: "爆米花放在我們中間的扶手上。電影演到一半，我們的手在桶子裡碰到兩次。第二次她沒有縮回去，是我先縮的。",
+      },
+      { text: "片尾字幕跑完，燈亮了，她還沒站起來。我也沒有。我們好像都在等對方先說「走吧」。" },
+    ],
     opening: "結帳的時候，她拿出錢包。",
     options: [
       { text: "「我請妳，妳請我喝飲料就好。」", response: "她笑了：「好啊。」" },
@@ -48,6 +60,13 @@ export const HEROINE_DATES: readonly HeroineDate[] = [
     place: "大稻埕",
     activity: "逛夜市、看煙火。",
     cost: HEROINE_DATE_COSTS[1],
+    moments: [
+      {
+        scene: "nightMarket",
+        text: "夜市人太多。她說：「你走前面，我拉著你的衣服。」我走得很慢，比平常慢很多。",
+      },
+      { text: "她的手機沒電了，借我的拍照。我的相簿從那天起，第一次有一張照片裡有別人。" },
+    ],
     opening: "她把最後一口雞排推給我。煙火開始的時候，四周都在拍照。",
     options: [
       {
@@ -62,6 +81,12 @@ export const HEROINE_DATES: readonly HeroineDate[] = [
     place: "板橋耶誕城",
     activity: "看燈、擠人潮。",
     cost: HEROINE_DATE_COSTS[2],
+    moments: [
+      {
+        scene: "treePhoto",
+        text: "排隊在聖誕樹前拍照，後面的阿姨說：「你們兩個靠近一點啦。」她沒有反駁，往我這邊靠了一點。",
+      },
+    ],
     opening: "聖誕樹上的燈一層一層亮起來。人潮把我們擠得很近，她的手很冰，我想了三分鐘要不要講這件事。",
     options: [
       {
@@ -106,7 +131,7 @@ const AFTER_FIRST_DATE_HOME: ReplyStep = {
 /** 威秀之後、大稻埕邀約之前（隔天起） */
 const AFTER_FIRST_DATE: readonly ReplyStep[] = [
   {
-    lead: ["那天謝謝你，我很開心。"],
+    lead: ["那天謝謝你，我很開心。", "我把票根夾在書裡了。不要問為什麼。"],
     incoming: { kind: "message", text: "欸，那部片的結局你看懂了嗎？我回家想了好久" },
     replies: ["老實說沒有。但當場不敢講，怕妳覺得我很笨", "我查了三篇影評，現在懂了。要我解釋嗎"],
     answers: ["我也沒看懂啦！我還以為只有我這樣", "不用，我想繼續不懂。不過你真的去查了三篇喔，好認真。"],
@@ -130,7 +155,7 @@ const AFTER_SECOND_DATE_HOME: ReplyStep = {
 
 /** 大稻埕隔天：最後一次這麼自然，假失敗才會痛 */
 const AFTER_SECOND_DATE: ReplyStep = {
-  lead: ["我的外套現在還有雞排味。"],
+  lead: ["我的外套現在還有雞排味。", "你手機裡那張我拍的煙火，傳給我好不好。我想設成桌布。"],
   incoming: { kind: "message", text: "明年要記得早點去占位子，這次差點看不到" },
   replies: ["好，我記下來了。明年。", "我開個行事曆提醒，提前三百六十天通知妳"],
   answers: ["嗯，明年。", "三百六十天也太早了吧。好啦，你提醒我。"],
@@ -145,6 +170,7 @@ const AFTER_COMEBACK: readonly ReplyStep[] = [
     answers: ["這名字也太慘了吧。對不起啦。這次是我約的，不會是下次。", "你真的很不會說謊。加班那幾天，我一直在想煙火的事。"],
   },
   {
+    lead: ["上次在大稻埕，你走得好慢。這次換我走前面。"],
     incoming: { kind: "message", text: "那天多穿一件，耶誕城人很多又很冷。" },
     replies: ["好。我查了點燈時間，提早半小時到，留一點誤差", "好。那妳也穿厚一點"],
     answers: ["你是要發射火箭嗎。好啦，聽你的。", "我才不要，我要穿好看的。冷再說。"],

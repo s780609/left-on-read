@@ -54,6 +54,7 @@ export const QUICK_STORIES: readonly Story[] = [
       {
         incoming: { kind: "message", text: "有房嗎" },
         replies: ["爸媽在嘉義有", "有 每個月 12,500", "遊戲裡有一棟 三層樓 有地下室"],
+        answers: ["那是爸媽的", "那是房東的", "遊戲的不算"],
       },
       {
         incoming: { kind: "message", text: "月薪多少" },

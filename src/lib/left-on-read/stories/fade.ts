@@ -26,6 +26,7 @@ export const FADE_STORIES: readonly Story[] = [
           "妳想去光華商場嗎 那邊我很熟",
           "看妳 我接下來十二個週末都有空",
         ],
+        answers: ["重灌電腦……喔。", "光華商場？", "十二個週末……好喔。"],
       },
       {
         incoming: { kind: "vanished" },

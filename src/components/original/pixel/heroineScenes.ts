@@ -28,7 +28,19 @@ export const DATE_SCENES: readonly SceneDraw[] = [
   photoDraw("dateBanqiao"),
 ];
 
+/**
+ * 約會裡選擇之前的曖昧片段（HeroineDate.moments 的 scene）。
+ * 插圖還沒生成，先借用同一次約會的主圖；圖來了在 scenes.ts 的 PHOTO_SRC 加一筆，這裡改一行就好。
+ */
+export const DATE_MOMENT_SCENES: Record<string, SceneDraw> = {
+  movieHands: photoDraw("dateMovie"),
+  nightMarket: photoDraw("dateFireworks"),
+  treePhoto: photoDraw("dateBanqiao"),
+};
+
 export const TRUE_ENDING_SCENES: Record<TrueEndingScene, SceneDraw> = {
+  // 告白後回程的捷運：插圖還沒生成，先借用耶誕城那張
+  train: photoDraw("dateBanqiao"),
   noodles: photoDraw("epiNoodles"),
   intimate: photoDraw("epiIntimate"),
   intimateSex: photoDraw("epiIntimateSex"),
