@@ -371,3 +371,5 @@ assets/heroine/                     真結局女角素材 01～11.jpg，只有 0
 - **成就**（`achievements.ts`、`screens/AchievementScreen.tsx`）：14 個，存在 meta 的 `achievements`（id → 解鎖那天）和 `counters`（跨局累計）。`dispatch` 每個動作後用 `progressAchievements` 更新，新解鎖跳 toast
 - **新遊戲＋**：圖鑑有任何結局時，選單多一顆「新遊戲＋」。`createRun(seed, { ngPlus: true })`，開場白多一句 `memory`（好感 +1、小晴計分也算 +1），白天多回一則
 
+
+- 2026-11-06：小晴第 4 題過門檻後，她依冠宇選的那句當場回（`PASSED_GATE_STEP.answers`，只在她的路線，差一點那份沒有）；下一步改成只定哪一部片，訂票的話兩個選項都講明是冠宇訂。

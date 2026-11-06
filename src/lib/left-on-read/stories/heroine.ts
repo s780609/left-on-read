@@ -183,15 +183,30 @@ const CHAT_STEPS: readonly ReplyStep[] = [
   },
 ];
 
+/**
+ * 過了門檻之後她當場回的那句：冠宇可能已經約了，也可能沒約，下一句才接得上。
+ * 只放在她的路線；走回「差一點」的那份沒有，不然她會先說好、再說先這樣。
+ */
+const PASSED_GATE_STEP: ReplyStep = {
+  ...CHAT_STEPS[3],
+  answers: [
+    "……你可以直接問要不要出來就好。好啦，我們去看電影。",
+    "好啊！我剛好有一部想看。",
+    "哈哈。那週末換你陪我去看電影，就這樣說定了。",
+  ],
+};
+
 export const HEROINE_STORY: Story = {
   id: HEROINE_STORY_ID,
   dexName: "小晴",
   dexQuip: "這一筆不會被記進失敗圖鑑。",
   category: "fade",
   steps: [
-    ...CHAT_STEPS,
+    ...CHAT_STEPS.slice(0, 3),
+    PASSED_GATE_STEP,
     {
-      incoming: { kind: "message", text: "週末信義威秀有一部我想看。一起去？" },
+      // 上一句已經講好要去看電影，這裡只定哪一部
+      incoming: { kind: "message", text: "信義威秀那部新上的，我一直想看。就那部？" },
       replies: ["好，我查一下場次", "好。我把那天空下來了，雖然本來就是空的"],
       // 冠宇說要查，她就等他回場次，不要自己先講好了
       answers: ["好～你查完跟我說要哪一場", "嗯，你定時間就好。我都可以。"],
@@ -200,8 +215,9 @@ export const HEROINE_STORY: Story = {
       // 同一輪就把場次講死，赴約前狀態列「約好了」才接得上
       wait: { days: 0 },
       incoming: { kind: "none" },
-      replies: ["週六下午 14:30 那場評價不錯，可以嗎？", "我看了，週六 14:30。票我來訂"],
-      answers: ["可以！那週六 14:30 信義威秀見。別遲到喔。", "收到～週六下午見。謝謝你訂。"],
+      // 兩句都講清楚票是冠宇訂的
+      replies: ["週六下午 14:30 那場評價不錯，票我來訂，可以嗎？", "我看了，週六 14:30。票我來訂"],
+      answers: ["可以！那週六 14:30 信義威秀見。票交給你，別遲到喔。", "收到～週六下午見。謝謝你訂。"],
     },
     dateStep(0),
     AFTER_FIRST_DATE_HOME,

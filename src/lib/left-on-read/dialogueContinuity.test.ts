@@ -106,3 +106,18 @@ test("heroine：約會後有當晚收尾，且 wait 為 0", () => {
     assert.match(JSON.stringify(step), /到家|晚安|謝謝/);
   }
 });
+
+test("小晴：過門檻那句她會先回，差一點那份不會；兩個訂場次選項都講明誰訂票", () => {
+  const gate = HEROINE_STORY.steps[3] as ReplyStep;
+  const almostGate = HEROINE_ALMOST_STORY.steps[3] as ReplyStep;
+  assert.ok(gate.gate && almostGate.gate);
+  assert.equal(gate.answers?.length, gate.replies.length);
+  assert.equal(almostGate.answers, undefined, "走回失敗時不能先說好");
+  assert.deepEqual(gate.replies, almostGate.replies);
+  assert.deepEqual(gate.scores, almostGate.scores);
+  const confirm = HEROINE_STORY.steps[5] as ReplyStep;
+  assert.ok(confirm.replies.every((r) => /票我來訂/.test(r)));
+  // 下一步不能再約一次
+  const pick = HEROINE_STORY.steps[4];
+  assert.ok("text" in pick.incoming && !/一起去/.test(pick.incoming.text));
+});
