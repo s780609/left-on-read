@@ -21,8 +21,9 @@ interface DayScreenProps {
 export function DayScreen({ run, onMenu, onOpenChats, onEndDay, onGoDate }: DayScreenProps) {
   const workday = isWorkday(calendarOf(run.dayIndex));
   const chats = visibleChats(run.chats, run.dayIndex);
-  const ready = readyChats(chats, run.dayIndex, run.phase).length;
-  const waiting = chats.length - ready;
+  const open = chats.filter((c) => !c.closed);
+  const ready = readyChats(open, run.dayIndex, run.phase).length;
+  const waiting = open.length - ready;
   const dateChat = dueDateChat(run.chats, run.dayIndex);
   const dateStep = dateChat && pendingDateStep(dateChat);
   const date = dateStep?.date ? HEROINE_DATES[dateStep.date.index] : null;

@@ -92,7 +92,8 @@ test("晚上也可以看完結局，圖鑑和花費都跟白天一樣", () => {
     assert.deepEqual(night.events, day.events);
     assert.deepEqual(night.dex, day.dex);
     assert.equal(night.run.money, day.run.money);
-    assert.deepEqual(night.run.chats, []);
+    assert.equal(night.run.chats.length, 1);
+    assert.equal(night.run.chats[0].closed, true);
     assert.equal(night.run.phase, phase);
   }
 });
@@ -377,6 +378,13 @@ test("模糊測試：只在晚上回訊息，不變量永遠成立，晚上真�
         } else {
           action = { type, chatId: pick(rng, finals).id };
           nightEndings++;
+        }
+      } else if (type === "deleteChat") {
+        const closed = run.chats.filter((c) => c.closed);
+        if (closed.length === 0) {
+          action = { type: pick(rng, legal.filter((t) => t !== "deleteChat")) } as GameAction;
+        } else {
+          action = { type, chatId: pick(rng, closed).id };
         }
       } else if (type === "swipe") {
         action = { type, dir: rng() < 0.3 ? "left" : "right" };

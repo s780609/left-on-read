@@ -89,7 +89,7 @@ export function ChatList({ run, onOpen, onClose }: ChatListProps) {
       <div className="min-h-0 flex-1 overflow-y-auto">
         {visibleChats(run.chats, run.dayIndex).map((chat) => {
           const girl = generateGirl(chat.girlSeed);
-          const ready = isChatReady(chat, run.dayIndex, run.phase);
+          const ready = !chat.closed && isChatReady(chat, run.dayIndex, run.phase);
           const lines = chatTranscript(chat, girl, run.dayIndex);
           return (
             <button
@@ -108,7 +108,9 @@ export function ChatList({ run, onOpen, onClose }: ChatListProps) {
                   {lastLineText(lines[lines.length - 1])}
                 </span>
               </span>
-              {ready ? (
+              {chat.closed ? (
+                <span className="shrink-0 border-2 border-black bg-[#55587a] px-1.5 text-xs text-[#c8cae0]">已結束</span>
+              ) : ready ? (
                 <span className="shrink-0 border-2 border-black bg-[#ff6f91] px-1.5 text-xs text-white">新</span>
               ) : null}
             </button>
@@ -204,10 +206,12 @@ interface ChatRoomProps {
   /** panelHeight：選項區當下的高度，接下來的畫面要從這個高度慢慢收，版面才不會跳 */
   onReply: (choice: number, panelHeight?: number) => void;
   onFinish: () => void;
+  /** 已結束的對話：從列表刪掉（不再記圖鑑） */
+  onDelete?: () => void;
   onBack: () => void;
 }
 
-export function ChatRoom({ run, chat, onReply, onFinish, onBack }: ChatRoomProps) {
+export function ChatRoom({ run, chat, onReply, onFinish, onDelete, onBack }: ChatRoomProps) {
   const girl = useMemo(() => generateGirl(chat.girlSeed), [chat.girlSeed]);
   const story = STORY_BY_ID[chat.storyId];
   const step = story.steps[chat.stepIndex];
@@ -257,7 +261,17 @@ export function ChatRoom({ run, chat, onReply, onFinish, onBack }: ChatRoomProps
         ref={panelRef}
         className="relative flex max-h-[52%] shrink-0 flex-col gap-2 overflow-y-auto border-t-[3px] border-black bg-[#20203c] px-3 py-3"
       >
-        {!ready ? (
+        {chat.closed ? (
+          <>
+            <p className="text-center text-sm text-[#a9abc9]">這段對話已經結束了。</p>
+            {onDelete ? (
+              <PixelButton color={COLOR.red} silent onClick={onDelete}>
+                刪除對話
+              </PixelButton>
+            ) : null}
+            <PixelButton onClick={onBack}>回列表</PixelButton>
+          </>
+        ) : !ready ? (
           <>
             <p className="text-center text-sm text-[#a9abc9]">
               {dateIsNext

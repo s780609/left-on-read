@@ -126,8 +126,9 @@ export function isWaitReady(chat: Chat, dayIndex: number, phase?: ChatPhase): bo
   return false;
 }
 
-/** 現在能不能回：等滿 + 今天是可回訊息日 */
+/** 現在能不能回：等滿 + 今天是可回訊息日；已結束的對話不能再回／關 */
 export function isChatReady(chat: Chat, dayIndex: number, phase?: ChatPhase): boolean {
+  if (chat.closed) return false;
   return isWaitReady(chat, dayIndex, phase) && isPhoneChatDay(calendarOf(dayIndex));
 }
 
@@ -157,6 +158,7 @@ export function pendingDateStep(chat: Chat): ReplyStep | null {
 export function dueDateChat(chats: readonly Chat[], dayIndex: number): Chat | null {
   if (isWorkday(calendarOf(dayIndex))) return null;
   const due = chats.find((chat) => {
+    if (chat.closed) return false;
     const step = pendingDateStep(chat);
     return step !== null && dayIndex >= firstReadyDay(chat.lastAdvancedDay, step.wait);
   });
@@ -166,6 +168,7 @@ export function dueDateChat(chats: readonly Chat[], dayIndex: number): Chat | nu
 /** 假失敗之後，她今天主動回來了的聊天 */
 export function comebackChat(chats: readonly Chat[], dayIndex: number): Chat | null {
   const due = chats.find((chat) => {
+    if (chat.closed) return false;
     const step = STORY_BY_ID[chat.storyId]?.steps[chat.stepIndex];
     // 回來那天就要看得到她；能不能回仍看 isChatReady
     return step && "comeback" in step && step.comeback && isWaitReady(chat, dayIndex);

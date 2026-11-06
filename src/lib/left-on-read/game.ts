@@ -61,6 +61,7 @@ export type GameAction =
   | { type: "ackPayday" }
   | { type: "reply"; chatId: number; choice: number }
   | { type: "closeChat"; chatId: number }
+  | { type: "deleteChat"; chatId: number }
   | { type: "goOnDate"; choice: number }
   | { type: "endDaytime" }
   | { type: "eatOut" }
@@ -210,6 +211,7 @@ function chatActions(run: RunState): GameAction["type"][] {
     (run.phase !== "daytime" || run.dayReplies < DAYTIME_REPLY_LIMIT);
   if (canReply) actions.push("reply");
   if (steps.some((s) => s && isFinal(s))) actions.push("closeChat");
+  if (run.chats.some((c) => c.closed)) actions.push("deleteChat");
   return actions;
 }
 
@@ -348,7 +350,7 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
     case "closeChat": {
       if (!canUsePhone(run.phase)) return same;
       const chat = run.chats.find((c) => c.id === action.chatId);
-      if (!chat || !isChatReady(chat, run.dayIndex, run.phase)) return same;
+      if (!chat || chat.closed || !isChatReady(chat, run.dayIndex, run.phase)) return same;
       const step = storyStep(chat);
       if (!step || !isFinal(step)) return same;
       const { narration, cost = 0, antiFraud } = step.ending;
@@ -365,10 +367,26 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
         },
       ];
       if (!isDexComplete(dex) && isDexComplete(nextDex)) events.push({ type: "dexCompleted" });
+      // 對話留在列表，標成已結束；玩家自己刪才從陣列拿掉
       return {
-        run: { ...run, money, chats: run.chats.filter((c) => c !== chat) },
+        run: {
+          ...run,
+          money,
+          chats: run.chats.map((c) => (c === chat ? { ...c, closed: true } : c)),
+        },
         dex: nextDex,
         events,
+      };
+    }
+
+    case "deleteChat": {
+      if (!canUsePhone(run.phase)) return same;
+      const chat = run.chats.find((c) => c.id === action.chatId);
+      if (!chat || !chat.closed) return same;
+      return {
+        run: { ...run, chats: run.chats.filter((c) => c !== chat) },
+        dex,
+        events: [],
       };
     }
 
@@ -444,7 +462,7 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
       const openerIndex = OPENER_KINDS.indexOf(action.opener);
       if (openerIndex < 0) return same;
       const girlSeed = run.pendingMatchSeed;
-      const activeStoryIds = run.chats.map((c) => c.storyId);
+      const activeStoryIds = run.chats.filter((c) => !c.closed).map((c) => c.storyId);
       // 個工只走隱藏路線；同時已經有一條在聊，就當一般人抽
       const story =
         girlSeed === HEROINE_SEED

@@ -133,6 +133,11 @@ function concreteAction(type: GameAction["type"], run: RunState, rng: Rng): Game
       assert.ok(finals.length > 0, "legal 有 closeChat 卻沒有可收的聊天");
       return { type, chatId: pick(rng, finals).id };
     }
+    case "deleteChat": {
+      const closed = run.chats.filter((c) => c.closed);
+      assert.ok(closed.length > 0, "legal 有 deleteChat 卻沒有已結束的聊天");
+      return { type, chatId: pick(rng, closed).id };
+    }
     case "goOnDate":
       return { type, choice: randInt(rng, 0, 1) };
     case "swipe":
@@ -434,12 +439,15 @@ test("reply 用在末步、closeChat 用在非末步都不合法", () => {
 
 // ---------- 結局與圖鑑 ----------
 
-test("closeChat：移除聊天、記圖鑑、發事件", () => {
+test("closeChat：標記已結束、記圖鑑、發事件；deleteChat 才移除", () => {
   const story = STORIES.find((s) => !(s.steps[s.steps.length - 1] as FinalStep).ending.cost);
   assert.ok(story);
   const s = session(at({ phase: "daytime", dayIndex: 60, chats: [finalChat(story)], nextChatId: 2 }));
   s.act({ type: "closeChat", chatId: 1 });
-  assert.deepEqual(s.run.chats, []);
+  assert.equal(s.run.chats.length, 1);
+  assert.equal(s.run.chats[0].closed, true);
+  assert.ok(!legalActions(s.run).includes("closeChat"));
+  assert.ok(legalActions(s.run).includes("deleteChat"));
   assert.deepEqual(s.dex[story.id], { count: 1, firstDayIndex: 60 });
   const ended = eventOf(s.events, "chatEnded");
   assert.ok(ended);
@@ -447,6 +455,11 @@ test("closeChat：移除聊天、記圖鑑、發事件", () => {
   assert.equal(ended.firstTime, true);
   assert.equal(ended.paid, 0);
   assert.equal(s.run.money, START_MONEY);
+  const dexAfter = structuredClone(s.dex);
+  s.act({ type: "deleteChat", chatId: 1 });
+  assert.deepEqual(s.run.chats, []);
+  assert.deepEqual(s.dex, dexAfter);
+  assert.deepEqual(s.events, []);
 });
 
 test("同一種失敗第二次：次數加一，事件不是首次，傳入的 dex 不被修改", () => {

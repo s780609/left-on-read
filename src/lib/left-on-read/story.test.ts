@@ -111,7 +111,7 @@ function walkStory(story: Story, choose: (step: ReplyStep, index: number) => num
   let ended: ChatEnded | undefined;
   let endDay = startDay;
   const replies: number[] = [];
-  for (let day = startDay; run.chats.length > 0; day++) {
+  for (let day = startDay; run.chats.some((c) => !c.closed); day++) {
     assert.ok(day <= startDay + 90, `${story.id} 走了 90 天還沒結束`);
     run = { ...run, dayIndex: day, dayReplies: 0 };
     const chat = run.chats[0];
