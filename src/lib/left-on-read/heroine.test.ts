@@ -571,8 +571,8 @@ test("結局進度：瓢蟲和真結局一起算 n / 2", () => {
   );
 });
 
-test("腳本：五段加片名，都有文字", () => {
-  assert.deepEqual(TRUE_ENDING_BEATS.map((b) => b.scene), ["noodles", "chiayi", "proposal", "wedding", "baby", "title"]);
+test("腳本：六段加片名，都有文字", () => {
+  assert.deepEqual(TRUE_ENDING_BEATS.map((b) => b.scene), ["noodles", "chiayi", "proposal", "wedding", "intimate", "baby", "title"]);
   for (const b of TRUE_ENDING_BEATS) assert.ok(b.text.trim().length > 0);
   assert.equal(TRUE_ENDING_BEATS.at(-1)?.text, "真結局\n已讀。\n然後她回了。");
 });

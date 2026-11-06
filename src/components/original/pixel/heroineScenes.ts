@@ -32,6 +32,7 @@ export const TRUE_ENDING_SCENES: Record<TrueEndingScene, SceneDraw> = {
   chiayi: photoDraw("epiChiayi"),
   proposal: photoDraw("epiProposal"),
   wedding: photoDraw("epiWedding"),
+  intimate: photoDraw("epiIntimate"),
   baby: photoDraw("epiBaby"),
   title: captionScene("#0f0e20", "", "#ff9fb4"),
 };
