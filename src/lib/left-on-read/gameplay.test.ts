@@ -9,7 +9,7 @@ import {
 import { applyDelta, replyDelta, shouldSoftEnd, statsOf, ZERO_STATS } from "./chatStats.ts";
 import { advance, createRun, legalActions } from "./game.ts";
 import type { RunState } from "./game.ts";
-import { STORIES } from "./stories/index.ts";
+import { STORIES, STORY_BY_ID } from "./stories/index.ts";
 import { isChatReady } from "./story.ts";
 import type { Chat, ReplyStep } from "./storyTypes.ts";
 import { calendarOf, isPhoneChatDay } from "./calendar.ts";
@@ -129,4 +129,58 @@ test("shouldSoftEnd 門檻", () => {
     awkward: 2,
     pressure: 3,
   });
+});
+
+test("白天一則都不回，睡覺後隔天仍可回，且當晚可開 Swipy", () => {
+  const day = nextPhoneDay(1);
+  const chat = chatAt(0, { lastAdvancedDay: day - 1 });
+  let run: RunState = {
+    ...createRun(1),
+    phase: "daytime",
+    dayIndex: day,
+    dayReplies: 0,
+    chats: [chat],
+    nextChatId: 2,
+  };
+  assert.ok(legalActions(run).includes("reply"));
+  // 不回，直接下班回家
+  run = advance(run, {}, { type: "endDaytime" }).run;
+  run = advance(run, {}, { type: "goHome" }).run;
+  assert.equal(run.phase, "night");
+  assert.ok(legalActions(run).includes("openApp"), "沒回訊息也能開 Swipy");
+  assert.ok(legalActions(run).includes("reply"), "晚上還可以補回白天沒回的");
+  run = advance(run, {}, { type: "sleep" }).run;
+  assert.equal(run.dayReplies, 0);
+  assert.ok(isChatReady(run.chats[0], run.dayIndex, run.phase));
+  assert.ok(legalActions(run).includes("reply"), "隔天仍可回昨天沒回的訊息");
+});
+
+test("拒 1h2s 後結局步立刻可關，且當晚仍可開 Swipy", () => {
+  const story = STORY_BY_ID.studio;
+  assert.ok(story);
+  const decisionIdx = story.steps.findIndex((s) => "decision" in s && s.decision);
+  assert.ok(decisionIdx >= 0);
+  const day = nextPhoneDay(1);
+  let run: RunState = {
+    ...createRun(1),
+    phase: "night",
+    dayIndex: day,
+    money: 5000,
+    chats: [
+      chatAt(decisionIdx, {
+        storyId: story.id,
+        lastAdvancedDay: day - 1,
+        replies: new Array(decisionIdx).fill(0),
+      }),
+    ],
+    nextChatId: 2,
+  };
+  assert.ok(legalActions(run).includes("reply"));
+  run = advance(run, {}, { type: "reply", chatId: 1, choice: 1 }).run; // 拒絕
+  const chat = run.chats[0];
+  assert.ok(chat, "聊天還在");
+  assert.equal(chat.stepIndex, story.steps.length - 1);
+  assert.ok(isChatReady(chat, day, "night"), "結局步當晚就能關");
+  assert.ok(legalActions(run).includes("closeChat"));
+  assert.ok(legalActions(run).includes("openApp"), "Swipy 不因結局步被鎖");
 });

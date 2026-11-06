@@ -23,6 +23,7 @@ import { LadybugScreen, type LadybugEntry } from "./screens/LadybugScreen";
 import { MatchScreen } from "./screens/MatchScreen";
 import MenuScreen from "./screens/MenuScreen";
 import { NightScreen } from "./screens/NightScreen";
+import { PhonePickupScreen } from "./screens/PhonePickupScreen";
 import { SwipeScreen } from "./screens/SwipeScreen";
 import { TrueEndingScreen } from "./screens/TrueEndingScreen";
 
@@ -46,6 +47,8 @@ export default function LeftOnReadGame() {
   const [ending, setEnding] = useState<EndingInfo | null>(null);
   const [mealNote, setMealNote] = useState<MealNote | null>(null);
   const [hobbyNote, setHobbyNote] = useState<string | null>(null);
+  /** 打開 Swipy 前的拿起手機轉場 */
+  const [pickingUpPhone, setPickingUpPhone] = useState(false);
   /** 正在約會畫面上；約會走完才扣錢，中途關掉不會損失 */
   const [onDate, setOnDate] = useState(false);
   const [graduationDue, setGraduationDue] = useState(false);
@@ -82,6 +85,8 @@ export default function LeftOnReadGame() {
     setPhone(null);
     setEnding(null);
     setMealNote(null);
+    setHobbyNote(null);
+    setPickingUpPhone(false);
     setOnDate(false);
     if (meta.introSeen) {
       setScreen("game");
@@ -256,6 +261,16 @@ export default function LeftOnReadGame() {
     if (mealNote) {
       return <MealScreen run={run} note={mealNote} onMenu={toMenu} onDone={() => setMealNote(null)} />;
     }
+    if (pickingUpPhone) {
+      return (
+        <PhonePickupScreen
+          onDone={() => {
+            setPickingUpPhone(false);
+            dispatch({ type: "openApp" });
+          }}
+        />
+      );
+    }
 
     switch (run.phase) {
       case "payday":
@@ -313,7 +328,7 @@ export default function LeftOnReadGame() {
             onMenu={toMenu}
             onOpenApp={() => {
               setHobbyNote(null);
-              dispatch({ type: "openApp" });
+              setPickingUpPhone(true);
             }}
             onOpenChats={() => {
               setHobbyNote(null);

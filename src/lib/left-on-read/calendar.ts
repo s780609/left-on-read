@@ -30,10 +30,9 @@ export function isWorkday(c: CalendarDay): boolean {
   return c.weekday >= 1 && c.weekday <= 5;
 }
 
-/** 平日只有週二、週五能回訊息（節奏快一點）；週末照常 */
-export function isPhoneChatDay(c: CalendarDay): boolean {
-  if (c.weekday === 0 || c.weekday === 6) return true;
-  return c.weekday === 2 || c.weekday === 5;
+/** 每天都能回訊息（含平日）；約會仍只在週末 */
+export function isPhoneChatDay(_c: CalendarDay): boolean {
+  return true;
 }
 
 /** 每月 5 號，週末也照常入帳 */

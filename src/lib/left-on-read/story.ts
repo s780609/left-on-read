@@ -107,6 +107,8 @@ export type ChatPhase = "daytime" | "night" | "nightDone" | string;
 export function isWaitReady(chat: Chat, dayIndex: number, phase?: ChatPhase): boolean {
   const step = STORY_BY_ID[chat.storyId]?.steps[chat.stepIndex];
   if (step === undefined || ("date" in step && step.date)) return false;
+  // 結局步立刻可關：拒 1h2s／軟收之後不要卡在「今晚她不會再回了」
+  if (isFinal(step)) return true;
   const wait = step.wait ?? { days: 1 };
   const readyDay = firstReadyDay(chat.lastAdvancedDay, wait);
   if (dayIndex >= readyDay) return true;
@@ -124,7 +126,7 @@ export function isWaitReady(chat: Chat, dayIndex: number, phase?: ChatPhase): bo
   return false;
 }
 
-/** 現在能不能回：等滿 + 今天是可回訊息日（平日僅週二／五） */
+/** 現在能不能回：等滿 + 今天是可回訊息日 */
 export function isChatReady(chat: Chat, dayIndex: number, phase?: ChatPhase): boolean {
   return isWaitReady(chat, dayIndex, phase) && isPhoneChatDay(calendarOf(dayIndex));
 }
@@ -165,7 +167,7 @@ export function dueDateChat(chats: readonly Chat[], dayIndex: number): Chat | nu
 export function comebackChat(chats: readonly Chat[], dayIndex: number): Chat | null {
   const due = chats.find((chat) => {
     const step = STORY_BY_ID[chat.storyId]?.steps[chat.stepIndex];
-    // 回來那天就要看得到她；能不能回仍看 isChatReady（平日僅週二／五）
+    // 回來那天就要看得到她；能不能回仍看 isChatReady
     return step && "comeback" in step && step.comeback && isWaitReady(chat, dayIndex);
   });
   return due ?? null;

@@ -121,10 +121,9 @@ test("firstDayIndexOnOrAfter：一週內一定找到正確的星期", () => {
   }
 });
 
-test("平日只有週二週五能回訊息，週末也可以", () => {
-  // dayIndex 0 = 2026-03-02 週一
-  const expect = { 0: false, 1: true, 2: false, 3: false, 4: true, 5: true, 6: true };
-  for (const [i, ok] of Object.entries(expect)) {
-    assert.equal(isPhoneChatDay(calendarOf(Number(i))), ok, `dayIndex ${i}`);
+test("每天都能回訊息", () => {
+  // dayIndex 0 = 2026-03-02 週一；含平日與週末
+  for (let i = 0; i < 7; i++) {
+    assert.equal(isPhoneChatDay(calendarOf(i)), true, `dayIndex ${i}`);
   }
 });

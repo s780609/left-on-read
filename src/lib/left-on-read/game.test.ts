@@ -347,8 +347,7 @@ test("還沒 ready 的聊天不能回", () => {
   const story = longStories()[0];
   const run = at({ phase: "daytime", dayIndex: 32, chats: [chatOf(story, { lastAdvancedDay: 32 })], nextChatId: 2 });
   assert.equal(advance(run, {}, { type: "reply", chatId: 1, choice: 0 }).run, run);
-  const last = at({ phase: "daytime", dayIndex: 32, chats: [{ ...finalChat(story), lastAdvancedDay: 32 }], nextChatId: 2 });
-  assert.equal(advance(last, {}, { type: "closeChat", chatId: 1 }).run, last);
+  // 結局步當天就能關，不再測「等一天才能 closeChat」
 });
 
 // 下面三個測試都讓「另一個聊天」可以做同一種動作，這樣 legalActions 會列出該動作，
@@ -366,7 +365,7 @@ test("另一個聊天還能回時，今天回過的聊天仍然不能再回", ()
   assert.deepEqual(again.events, []);
 });
 
-test("另一個聊天 ready 時，還沒 ready 的聊天仍然不能回或結束", () => {
+test("另一個聊天 ready 時，還沒 ready 的聊天仍然不能回", () => {
   const [a, b] = longStories();
   const today = 60;
   const replyRun = at({
@@ -376,20 +375,11 @@ test("另一個聊天 ready 時，還沒 ready 的聊天仍然不能回或結束
     nextChatId: 3,
   });
   assert.ok(legalActions(replyRun).includes("reply"));
+  // chat 1 今天剛推過，不能再回；只能回 chat 2
   const replied = advance(replyRun, {}, { type: "reply", chatId: 1, choice: 0 });
   assert.equal(replied.run, replyRun);
   assert.deepEqual(replied.events, []);
-
-  const closeRun = at({
-    phase: "daytime",
-    dayIndex: today,
-    chats: [{ ...finalChat(a, 1), lastAdvancedDay: today }, finalChat(b, 2)],
-    nextChatId: 3,
-  });
-  assert.ok(legalActions(closeRun).includes("closeChat"));
-  const closed = advance(closeRun, {}, { type: "closeChat", chatId: 1 });
-  assert.equal(closed.run, closeRun);
-  assert.deepEqual(closed.events, []);
+  // 結局步不再等一天，當天就能關（見 gameplay 拒 1h2s 測試）
 });
 
 test("動作和聊天的步驟不符時不合法，即使另一個聊天可以做那個動作", () => {

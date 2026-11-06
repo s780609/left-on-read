@@ -385,6 +385,11 @@ test("isChatReady：看的是目前這一步的等待", () => {
   const story = STORY_BY_ID["fading-replies"];
   story.steps.forEach((step, stepIndex) => {
     const chat = makeChat(story, { stepIndex, lastAdvancedDay: 40, replies: new Array<number>(stepIndex).fill(0) });
+    if (isFinal(step)) {
+      // 結局步不等待，當天就能關
+      assert.equal(isChatReady(chat, 40), true, `第 ${stepIndex} 步結局`);
+      return;
+    }
     const ready = firstReadyDay(40, step.wait);
     assert.equal(isChatReady(chat, ready - 1), false, `第 ${stepIndex} 步`);
     assert.equal(isChatReady(chat, nextPhoneDay(ready)), true, `第 ${stepIndex} 步`);
@@ -592,8 +597,13 @@ test("chatTranscript：順序是開場白、她的訊息、冠宇選的回覆，
       const chat = makeChat(story, { girlSeed, opener, stepIndex, lastAdvancedDay: 100, replies });
       const readyDay = firstReadyDay(100, step.wait);
       const where = `${story.id} 第 ${stepIndex} 步`;
-      // 還沒到等待日：這一步還沒揭示
-      assert.deepEqual(chatTranscript(chat, girl, 100), expectedTranscript(story, chat, girl, false), where);
+      const finalNow = isFinal(step);
+      // 還沒到等待日：這一步還沒揭示（結局步除外，立刻揭示）
+      assert.deepEqual(
+        chatTranscript(chat, girl, 100),
+        expectedTranscript(story, chat, girl, finalNow),
+        where
+      );
       // 到了等待日：看得到她這一步的內容
       assert.deepEqual(chatTranscript(chat, girl, readyDay), expectedTranscript(story, chat, girl, true), where);
     });

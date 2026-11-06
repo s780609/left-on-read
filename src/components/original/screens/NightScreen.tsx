@@ -68,7 +68,7 @@ export function NightScreen({ run, onMenu, onOpenApp, onOpenChats, onJerkOff, on
               </PixelButton>
             ) : null}
             {!done ? (
-              <PixelButton color={ready > 0 ? COLOR.blue : COLOR.pink} disabled={sleeping} onClick={onOpenApp}>
+              <PixelButton color={COLOR.pink} disabled={sleeping} onClick={onOpenApp} sub="滑幾張再說">
                 打開 Swipy
               </PixelButton>
             ) : null}
