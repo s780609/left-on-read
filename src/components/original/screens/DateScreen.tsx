@@ -29,6 +29,7 @@ export function DateScreen({ chat, money, onDone }: { chat: Chat; money: number;
   const scenes = chat.storyId === IRIS_STORY_ID ? IRIS_DATE_SCENES : DATE_SCENES;
   useEffect(() => {
     if (chat.storyId === IRIS_STORY_ID) preloadPhotos(["dateXiangshan", "dateBeitou"]);
+    else preloadPhotos(["dateMovieHands", "dateNightMarket", "dateTreePhoto"]);
   }, [chat.storyId]);
   const picked = choice === null ? null : date.options[choice];
   const name = generateGirl(chat.girlSeed).nickname;

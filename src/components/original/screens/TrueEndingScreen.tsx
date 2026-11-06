@@ -11,7 +11,7 @@ const playEndingSound = () => audioManager.success();
 
 /** 真結局：一段一段按著看，看完這一局就結束了 */
 export function TrueEndingScreen({ doneLabel, onDone }: { doneLabel?: string; onDone: () => void }) {
-  useEffect(() => preloadPhotos(["epiNoodles", "epiIntimate", "epiChiayi", "epiProposal", "epiWedding", "epiBaby"]), []);
+  useEffect(() => preloadPhotos(["epiTrain", "epiNoodles", "epiIntimate", "epiIntimateSex", "epiChiayi", "epiProposal", "epiWedding", "epiBaby"]), []);
 
   return (
     <BeatPlayer
