@@ -229,6 +229,14 @@ export default function LeftOnReadGame() {
     if (events.some((e) => e.type === "dexCompleted")) setGraduationDue(true);
   };
 
+  const deleteChat = (chatId: number) => {
+    dispatch({ type: "deleteChat", chatId });
+    audioManager.pop();
+    const { run } = getSaveSnapshot();
+    const remaining = run ? visibleChats(run.chats, run.dayIndex).length : 0;
+    setPhone(remaining > 0 ? "list" : null);
+  };
+
   const finishDate = (choice: number) => {
     const events = dispatch({ type: "goOnDate", choice });
     setOnDate(false);
@@ -341,6 +349,7 @@ export default function LeftOnReadGame() {
           }}
           onReply={(choice, panelHeight) => reply(chat.id, choice, panelHeight)}
           onFinish={() => closeChat(chat.id)}
+          onDelete={chat.closed ? () => deleteChat(chat.id) : undefined}
         />
       );
     }

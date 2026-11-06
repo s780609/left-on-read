@@ -213,7 +213,8 @@ test("同一局已經在走她的路線、或走回失敗，就不再出現", ()
   // 走回失敗之後聊天沒了，但這一局還是不會再出現
   const { run } = answerChat("hi", [-1, -1, -1, -1]);
   const closed = advance({ ...run, dayIndex: nextPhoneDay(run.dayIndex + 1), dayReplies: 0 }, UNLOCKED, { type: "closeChat", chatId: 1 });
-  assert.equal(closed.run.chats.length, 0);
+  assert.equal(closed.run.chats.length, 1);
+  assert.equal(closed.run.chats[0].closed, true);
   assert.equal(closed.run.heroineMet, true);
   for (let day = 0; day < 500; day++) {
     assert.equal(heroineCardIndex({ ...closed.run, dayIndex: closed.run.dayIndex + day }, UNLOCKED), null);
@@ -272,7 +273,8 @@ test("分數邊界：1 分走回失敗，記一筆隱藏失敗，不影響 27 �
   assert.equal(ended.narration, "這次我什麼都沒做錯，也什麼都沒做對。");
   assert.equal(r.dex[HEROINE_ALMOST_STORY_ID].count, 1);
   assert.equal(dexProgress(r.dex).collected, before);
-  assert.equal(r.run.chats.length, 0);
+  assert.equal(r.run.chats.length, 1);
+  assert.equal(r.run.chats[0].closed, true);
   assert.equal(STORY_BY_ID[HEROINE_ALMOST_STORY_ID].dexName, "差一點");
 });
 
@@ -948,6 +950,11 @@ function concrete(type: GameAction["type"], run: RunState, rng: () => number): G
       const finals = ready.filter((c) => c && STORY_BY_ID[c.storyId] && isFinal(stepOf(c)));
       assert.ok(finals.length > 0, "legal 有 closeChat 卻沒有可收的聊天");
       return { type, chatId: pick(rng, finals).id };
+    }
+    case "deleteChat": {
+      const closed = run.chats.filter((c) => c.closed);
+      assert.ok(closed.length > 0, "legal 有 deleteChat 卻沒有已結束的聊天");
+      return { type, chatId: pick(rng, closed).id };
     }
     case "goOnDate":
       return { type, choice: randInt(rng, 0, 1) };

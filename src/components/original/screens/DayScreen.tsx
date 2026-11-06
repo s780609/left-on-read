@@ -28,8 +28,9 @@ export function DayScreen({ run, eventNote, onMenu, onOpenChats, onEndDay, onGoD
   const holiday = holidayOf(run.dayIndex);
   const event = pendingDayEvent(run);
   const chats = visibleChats(run.chats, run.dayIndex);
-  const ready = readyChats(chats, run.dayIndex, run.phase).length;
-  const waiting = chats.length - ready;
+  const open = chats.filter((c) => !c.closed);
+  const ready = readyChats(open, run.dayIndex, run.phase).length;
+  const waiting = open.length - ready;
   const dateChat = dueDateChat(run.chats, run.dayIndex);
   const dateStep = dateChat && pendingDateStep(dateChat);
   const date = dateChat && dateStep?.date ? datesForStory(dateChat.storyId)[dateStep.date.index] : null;

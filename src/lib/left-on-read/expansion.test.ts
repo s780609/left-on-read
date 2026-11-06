@@ -304,9 +304,10 @@ test("D：傳錯人：原本的聊天照樣往下，被傳到的那個人直接�
   assert.equal(ended?.storyId, MIXUP_STORY_ID);
   assert.equal(ended?.girlSeed, victim.girlSeed);
   assert.ok(ended?.narration.includes(generateGirl(victim.girlSeed).nickname));
-  assert.equal(r.run.chats.length, 2);
   assert.equal(r.run.chats.find((c) => c.id === 1)?.stepIndex, 1);
-  assert.ok(!r.run.chats.some((c) => c.id === victim.id));
+  // 被傳到的那個人留在列表，標成已結束，不會再被傳錯
+  assert.equal(r.run.chats.find((c) => c.id === victim.id)?.closed, true);
+  assert.equal(r.run.chats.filter((c) => !c.closed).length, 2);
   assert.equal(r.dex[MIXUP_STORY_ID].count, 1);
   // 隱藏失敗，不算進一般圖鑑
   assert.ok(!STORIES.some((s) => s.id === MIXUP_STORY_ID));
@@ -526,7 +527,7 @@ test("Iris：連續兩晚已讀不回，睡一覺她就走了；回了就重算"
   assert.equal(replied.chats[0].stats?.pressure, 0);
   // 再不回一晚就走了
   const r = act({ ...run, phase: "night" }, {}, { type: "sleep" });
-  assert.equal(r.run.chats.length, 0);
+  assert.equal(r.run.chats[0].closed, true);
   const ended = eventOf(r.events, "chatEnded");
   assert.equal(ended?.storyId, IRIS_LEFT_STORY_ID);
   assert.equal(ended?.girlSeed, IRIS_SEED);
@@ -564,7 +565,7 @@ test("Iris：好好聊、兩次約會之後走到結局，這一局結束", () =
       continue;
     }
     run = act({ ...run, phase: "night" }, dex, { type: "sleep" }).run;
-    assert.equal(run.chats.length, 1, "好好回的時候她不會走");
+    assert.ok(!run.chats[0].closed, "好好回的時候她不會走");
   }
   assert.ok(ended, "沒走到 Iris 的結局");
   assert.equal(endingProgress(dex).collected, 1);

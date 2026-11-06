@@ -96,6 +96,8 @@ function concreteAction(type: GameAction["type"], run: RunState, rng: Rng): Game
     }
     case "closeChat":
       return { type, chatId: pick(rng, ready.filter((c) => isFinal(stepOf(c)))).id };
+    case "deleteChat":
+      return { type, chatId: pick(rng, run.chats.filter((c) => c.closed)).id };
     case "goOnDate":
       return { type, choice: randInt(rng, 0, 1) };
     case "swipe":

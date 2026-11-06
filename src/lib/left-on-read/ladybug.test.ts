@@ -199,7 +199,8 @@ test("選不去：不扣錢，隔天收到結尾，收起來記一筆隱藏失�
   assert.ok(legalActions(next).includes("closeChat"));
   const closed = advance(next, r.dex, { type: "closeChat", chatId: chat.id });
   assert.equal(closed.dex[STUDIO].count, 1);
-  assert.equal(closed.run.chats.length, 0);
+  assert.equal(closed.run.chats.length, 1);
+  assert.equal(closed.run.chats[0].closed, true);
   assert.equal(dexProgress(closed.dex).collected, 0);
 });
 

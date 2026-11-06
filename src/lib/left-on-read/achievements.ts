@@ -36,7 +36,7 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
   {
     id: "rich-alone",
     name: "存款破十萬",
-    hint: `存款 NT$${RICH_ALONE_MONEY.toLocaleString("en-US")} 以上，手機裡一個聊天都沒有`,
+    hint: `存款 NT$${RICH_ALONE_MONEY.toLocaleString("en-US")} 以上，手機裡沒有一個還在聊的人`,
     quip: "錢存起來了。不知道要請誰吃飯。",
   },
   { id: "scam-dodger", name: "看得出來", hint: "左滑 5 張有業績的卡", quip: "我第一次在交友軟體上躲過一劫。五次。" },
@@ -111,7 +111,7 @@ export function earnedAchievements({ run, dex, counters, events }: AchievementCo
     if (run.deckIndex >= DECK_SIZE && run.nightLog.rights >= DECK_SIZE && run.nightLog.matches === 0) {
       earned.push("ten-zero");
     }
-    if (run.money >= RICH_ALONE_MONEY && run.chats.length === 0) earned.push("rich-alone");
+    if (run.money >= RICH_ALONE_MONEY && run.chats.every((c) => c.closed)) earned.push("rich-alone");
     if (isHaircutActive(run.grooming, run.dayIndex) && run.grooming.outfit && run.grooming.proPhoto) {
       earned.push("glow-up");
     }

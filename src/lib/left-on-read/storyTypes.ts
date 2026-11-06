@@ -85,4 +85,6 @@ export interface Chat {
   heroineNightUsed?: boolean;
   /** 隱性數值；舊存檔沒有就從 0 起算 */
   stats?: ChatStats;
+  /** 失敗結局已確認（圖鑑已記）；舊存檔沒有就當 false。玩家可自行刪除 */
+  closed?: boolean;
 }

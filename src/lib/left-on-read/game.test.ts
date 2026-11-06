@@ -25,8 +25,8 @@ import type { Chat, FinalStep, OpenerKind, ReplyStep, Story } from "./storyTypes
 
 // ---------- 共用工具 ----------
 
-/** 圖鑑可集滿的上限（真實對白 300 個 seed 實測：最少 22、中位 37、最多 65 天） */
-const DEX_COMPLETE_MAX_GAME_DAYS = 120;
+/** 圖鑑可集滿的上限：業績學程改成主要靠業績卡之後變慢，8 個 seed 實測 40～135 天 */
+const DEX_COMPLETE_MAX_GAME_DAYS = 160;
 
 const MATCH: RngFactory = () => () => 0;
 const NO_MATCH: RngFactory = () => () => 0.999;
@@ -135,6 +135,11 @@ function concreteAction(type: GameAction["type"], run: RunState, rng: Rng): Game
       const finals = ready.filter((c) => c && STORY_BY_ID[c.storyId] && isFinal(stepOf(c)));
       assert.ok(finals.length > 0, "legal 有 closeChat 卻沒有可收的聊天");
       return { type, chatId: pick(rng, finals).id };
+    }
+    case "deleteChat": {
+      const closed = run.chats.filter((c) => c.closed);
+      assert.ok(closed.length > 0, "legal 有 deleteChat 卻沒有已結束的聊天");
+      return { type, chatId: pick(rng, closed).id };
     }
     case "goOnDate":
       return { type, choice: randInt(rng, 0, 1) };
@@ -440,12 +445,15 @@ test("reply 用在末步、closeChat 用在非末步都不合法", () => {
 
 // ---------- 結局與圖鑑 ----------
 
-test("closeChat：移除聊天、記圖鑑、發事件", () => {
+test("closeChat：標記已結束、記圖鑑、發事件；deleteChat 才移除", () => {
   const story = STORIES.find((s) => !(s.steps[s.steps.length - 1] as FinalStep).ending.cost);
   assert.ok(story);
   const s = session(at({ phase: "daytime", dayIndex: 60, chats: [finalChat(story)], nextChatId: 2 }));
   s.act({ type: "closeChat", chatId: 1 });
-  assert.deepEqual(s.run.chats, []);
+  assert.equal(s.run.chats.length, 1);
+  assert.equal(s.run.chats[0].closed, true);
+  assert.ok(!legalActions(s.run).includes("closeChat"));
+  assert.ok(legalActions(s.run).includes("deleteChat"));
   assert.deepEqual(s.dex[story.id], { count: 1, firstDayIndex: 60 });
   const ended = eventOf(s.events, "chatEnded");
   assert.ok(ended);
@@ -453,6 +461,11 @@ test("closeChat：移除聊天、記圖鑑、發事件", () => {
   assert.equal(ended.firstTime, true);
   assert.equal(ended.paid, 0);
   assert.equal(s.run.money, START_MONEY);
+  const dexAfter = structuredClone(s.dex);
+  s.act({ type: "deleteChat", chatId: 1 });
+  assert.deepEqual(s.run.chats, []);
+  assert.deepEqual(s.dex, dexAfter);
+  assert.deepEqual(s.events, []);
 });
 
 test("同一種失敗第二次：次數加一，事件不是首次，傳入的 dex 不被修改", () => {
@@ -1039,3 +1052,4 @@ test("同 seed 同操作得到相同結果，不同 seed 不同", () => {
   assert.deepEqual(play(3), play(3));
   assert.notDeepEqual(play(3).run.chats, play(4).run.chats);
 });
+

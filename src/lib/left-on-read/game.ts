@@ -141,6 +141,7 @@ export type GameAction =
   /** calm：賢者模式，只能選 calmChoice 那一句 */
   | { type: "reply"; chatId: number; choice: number; calm?: boolean }
   | { type: "closeChat"; chatId: number }
+  | { type: "deleteChat"; chatId: number }
   | { type: "goOnDate"; choice: number }
   | { type: "endDaytime" }
   | { type: "eatOut" }
@@ -373,13 +374,14 @@ function chatActions(run: RunState): GameAction["type"][] {
     repliesLeft(run) > 0;
   if (canReply) actions.push("reply");
   if (steps.some((s) => s && isFinal(s))) actions.push("closeChat");
+  if (run.chats.some((c) => c.closed)) actions.push("deleteChat");
   return actions;
 }
 
 /** 一般失敗線、還沒走到結局步的聊天：傳錯人只會發生在這些聊天之間 */
 function isOpenNormalChat(chat: Chat): boolean {
   const step = storyStep(chat);
-  return step !== undefined && !isFinal(step) && STORIES.some((s) => s.id === chat.storyId);
+  return !chat.closed && step !== undefined && !isFinal(step) && STORIES.some((s) => s.id === chat.storyId);
 }
 
 /**
@@ -507,7 +509,8 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
         const from = generateGirl(chat.girlSeed);
         const to = generateGirl(victim.girlSeed);
         const text = renderLine(step.replies[action.choice], from);
-        chats = chats.filter((c) => c !== victim);
+        // 跟一般結局一樣，對話留在列表標成已結束，玩家自己刪
+        chats = chats.map((c) => (c === victim ? { ...c, closed: true } : c));
         nextDex = recordFailure(dex, MIXUP_STORY_ID, run.dayIndex);
         events.push(
           { type: "mixup", chatId: chat.id, toGirlSeed: victim.girlSeed },
@@ -569,7 +572,7 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
     case "closeChat": {
       if (!canUsePhone(run.phase)) return same;
       const chat = run.chats.find((c) => c.id === action.chatId);
-      if (!chat || !isChatReady(chat, run.dayIndex, run.phase)) return same;
+      if (!chat || chat.closed || !isChatReady(chat, run.dayIndex, run.phase)) return same;
       const step = storyStep(chat);
       if (!step || !isFinal(step)) return same;
       const { narration, cost = 0, antiFraud } = step.ending;
@@ -587,10 +590,26 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
         },
       ];
       if (!isDexComplete(dex) && isDexComplete(nextDex)) events.push({ type: "dexCompleted" });
+      // 對話留在列表，標成已結束；玩家自己刪才從陣列拿掉
       return {
-        run: { ...run, money, chats: run.chats.filter((c) => c !== chat) },
+        run: {
+          ...run,
+          money,
+          chats: run.chats.map((c) => (c === chat ? { ...c, closed: true } : c)),
+        },
         dex: nextDex,
         events,
+      };
+    }
+
+    case "deleteChat": {
+      if (!canUsePhone(run.phase)) return same;
+      const chat = run.chats.find((c) => c.id === action.chatId);
+      if (!chat || !chat.closed) return same;
+      return {
+        run: { ...run, chats: run.chats.filter((c) => c !== chat) },
+        dex,
+        events: [],
       };
     }
 
@@ -689,7 +708,7 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
       if (action.opener === "memory" && !run.ngPlus) return same;
       const girlSeed = run.pendingMatchSeed;
       const girl = generateGirl(girlSeed);
-      const activeStoryIds = run.chats.map((c) => c.storyId);
+      const activeStoryIds = run.chats.filter((c) => !c.closed).map((c) => c.storyId);
       // 個工只走隱藏路線；同時已經有一條在聊，就當一般人抽
       const story =
         girlSeed === HEROINE_SEED
@@ -746,11 +765,11 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
       // 最討厭已讀不回的她：壓力滿了，睡一覺起來她就走了
       for (const chat of chats) {
         const patience = STORY_BY_ID[chat.storyId]?.patience;
-        if (!patience || statsOf(chat).pressure < patience.max) continue;
+        if (chat.closed || !patience || statsOf(chat).pressure < patience.max) continue;
         const leave = STORY_BY_ID[patience.leaveStoryId];
         const last = leave?.steps[leave.steps.length - 1];
         if (!last || !isFinal(last)) continue;
-        chats = chats.filter((c) => c !== chat);
+        chats = chats.map((c) => (c === chat ? { ...c, closed: true } : c));
         events.push({
           type: "chatEnded",
           girlSeed: chat.girlSeed,

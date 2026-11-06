@@ -48,8 +48,9 @@ export function NightScreen({
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const done = run.phase === "nightDone";
   const chats = visibleChats(run.chats, run.dayIndex);
-  const ready = readyChats(chats, run.dayIndex, run.phase).length;
-  const waiting = chats.length - ready;
+  const open = chats.filter((c) => !c.closed);
+  const ready = readyChats(open, run.dayIndex, run.phase).length;
+  const waiting = open.length - ready;
   const lines = ready > 0 ? NIGHT_UNREAD_LINES : done ? NIGHT_DONE_LINES : NIGHT_LINES;
   const holiday = holidayOf(run.dayIndex);
   const line = run.today.overtime

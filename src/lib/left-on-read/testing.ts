@@ -42,7 +42,7 @@ export function newGameplayAction(type: GameAction["type"], run: RunState, rng: 
       const stepOf = (c: (typeof run.chats)[number]) => STORY_BY_ID[c.storyId]?.steps[c.stepIndex];
       const ready = run.chats.filter((c) => {
         const step = stepOf(c);
-        return step && !isFinal(step) && isChatReady(c, run.dayIndex, run.phase);
+        return !c.closed && step && !isFinal(step) && isChatReady(c, run.dayIndex, run.phase);
       });
       const calmChat = run.nightHobby.calm ? ready.find((c) => canCalm(stepOf(c) as ReplyStep)) : undefined;
       if (calmChat && rng() < 0.5) {
