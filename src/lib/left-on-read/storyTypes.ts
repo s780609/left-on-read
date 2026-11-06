@@ -18,6 +18,8 @@ export type StepWait = { days: number } | { weekday: number };
 
 export interface ReplyStep {
   incoming: Incoming;
+  /** 她在 incoming 之前先傳的幾則，讓突然的問題有鋪陳；步驟數不變，舊存檔的 stepIndex 不受影響 */
+  lead?: readonly string[];
   wait?: StepWait;
   /** 2～3 句；有 answer 或 fakeEnding 的步驟可以只有 1 句 */
   replies: readonly string[];
@@ -29,6 +31,8 @@ export interface ReplyStep {
   gate?: { minScore: number; failStoryId: string };
   /** 冠宇傳完，她當場回的那一句 */
   answer?: string;
+  /** 她依冠宇選的那句當場回，和 replies 一一對應；有寫就優先於 answer */
+  answers?: readonly string[];
   /** 約會：不能在聊天室回，要週末白天付 cost 赴約，replies 是約會裡的選項；有 endingId 就走向這一局的結局 */
   date?: { index: number; cost: number; endingId?: string };
   /** 假失敗：畫面演得像 storyId 那種失敗，但不記圖鑑，也不結束聊天 */

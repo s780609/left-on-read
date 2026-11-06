@@ -6,7 +6,7 @@ import { dexProgress } from "@/lib/left-on-read/dex";
 import { advance, createRun, type GameAction, type GameEvent, type RunState } from "@/lib/left-on-read/game";
 import { generateGirl } from "@/lib/left-on-read/girl";
 import { NOODLES } from "@/lib/left-on-read/meals";
-import { comebackChat, dueDateChat, visibleChats } from "@/lib/left-on-read/story";
+import { chatTranscript, comebackChat, dueDateChat, visibleChats } from "@/lib/left-on-read/story";
 import { useSettings } from "@/lib/settings/SettingsContext";
 import PortraitFrame from "./PortraitFrame";
 import { commitSave, getSaveSnapshot, getServerSaveSnapshot, subscribeSave } from "./saveStore";
@@ -17,7 +17,7 @@ import { DexScreen } from "./screens/DexScreen";
 import { EveningScreen, MealScreen, type MealNote } from "./screens/EveningScreen";
 import { GraduationScreen } from "./screens/GraduationScreen";
 import IntroScreen from "./screens/IntroScreen";
-import { LadybugScreen } from "./screens/LadybugScreen";
+import { LadybugScreen, type LadybugEntry } from "./screens/LadybugScreen";
 import { MatchScreen } from "./screens/MatchScreen";
 import MenuScreen from "./screens/MenuScreen";
 import { NightScreen } from "./screens/NightScreen";
@@ -47,6 +47,8 @@ export default function LeftOnReadGame() {
   const [onDate, setOnDate] = useState(false);
   const [graduationDue, setGraduationDue] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  /** 從聊天室走進瓢蟲結局時，把聊天紀錄帶過去；從圖鑑重看就沒有 */
+  const [ladybugEntry, setLadybugEntry] = useState<LadybugEntry | null>(null);
 
   useEffect(() => {
     audioManager.init();
@@ -104,9 +106,13 @@ export default function LeftOnReadGame() {
 
   // ---------- 遊戲動作 ----------
 
-  const reply = (chatId: number, choice: number) => {
+  const reply = (chatId: number, choice: number, panelHeight?: number) => {
     audioManager.bubble();
-    const girlSeed = save.run?.chats.find((c) => c.id === chatId)?.girlSeed;
+    const sourceChat = save.run?.chats.find((c) => c.id === chatId);
+    const girlSeed = sourceChat?.girlSeed;
+    // 走到結局後聊天會被收掉，紀錄要先留下來
+    const girl = sourceChat ? generateGirl(sourceChat.girlSeed) : null;
+    const history = sourceChat && girl && save.run ? chatTranscript(sourceChat, girl, save.run.dayIndex) : [];
     const events = dispatch({ type: "reply", chatId, choice });
     // 假失敗：演得和一般失敗一樣，但圖鑑和聊天都沒有動
     const fake = events.find((e) => e.type === "fakeEnding");
@@ -129,6 +135,8 @@ export default function LeftOnReadGame() {
     // 走到結局這一局就結束了，圖鑑留著
     commitSave(null, getSaveSnapshot().meta);
     setPhone(null);
+    // 最後一句是 1h2s 那題，結局的第一段會接著顯示
+    setLadybugEntry(girl ? { girl, history: history.slice(0, -1), panelHeight } : null);
     setScreen("ladybug");
   };
 
@@ -201,7 +209,7 @@ export default function LeftOnReadGame() {
             audioManager.pop();
             setPhone("list");
           }}
-          onReply={(choice) => reply(chat.id, choice)}
+          onReply={(choice, panelHeight) => reply(chat.id, choice, panelHeight)}
           onFinish={() => closeChat(chat.id)}
         />
       );
@@ -245,7 +253,18 @@ export default function LeftOnReadGame() {
         );
       case "daytime": {
         const returning = comebackChat(run.chats, run.dayIndex);
-        if (returning) return <ComebackScreen chat={returning} onReply={(choice) => reply(returning.id, choice)} />;
+        if (returning) {
+          return (
+            <ComebackScreen
+              chat={returning}
+              onReply={(choice) => {
+                reply(returning.id, choice);
+                // 回完留在聊天室，她那句和冠宇的回覆都還看得到
+                setPhone(returning.id);
+              }}
+            />
+          );
+        }
         const dateChat = onDate ? dueDateChat(run.chats, run.dayIndex) : null;
         if (dateChat) return <DateScreen chat={dateChat} onDone={finishDate} />;
         const phoneScreen = renderPhone(run);
@@ -315,12 +334,15 @@ export default function LeftOnReadGame() {
           <DexScreen
             dex={save.meta.dex}
             onBack={() => setScreen("menu")}
-            onLadybug={() => setScreen("ladybug")}
+            onLadybug={() => {
+              setLadybugEntry(null);
+              setScreen("ladybug");
+            }}
             onTrueEnding={() => setScreen("trueEnding")}
           />
         );
       case "ladybug":
-        return <LadybugScreen onDone={() => setScreen("menu")} />;
+        return <LadybugScreen entry={ladybugEntry} onDone={() => setScreen("menu")} />;
       case "trueEnding":
         return <TrueEndingScreen onDone={() => setScreen("menu")} />;
       case "graduation":

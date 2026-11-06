@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { audioManager } from "@/lib/audio/AudioManager";
 import type { RunState } from "@/lib/left-on-read/game";
 import { generateGirl, type Girl } from "@/lib/left-on-read/girl";
@@ -19,7 +19,7 @@ import type { Chat, ReplyStep } from "@/lib/left-on-read/storyTypes";
 import PixelCanvas from "../PixelCanvas";
 import { rect, type Ctx } from "../pixel/draw";
 import { PHOTO_H, PHOTO_W, drawGirl, drawGirlAvatar } from "../pixel/girlSprite";
-import { COLOR, DialogBox, PixelButton, TOP_BAR_CLASS, Typewriter } from "../ui";
+import { COLOR, DialogBox, PixelButton, TOP_BAR_CLASS, Typewriter, useAdvanceKeys } from "../ui";
 
 /** 頭像：把整張照片畫到暫存 canvas，再裁出臉 */
 export function GirlAvatar({ girl, size = 44 }: { girl: Girl; size?: number }) {
@@ -126,15 +126,47 @@ export function ChatList({ run, onOpen, onClose }: ChatListProps) {
 
 // ---------- 聊天室 ----------
 
-function Transcript({ lines }: { lines: readonly TranscriptLine[] }) {
+/** 她鋪陳的訊息一則一則來：第一則的等待和之後的間隔 */
+const LEAD_FIRST_MS = 300;
+const LEAD_GAP_MS = 1100;
+/** 新訊息進來時，她的那句晚一點，才像是看完才回 */
+const HER_REPLY_DELAY_MS = 450;
+
+const newLineStyle = (delayMs: number) => ({ animation: `lor-appear 320ms ease-out ${delayMs}ms both` });
+
+/** 聊天泡泡，結局裡的對話也用這個 */
+export function ChatBubble({ mine, children, style }: { mine: boolean; children: ReactNode; style?: CSSProperties }) {
+  return (
+    <div className={`flex ${mine ? "justify-end" : "justify-start"}`} style={style}>
+      <div
+        className={`max-w-[80%] border-2 border-black px-2.5 py-1.5 shadow-[2px_2px_0_#000] ${
+          mine ? "bg-[#ffb3c4] text-[#2a1a22]" : "bg-[#f4efe0] text-[#20203c]"
+        }`}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+interface TranscriptProps {
+  lines: readonly TranscriptLine[];
+  herDelayMs?: number;
+  onTap?: () => void;
+}
+
+export function Transcript({ lines, herDelayMs = 0, onTap }: TranscriptProps) {
+  // 一打開就有的訊息直接顯示，之後才進來的淡入
+  const [initialCount] = useState(lines.length);
   const endRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: "end" });
   }, [lines.length]);
 
   return (
-    <div className="min-h-0 flex-1 space-y-2 overflow-y-auto bg-[#191933] px-3 py-3 text-[15px] leading-snug">
+    <div onClick={onTap} className="min-h-0 flex-1 space-y-2 overflow-y-auto bg-[#191933] px-3 py-3 text-[15px] leading-snug">
       {lines.map((line, i) => {
+        const fresh = i >= initialCount;
         // 對話紀錄不會中途插入或刪除，用順序當 key
         if (line.who === "status") {
           return (
@@ -145,22 +177,20 @@ function Transcript({ lines }: { lines: readonly TranscriptLine[] }) {
         }
         if (line.who === "narration") {
           return (
-            <p key={i} className="px-2 text-center text-sm font-normal leading-relaxed text-[#c8cae0]">
+            <p
+              key={i}
+              className="px-2 text-center text-sm font-normal leading-relaxed text-[#c8cae0]"
+              style={fresh ? newLineStyle(0) : undefined}
+            >
               {line.text}
             </p>
           );
         }
         const mine = line.who === "me";
         return (
-          <div key={i} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
-            <p
-              className={`max-w-[80%] border-2 border-black px-2.5 py-1.5 shadow-[2px_2px_0_#000] ${
-                mine ? "bg-[#ffb3c4] text-[#2a1a22]" : "bg-[#f4efe0] text-[#20203c]"
-              }`}
-            >
-              {line.text}
-            </p>
-          </div>
+          <ChatBubble key={i} mine={mine} style={fresh ? newLineStyle(mine ? 0 : herDelayMs) : undefined}>
+            {line.text}
+          </ChatBubble>
         );
       })}
       <div ref={endRef} />
@@ -171,7 +201,8 @@ function Transcript({ lines }: { lines: readonly TranscriptLine[] }) {
 interface ChatRoomProps {
   run: RunState;
   chat: Chat;
-  onReply: (choice: number) => void;
+  /** panelHeight：選項區當下的高度，接下來的畫面要從這個高度慢慢收，版面才不會跳 */
+  onReply: (choice: number, panelHeight?: number) => void;
   onFinish: () => void;
   onBack: () => void;
 }
@@ -181,8 +212,25 @@ export function ChatRoom({ run, chat, onReply, onFinish, onBack }: ChatRoomProps
   const story = STORY_BY_ID[chat.storyId];
   const step = story.steps[chat.stepIndex];
   const ready = isChatReady(chat, run.dayIndex);
-  const lines = chatTranscript(chat, girl, run.dayIndex);
+  const allLines = chatTranscript(chat, girl, run.dayIndex);
   const dateIsNext = pendingDateStep(chat) !== null;
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // 有鋪陳的那一步：她一則一則傳完才出現選項，選項先佔好位子，版面不會跳；按聊天區可以跳過
+  const leadTotal = ready && !isFinal(step) && step.lead ? step.lead.length + 1 : 0;
+  const revealKey = `${chat.id}:${chat.stepIndex}`;
+  const [reveal, setReveal] = useState({ key: revealKey, shown: 0 });
+  const shown = reveal.key === revealKey ? reveal.shown : 0;
+  const revealing = shown < leadTotal;
+  useEffect(() => {
+    if (!revealing) return;
+    const id = setTimeout(
+      () => setReveal({ key: revealKey, shown: shown + 1 }),
+      shown === 0 ? LEAD_FIRST_MS : LEAD_GAP_MS
+    );
+    return () => clearTimeout(id);
+  }, [revealing, revealKey, shown]);
+  const lines = revealing ? allLines.slice(0, allLines.length - (leadTotal - shown)) : allLines;
 
   return (
     <>
@@ -200,8 +248,15 @@ export function ChatRoom({ run, chat, onReply, onFinish, onBack }: ChatRoomProps
           列表
         </button>
       </div>
-      <Transcript lines={lines} />
-      <div className="flex max-h-[52%] shrink-0 flex-col gap-2 overflow-y-auto border-t-[3px] border-black bg-[#20203c] px-3 py-3">
+      <Transcript
+        lines={lines}
+        herDelayMs={HER_REPLY_DELAY_MS}
+        onTap={revealing ? () => setReveal({ key: revealKey, shown: leadTotal }) : undefined}
+      />
+      <div
+        ref={panelRef}
+        className="relative flex max-h-[52%] shrink-0 flex-col gap-2 overflow-y-auto border-t-[3px] border-black bg-[#20203c] px-3 py-3"
+      >
         {!ready ? (
           <>
             <p className="text-center text-sm text-[#a9abc9]">
@@ -216,21 +271,31 @@ export function ChatRoom({ run, chat, onReply, onFinish, onBack }: ChatRoomProps
             ……就這樣了
           </PixelButton>
         ) : (
-          step.replies.map((reply, choice) => (
-            <PixelButton
-              key={reply}
-              color={step.fakeEnding ? COLOR.red : "#f4efe0"}
-              textColor={step.fakeEnding ? "#ffffff" : "#20203c"}
-              align={step.fakeEnding ? "center" : "left"}
-              silent
-              className={step.fakeEnding ? "" : "text-sm"}
-              disabled={step.decision?.choice === choice && run.money < step.decision.cost}
-              sub={step.decision?.choice === choice && run.money < step.decision.cost ? "錢不夠" : undefined}
-              onClick={() => onReply(choice)}
+          <>
+            <div
+              className="flex flex-col gap-2"
+              style={revealing ? { visibility: "hidden" } : leadTotal > 0 ? newLineStyle(0) : undefined}
             >
-              {renderLine(reply, girl)}
-            </PixelButton>
-          ))
+              {step.replies.map((reply, choice) => (
+                <PixelButton
+                  key={reply}
+                  color={step.fakeEnding ? COLOR.red : "#f4efe0"}
+                  textColor={step.fakeEnding ? "#ffffff" : "#20203c"}
+                  align={step.fakeEnding ? "center" : "left"}
+                  silent
+                  className={step.fakeEnding ? "" : "text-sm"}
+                  disabled={step.decision?.choice === choice && run.money < step.decision.cost}
+                  sub={step.decision?.choice === choice && run.money < step.decision.cost ? "錢不夠" : undefined}
+                  onClick={() => onReply(choice, panelRef.current?.offsetHeight)}
+                >
+                  {renderLine(reply, girl)}
+                </PixelButton>
+              ))}
+            </div>
+            {revealing ? (
+              <p className="absolute inset-0 flex items-center justify-center text-sm text-[#a9abc9]">她正在輸入……</p>
+            ) : null}
+          </>
         )}
       </div>
     </>
@@ -252,8 +317,13 @@ export interface EndingInfo {
 
 export function EndingScreen({ ending, onClose }: { ending: EndingInfo; onClose: () => void }) {
   const story = STORY_BY_ID[ending.storyId];
+  // 字打完之前，按第一下只會把字打完，不會整段不見
+  const [typed, setTyped] = useState(false);
+  const finishTyping = useCallback(() => setTyped(true), []);
+  const advance = () => (typed ? onClose() : setTyped(true));
+  useAdvanceKeys(advance);
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col" onClick={finishTyping}>
       <div className={TOP_BAR_CLASS}>
         <GirlAvatar girl={ending.girl} size={36} />
         <div className="min-w-0 flex-1 truncate text-sm text-[#a9abc9]">{ending.girl.nickname}</div>
@@ -268,7 +338,7 @@ export function EndingScreen({ ending, onClose }: { ending: EndingInfo; onClose:
           </div>
         </div>
         <DialogBox>
-          <Typewriter key={ending.narration} text={ending.narration} cps={20} />
+          <Typewriter key={ending.narration} text={ending.narration} cps={20} instant={typed} onDone={finishTyping} />
         </DialogBox>
         {ending.antiFraud ? (
           <p className="mt-4 border-[3px] border-black bg-[#f2d675] px-3 py-2 text-sm leading-relaxed text-[#20203c] shadow-[3px_3px_0_#000]">
@@ -288,7 +358,7 @@ export function EndingScreen({ ending, onClose }: { ending: EndingInfo; onClose:
         </div>
       </div>
       <div className="shrink-0 border-t-[3px] border-black bg-[#191933] px-4 py-3">
-        <PixelButton color={COLOR.blue} onClick={onClose}>
+        <PixelButton color={COLOR.blue} onClick={advance}>
           收起手機
         </PixelButton>
       </div>

@@ -177,16 +177,25 @@ export function chatTranscript(chat: Chat, girl: Girl, dayIndex: number): Transc
     const line = incomingLine(incoming, girl);
     if (line) lines.push(line);
   };
+  const pushLead = (step: ReplyStep | FinalStep) => {
+    if ("lead" in step) for (const text of step.lead ?? []) lines.push({ who: "her", text: renderLine(text, girl) });
+  };
   for (let i = 0; i < chat.stepIndex; i++) {
     const step = story.steps[i] as ReplyStep;
+    pushLead(step);
     pushIncoming(step.incoming);
     // 約會裡的選擇和「……就這樣了」不是傳給她的訊息
     if (!step.date && !step.fakeEnding) {
       lines.push({ who: "me", text: renderLine(step.replies[chat.replies[i]], girl) });
     }
-    if (step.answer) lines.push({ who: "her", text: renderLine(step.answer, girl) });
+    const answer = step.answers?.[chat.replies[i]] ?? step.answer;
+    if (answer) lines.push({ who: "her", text: renderLine(answer, girl) });
   }
-  if (isChatReady(chat, dayIndex)) pushIncoming(story.steps[chat.stepIndex].incoming);
+  if (isChatReady(chat, dayIndex)) {
+    const current = story.steps[chat.stepIndex];
+    pushLead(current);
+    pushIncoming(current.incoming);
+  }
   return lines;
 }
 
@@ -213,7 +222,12 @@ function waitErrors(wait: StepWait | undefined, where: string, minDays = 1): str
 /** 她路線才有的欄位 */
 function routeFieldErrors(step: ReplyStep, where: string): string[] {
   const errors: string[] = [];
-  const { scores, gate, answer, date, fakeEnding, comeback } = step;
+  const { scores, gate, answer, answers, lead, date, fakeEnding, comeback } = step;
+  if (answers) {
+    if (answers.length !== step.replies.length) errors.push(`${where} 的回應和回覆數不符`);
+    answers.forEach((text, i) => errors.push(...placeholderErrors(text, `${where} 的回應 ${i}`)));
+  }
+  lead?.forEach((text, i) => errors.push(...placeholderErrors(text, `${where} 的鋪陳 ${i}`)));
   if (scores) {
     if (scores.length !== step.replies.length) errors.push(`${where} 的分數和回覆數不符`);
     if (!scores.every((s) => s === 1 || s === 0 || s === -1)) errors.push(`${where} 的分數不合法`);

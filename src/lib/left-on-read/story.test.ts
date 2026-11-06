@@ -540,6 +540,8 @@ function expectedTranscript(story: Story, chat: Chat, girl: Girl, revealed: bool
     const step = story.steps[i] as ReplyStep;
     lines.push(incomingLine(step.incoming, girl));
     lines.push({ who: "me", text: renderLine(step.replies[chat.replies[i]], girl) });
+    const answer = step.answers?.[chat.replies[i]];
+    if (answer) lines.push({ who: "her", text: renderLine(answer, girl) });
   }
   if (revealed) lines.push(incomingLine(story.steps[chat.stepIndex].incoming, girl));
   return lines;
@@ -570,4 +572,67 @@ test("chatTranscript：只有開場白時，隔天才看得到她的第一步", 
   const chat = makeChat(story, { girlSeed: 3, opener: "eaten", lastAdvancedDay: 8 });
   assert.equal(chatTranscript(chat, girl, 8).length, 1);
   assert.equal(chatTranscript(chat, girl, firstReadyDay(8, story.steps[0].wait)).length, 2);
+});
+
+// ---------- 她依回覆回話、鋪陳 ----------
+
+function transcriptAt(storyId: string, stepIndex: number, replies: number[], lastAdvancedDay = 0, dayIndex = 0) {
+  const girl = generateGirl(1);
+  const chat = { id: 1, girlSeed: 1, storyId, opener: "hi" as const, stepIndex, lastAdvancedDay, replies };
+  return chatTranscript(chat, girl, dayIndex).filter((l) => l.who === "me" || l.who === "her");
+}
+
+test("照片僅供參考：三個回覆她都回得上，說眼鏡那句不會被反問幹嘛問這個", () => {
+  const step = STORY_BY_ID["friend-photo"].steps[0];
+  assert.ok("replies" in step && step.answers);
+  assert.equal(step.answers.length, step.replies.length);
+  // 選項順序不能動，舊存檔存的是第幾句
+  assert.match(step.replies[1], /眼鏡/);
+  assert.match(step.answers[1], /眼鏡/);
+  assert.doesNotMatch(step.answers[1], /幹嘛問/);
+  for (const choice of [0, 1, 2]) {
+    const lines = transcriptAt("friend-photo", 1, [choice]);
+    const i = lines.findIndex((l) => "text" in l && l.text === step.replies[choice]);
+    const next = lines[i + 1];
+    assert.equal(next.who, "her");
+    assert.ok("text" in next && next.text === step.answers[choice], `第 ${choice} 句的回應`);
+  }
+});
+
+test("照片僅供參考：隔天那一步的問題和三個回覆，接在三種開頭後面都不會是在怪他問問題", () => {
+  const next = STORY_BY_ID["friend-photo"].steps[1];
+  assert.ok("replies" in next && next.incoming.kind === "message");
+  const all = [next.incoming.text, ...next.replies].join("\n");
+  assert.doesNotMatch(all, /幹嘛問這個|沒別的意思|資料完整性/);
+});
+
+test("回應數量和回覆對不上、鋪陳是空字串，資料驗證都抓得到", () => {
+  const base = { id: "x", dexName: "x", dexQuip: "x", category: "ghost" as const };
+  const final = { incoming: { kind: "read" as const }, ending: { narration: "x" } };
+  const bad = (extra: object) => ({
+    ...base,
+    steps: [{ incoming: { kind: "message" as const, text: "嗨" }, replies: ["a", "b"], ...extra }, final],
+  });
+  assert.deepEqual(validateStory(bad({ answers: ["1", "2"], lead: ["先講"] })), []);
+  assert.ok(validateStory(bad({ answers: ["1"] })).length > 0);
+  assert.ok(validateStory(bad({ answers: ["1", " "] })).length > 0);
+  assert.ok(validateStory(bad({ lead: [""] })).length > 0);
+});
+
+test("1h2s 那題有鋪陳：她先把話講開才問，步驟數沒變，舊存檔的 stepIndex 不會錯位", () => {
+  const steps = STORY_BY_ID.studio.steps;
+  assert.equal(steps.length, 6, "步驟數不能變，存檔存的是第幾步");
+  const i = steps.findIndex((s) => "decision" in s);
+  assert.equal(i, 4);
+  const ask = steps[i];
+  assert.ok("lead" in ask && ask.lead && ask.lead.length >= 2);
+  const lines = transcriptAt("studio", i, [0, 0, 0, 0], 0, 1);
+  const texts = lines.map((l) => ("text" in l ? l.text : ""));
+  const askAt = texts.findIndex((t) => /1h2s/.test(t));
+  assert.equal(askAt, texts.length - 1, "1h2s 是最後才講的");
+  for (const lead of ask.lead) assert.ok(texts.indexOf(lead) >= 0 && texts.indexOf(lead) < askAt);
+  // 拒絕之後她有回應，也不會再被問一次
+  assert.ok("answers" in ask && ask.answers?.every((a) => !/1h2s|3000/.test(a)));
+  const refused = transcriptAt("studio", i + 1, [0, 0, 0, 0, 2], 0, 1);
+  assert.equal(refused.filter((l) => "text" in l && /1h2s 3000/.test(l.text)).length, 1);
 });

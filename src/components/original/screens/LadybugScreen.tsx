@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { audioManager } from "@/lib/audio/AudioManager";
-import { LADYBUG_BEATS, type LadybugScene } from "@/lib/left-on-read/ladybug";
+import type { Girl } from "@/lib/left-on-read/girl";
+import { LADYBUG_BEATS, LADYBUG_START_INDEX, type LadybugScene } from "@/lib/left-on-read/ladybug";
+import type { TranscriptLine } from "@/lib/left-on-read/story";
 import { blink, pixelText, rect, saw, type Ctx } from "../pixel/draw";
 import { SCENE_H, SCENE_W, drawCommuteScene, drawNightScene } from "../pixel/scenes";
-import { COLOR, DialogBox, PixelButton, Scene, Typewriter } from "../ui";
+import { BeatPlayer } from "./BeatPlayer";
+import { GirlAvatar } from "./ChatScreens";
 
 /** 巷子裡一扇鐵門，招牌的霓虹燈時亮時暗 */
 function drawAlley(ctx: Ctx, t: number) {
@@ -103,7 +105,7 @@ function drawBlack(ctx: Ctx) {
   rect(ctx, "#000000", 0, 0, SCENE_W, SCENE_H);
 }
 
-const DRAW: Record<LadybugScene, (ctx: Ctx, t: number) => void> = {
+const DRAW: Record<Exclude<LadybugScene, "chat">, (ctx: Ctx, t: number) => void> = {
   alley: drawAlley,
   door: drawDoor,
   black: drawBlack,
@@ -113,45 +115,40 @@ const DRAW: Record<LadybugScene, (ctx: Ctx, t: number) => void> = {
   title: drawTitle,
 };
 
-/** 瓢蟲結局：一段一段按著看，看完這一局就結束了 */
-export function LadybugScreen({ onDone }: { onDone: () => void }) {
-  const [index, setIndex] = useState(0);
-  const beat = LADYBUG_BEATS[index];
-  const last = index === LADYBUG_BEATS.length - 1;
+const playEndingSound = () => audioManager.wrong();
 
-  useEffect(() => {
-    if (last) audioManager.wrong();
-  }, [last]);
+export interface LadybugEntry {
+  girl: Girl;
+  /** 聊天室裡 1h2s 那題之前的對話 */
+  history: readonly TranscriptLine[];
+  /** 聊天室選項區當下的高度 */
+  panelHeight?: number;
+}
 
+/** 瓢蟲結局：一段一段按著看，看完這一局就結束了。從聊天室進來時版面相同，看起來還在同一個聊天室 */
+export function LadybugScreen({ entry, onDone }: { entry: LadybugEntry | null; onDone: () => void }) {
   return (
-    <div className="flex h-full flex-col">
-      <Scene key={index} draw={DRAW[beat.scene]} label="瓢蟲結局" />
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
-        {last ? (
-          <div className="pt-2 text-center">
-            {beat.text.split("\n").map((line, i) => (
-              <p key={line} className={i === 0 ? "mb-3 text-3xl text-[#ff6f91]" : "mt-1 leading-relaxed"}>
-                {line}
-              </p>
-            ))}
-          </div>
-        ) : (
-          <DialogBox>
-            <Typewriter key={beat.text} text={beat.text} cps={20} />
-          </DialogBox>
-        )}
-      </div>
-      <div className="shrink-0 border-t-[3px] border-black bg-[#191933] px-4 py-3">
-        {last ? (
-          <PixelButton color={COLOR.blue} onClick={onDone}>
-            回選單
-          </PixelButton>
-        ) : (
-          <PixelButton color={COLOR.gray} onClick={() => setIndex(index + 1)}>
-            ……
-          </PixelButton>
-        )}
-      </div>
-    </div>
+    <BeatPlayer
+      beats={LADYBUG_BEATS}
+      scenes={DRAW}
+      label="瓢蟲結局"
+      startIndex={LADYBUG_START_INDEX}
+      fadeIn={!entry}
+      chatHeader={
+        entry ? (
+          <>
+            <GirlAvatar girl={entry.girl} size={36} />
+            <div className="min-w-0 flex-1 truncate leading-tight">
+              {entry.girl.nickname}
+              <span className="ml-1 text-xs text-[#a9abc9]">{entry.girl.age}</span>
+            </div>
+          </>
+        ) : undefined
+      }
+      chatHistory={entry?.history}
+      panelFromHeight={entry?.panelHeight}
+      onLast={playEndingSound}
+      onDone={onDone}
+    />
   );
 }

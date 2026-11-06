@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { audioManager } from "@/lib/audio/AudioManager";
 import { calendarOf, formatDate } from "@/lib/left-on-read/calendar";
 import type { Phase, RunState } from "@/lib/left-on-read/game";
@@ -107,27 +107,71 @@ export function StatusBar({ run, onMenu }: { run: RunState; onMenu: () => void }
 
 // ---------- 文字 ----------
 
+interface TypewriterProps {
+  text: string;
+  cps?: number;
+  className?: string;
+  /** 玩家按了，直接把字打完 */
+  instant?: boolean;
+  /** 自己打完時呼叫；請傳穩定的函式，否則會重打 */
+  onDone?: () => void;
+}
+
 /** 打字機：還沒打出來的字先佔位，版面不會跳。換文字請換 key。 */
-export function Typewriter({ text, cps = 26, className = "" }: { text: string; cps?: number; className?: string }) {
+export function Typewriter({ text, cps = 26, className = "", instant = false, onDone }: TypewriterProps) {
   const [count, setCount] = useState(0);
+  const shown = instant ? text.length : count;
 
   useEffect(() => {
+    if (instant) return;
     const start = performance.now();
     const id = setInterval(() => {
       const n = typewriterCount(text, performance.now() - start, cps);
       setCount(n);
-      if (n >= text.length) clearInterval(id);
+      if (n >= text.length) {
+        clearInterval(id);
+        onDone?.();
+      }
     }, 40);
     return () => clearInterval(id);
-  }, [text, cps]);
+  }, [text, cps, instant, onDone]);
 
   return (
     <p className={className} aria-label={text}>
-      <span aria-hidden>{text.slice(0, count)}</span>
+      <span aria-hidden>{text.slice(0, shown)}</span>
       <span aria-hidden className="opacity-0">
-        {text.slice(count)}
+        {text.slice(shown)}
       </span>
     </p>
+  );
+}
+
+/** 空白鍵或 Enter 等於按一下；關掉 enabled 時不攔截，焦點上的按鈕才按得到 */
+export function useAdvanceKeys(onAdvance: () => void, enabled = true) {
+  useEffect(() => {
+    if (!enabled) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.repeat || (e.key !== " " && e.key !== "Enter")) return;
+      e.preventDefault();
+      onAdvance();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onAdvance, enabled]);
+}
+
+function subscribeReducedMotion(onChange: () => void) {
+  const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+  mq.addEventListener("change", onChange);
+  return () => mq.removeEventListener("change", onChange);
+}
+
+/** 系統設定「減少動態效果」 */
+export function useReducedMotion(): boolean {
+  return useSyncExternalStore(
+    subscribeReducedMotion,
+    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+    () => false
   );
 }
 

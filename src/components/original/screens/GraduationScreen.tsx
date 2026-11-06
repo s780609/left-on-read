@@ -8,7 +8,7 @@ import PixelCanvas from "../PixelCanvas";
 import { blink, pixelText, rect, saw, type Ctx } from "../pixel/draw";
 import { drawGuanyuBust } from "../pixel/guanyuSprite";
 import { SCENE_H, SCENE_W } from "../pixel/scenes";
-import { COLOR, PixelButton } from "../ui";
+import { COLOR, PixelButton, useAdvanceKeys } from "../ui";
 
 function drawDiploma(ctx: Ctx, t: number) {
   rect(ctx, "#1a1236", 0, 0, SCENE_W, SCENE_H);
@@ -85,8 +85,13 @@ export function GraduationScreen({ dex, dayIndex, onContinue, onMenu }: Graduati
     return () => clearInterval(id);
   }, [lines.length]);
 
+  // 證書還沒念完時，按一下是念完，不會直接離開
+  const done = shown >= lines.length;
+  const revealAll = () => setShown(lines.length);
+  useAdvanceKeys(revealAll, !done);
+
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col" onClick={revealAll}>
       <div className="flex shrink-0 justify-center border-b-[3px] border-black bg-black">
         <PixelCanvas
           width={SCENE_W}
@@ -105,10 +110,10 @@ export function GraduationScreen({ dex, dayIndex, onContinue, onMenu }: Graduati
         ))}
       </div>
       <div className="flex shrink-0 flex-col gap-2.5 border-t-[3px] border-black bg-[#191933] px-4 py-3">
-        <PixelButton color={COLOR.green} onClick={onContinue}>
+        <PixelButton color={COLOR.green} onClick={done ? onContinue : undefined}>
           繼續過日子
         </PixelButton>
-        <PixelButton onClick={onMenu}>回選單</PixelButton>
+        <PixelButton onClick={done ? onMenu : undefined}>回選單</PixelButton>
       </div>
     </div>
   );

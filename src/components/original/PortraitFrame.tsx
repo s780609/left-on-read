@@ -10,6 +10,11 @@ const KEYFRAMES = `
 @keyframes lor-crack-left { to { transform: translate(-10px, 6px) rotate(-7deg); opacity: 0.45; } }
 @keyframes lor-crack-right { to { transform: translate(10px, -3px) rotate(6deg); opacity: 0.45; } }
 @keyframes lor-appear { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes lor-panel-settle { from { min-height: var(--lor-panel-from, 0); } to { min-height: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  @keyframes lor-appear { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes lor-panel-settle { from { min-height: 0; } to { min-height: 0; } }
+}
 `;
 
 /**
