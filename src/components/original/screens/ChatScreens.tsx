@@ -299,7 +299,10 @@ export function ChatRoom({ run, chat, onReply, onFinish, onDelete, onBack }: Cha
             <p className="text-center text-sm text-[#a9abc9]">
               {dateIsNext
                 ? "約好了。週末白天才能出門赴約。"
-                : `已送出。${run.phase === "daytime" ? "今天" : "今晚"}她不會再回了。`}
+                : allLines[allLines.length - 1]?.who === "her"
+                  ? // 她剛回完：不是卡住，是今天先聊到這裡（每個聊天一天推進一步）
+                    "她回完了。今天就聊到這裡，下一則明天才會來。"
+                  : `已送出。${run.phase === "daytime" ? "今天" : "今晚"}她不會再回了，明天再看看。`}
             </p>
             <PixelButton onClick={onBack}>回列表</PixelButton>
           </>
