@@ -101,13 +101,15 @@ function makeDraw(girl: Girl) {
 
 interface MatchScreenProps {
   girlSeed: number;
+  /** 新遊戲＋多一句上一輪學到的開場白 */
+  ngPlus?: boolean;
   onChoose: (opener: OpenerKind) => void;
 }
 
-export function MatchScreen({ girlSeed, onChoose }: MatchScreenProps) {
+export function MatchScreen({ girlSeed, ngPlus = false, onChoose }: MatchScreenProps) {
   const girl = useMemo(() => generateGirl(girlSeed), [girlSeed]);
   const draw = useMemo(() => makeDraw(girl), [girl]);
-  const options = openerOptions(girl);
+  const options = openerOptions(girl, ngPlus);
   return (
     <div className="flex h-full flex-col bg-[#2a0f2e]">
       <div className="shrink-0 border-b-[3px] border-black bg-black">
@@ -130,11 +132,12 @@ export function MatchScreen({ girlSeed, onChoose }: MatchScreenProps) {
           {options.map((o) => (
             <PixelButton
               key={o.kind}
-              color="#f4efe0"
+              color={o.kind === "memory" ? "#ffe08a" : "#f4efe0"}
               textColor="#20203c"
               align="left"
               silent
               className="text-sm"
+              sub={o.kind === "memory" ? "上一輪學到的" : undefined}
               onClick={() => onChoose(o.kind)}
             >
               {o.text}

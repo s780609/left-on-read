@@ -2,7 +2,7 @@
 
 import { calendarOf, formatDate } from "@/lib/left-on-read/calendar";
 import { dexProgress, endingProgress, type Dex } from "@/lib/left-on-read/dex";
-import { LADYBUG_ENDING_ID, TRUE_ENDING_ID } from "@/lib/left-on-read/constants";
+import { IRIS_ENDING_ID, LADYBUG_ENDING_ID, TRUE_ENDING_ID } from "@/lib/left-on-read/constants";
 import { SPECIAL_STORIES, STORIES } from "@/lib/left-on-read/stories/index";
 import type { StoryCategory } from "@/lib/left-on-read/storyTypes";
 import { COLOR, PixelButton, TOP_BAR_CLASS } from "../ui";
@@ -21,9 +21,10 @@ interface DexScreenProps {
   onBack: () => void;
   onLadybug: () => void;
   onTrueEnding: () => void;
+  onIrisEnding: () => void;
 }
 
-export function DexScreen({ dex, onBack, onLadybug, onTrueEnding }: DexScreenProps) {
+export function DexScreen({ dex, onBack, onLadybug, onTrueEnding, onIrisEnding }: DexScreenProps) {
   const { collected, total } = dexProgress(dex);
   const endings = endingProgress(dex);
   return (
@@ -105,6 +106,17 @@ export function DexScreen({ dex, onBack, onLadybug, onTrueEnding }: DexScreenPro
               </li>
             ) : (
               <li className={UNKNOWN_ENDING_CLASS}>？？？　這裡還有一個結局</li>
+            )}
+            {Object.hasOwn(dex, IRIS_ENDING_ID) ? (
+              <li>
+                <PixelButton color={COLOR.blue} onClick={onIrisEnding} sub="重看這個結局">
+                  另一個結局
+                </PixelButton>
+              </li>
+            ) : (
+              <li className={UNKNOWN_ENDING_CLASS}>
+                ？？？　{endings.collected > 0 ? "下一局，好像會遇到一個先傳訊息的人" : "還有一個結局"}
+              </li>
             )}
           </ul>
         </section>

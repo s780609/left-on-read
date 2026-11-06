@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { audioManager } from "@/lib/audio/AudioManager";
 import { NIGHT_DONE_LINES, NIGHT_LINES, NIGHT_UNREAD_LINES, QUIET_PHONE_LINES, dailyLine } from "@/lib/left-on-read/flavor";
 import type { RunState } from "@/lib/left-on-read/game";
+import { holidayOf } from "@/lib/left-on-read/holidays";
 import { readyChats, visibleChats } from "@/lib/left-on-read/story";
 import {
   drawNightGamesScene,
@@ -24,6 +25,7 @@ interface NightScreenProps {
   onOpenChats: () => void;
   onJerkOff: () => void;
   onPlayGames: () => void;
+  onProfile: () => void;
   onSleep: () => void;
   hobbyNote: string | null;
   hobbyKind: null | "solo" | "games";
@@ -37,6 +39,7 @@ export function NightScreen({
   onOpenChats,
   onJerkOff,
   onPlayGames,
+  onProfile,
   onSleep,
   hobbyNote,
   hobbyKind,
@@ -48,7 +51,10 @@ export function NightScreen({
   const ready = readyChats(chats, run.dayIndex, run.phase).length;
   const waiting = chats.length - ready;
   const lines = ready > 0 ? NIGHT_UNREAD_LINES : done ? NIGHT_DONE_LINES : NIGHT_LINES;
-  const line = dailyLine(lines, run.dayIndex);
+  const holiday = holidayOf(run.dayIndex);
+  const line = run.today.overtime
+    ? "加班到十點才回到家。今晚沒有力氣滑卡了。"
+    : dailyLine(lines, run.dayIndex);
   const quiet = dailyLine(QUIET_PHONE_LINES, run.dayIndex);
 
   useEffect(() => preloadPhotos(["night", "nightSolo", "nightGames"]), []);
@@ -106,15 +112,23 @@ export function NightScreen({
               </PixelButton>
             ) : null}
             {!done && !run.nightHobby.solo ? (
-              <PixelButton color={COLOR.blue} disabled={sleeping} onClick={onJerkOff} sub="消磨一下">
+              <PixelButton color={COLOR.blue} disabled={sleeping} onClick={onJerkOff} sub="消磨一下｜今晚回訊息多一個冷靜選項">
                 打手槍
               </PixelButton>
             ) : null}
             {!done && !run.nightHobby.games ? (
-              <PixelButton color={COLOR.blue} disabled={sleeping} onClick={onPlayGames} sub="排位之類的">
+              <PixelButton
+                color={COLOR.blue}
+                disabled={sleeping}
+                onClick={onPlayGames}
+                sub="今晚沒回的不算已讀壓力｜明天少回一則"
+              >
                 打電動
               </PixelButton>
             ) : null}
+            <PixelButton color={COLOR.gray} disabled={sleeping} onClick={onProfile} sub="照片、自介、Swipy Gold">
+              Swipy 個人檔案
+            </PixelButton>
             <PixelButton color={COLOR.gray} disabled={sleeping} silent onClick={goSleep}>
               {sleeping ? "晚安" : "去睡覺"}
             </PixelButton>
@@ -122,8 +136,12 @@ export function NightScreen({
         }
       >
         <DialogBox>
+          {holiday ? <p className="mb-1 text-xs text-[#ff9fb4]">今天是{holiday.name}</p> : null}
           <Typewriter key={line} text={line} />
           {hobbyNote ? <p className="mt-2 text-sm text-[#c8cae0]">{hobbyNote}</p> : null}
+          {run.nightHobby.calm && !sleeping ? (
+            <p className="mt-2 text-sm text-[#9fd3ff]">賢者模式：今晚回訊息時，會多一個冷靜的選項。</p>
+          ) : null}
           {chats.length > 0 && ready === 0 && !sleeping && !hobbyNote ? (
             <p className="mt-2 text-sm text-[#a9abc9]">{quiet}</p>
           ) : null}

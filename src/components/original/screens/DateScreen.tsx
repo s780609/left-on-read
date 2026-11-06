@@ -1,17 +1,18 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { HEROINE_DATES } from "@/lib/left-on-read/stories/index";
+import { IRIS_STORY_ID, datesForStory } from "@/lib/left-on-read/stories/index";
 import { pendingDateStep } from "@/lib/left-on-read/story";
 import type { Chat } from "@/lib/left-on-read/storyTypes";
-import { DATE_SCENES } from "../pixel/heroineScenes";
+import { DATE_SCENES, IRIS_DATE_SCENES } from "../pixel/heroineScenes";
 import { COLOR, DialogBox, PixelButton, Scene, ScreenBody, Typewriter, useAdvanceKeys } from "../ui";
 
 /** 一次約會：一段對白加一個選擇。選擇只影響當下的台詞，走完才真的扣錢、往下走 */
 export function DateScreen({ chat, onDone }: { chat: Chat; onDone: (choice: number) => void }) {
   const [choice, setChoice] = useState<number | null>(null);
   const index = pendingDateStep(chat)?.date?.index ?? 0;
-  const date = HEROINE_DATES[index];
+  const date = datesForStory(chat.storyId)[index];
+  const scenes = chat.storyId === IRIS_STORY_ID ? IRIS_DATE_SCENES : DATE_SCENES;
   const picked = choice === null ? null : date.options[choice];
   // 她的回應打完才出現收尾；按第一下只把字打完，按第二下才回家
   const [typed, setTyped] = useState(false);
@@ -25,7 +26,7 @@ export function DateScreen({ chat, onDone }: { chat: Chat; onDone: (choice: numb
 
   return (
     <div className="flex h-full flex-col" onClick={choice === null ? undefined : finishTyping}>
-      <Scene draw={DATE_SCENES[index]} label={date.place} />
+      <Scene draw={scenes[index]} label={date.place} />
       <ScreenBody
         actions={
           choice === null ? (

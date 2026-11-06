@@ -16,6 +16,7 @@ import {
   type TranscriptLine,
 } from "@/lib/left-on-read/story";
 import type { Chat, ReplyStep } from "@/lib/left-on-read/storyTypes";
+import { calmChoice, canCalm, chatVibe, statsOf, type Vibe } from "@/lib/left-on-read/chatStats";
 import PixelCanvas from "../PixelCanvas";
 import { rect, type Ctx } from "../pixel/draw";
 import { PHOTO_H, PHOTO_W, drawGirl, drawGirlAvatar } from "../pixel/girlSprite";
@@ -65,6 +66,13 @@ export function GirlAvatar({ girl, size = 44 }: { girl: Girl; size?: number }) {
 
 const STATUS_TEXT = { read: "已讀", unread: "未讀", vanished: "對方已離開" } as const;
 
+/** 聊天列表上的小標籤：不顯示數字，只看得出氣氛 */
+const VIBE_TAG: Record<Exclude<Vibe, "neutral">, { text: string; className: string }> = {
+  warm: { text: "熱絡", className: "bg-[#ffb3c4] text-[#2a1a22]" },
+  cold: { text: "冷掉", className: "bg-[#9fd3ff] text-[#20203c]" },
+  awkward: { text: "尷尬", className: "bg-[#55587a] text-white" },
+};
+
 function lastLineText(line: TranscriptLine | undefined): string {
   if (!line) return "";
   if (line.who === "status") return `（${STATUS_TEXT[line.status]}）`;
@@ -108,6 +116,12 @@ export function ChatList({ run, onOpen, onClose }: ChatListProps) {
                   {lastLineText(lines[lines.length - 1])}
                 </span>
               </span>
+              {(() => {
+                const { vibe } = chatVibe(statsOf(chat));
+                if (vibe === "neutral") return null;
+                const tag = VIBE_TAG[vibe];
+                return <span className={`shrink-0 border-2 border-black px-1 text-xs ${tag.className}`}>{tag.text}</span>;
+              })()}
               {ready ? (
                 <span className="shrink-0 border-2 border-black bg-[#ff6f91] px-1.5 text-xs text-white">新</span>
               ) : null}
@@ -201,8 +215,8 @@ export function Transcript({ lines, herDelayMs = 0, onTap }: TranscriptProps) {
 interface ChatRoomProps {
   run: RunState;
   chat: Chat;
-  /** panelHeight：選項區當下的高度，接下來的畫面要從這個高度慢慢收，版面才不會跳 */
-  onReply: (choice: number, panelHeight?: number) => void;
+  /** panelHeight：選項區當下的高度，接下來的畫面要從這個高度慢慢收，版面才不會跳；calm：賢者模式 */
+  onReply: (choice: number, panelHeight?: number, calm?: boolean) => void;
   onFinish: () => void;
   onBack: () => void;
 }
@@ -215,6 +229,8 @@ export function ChatRoom({ run, chat, onReply, onFinish, onBack }: ChatRoomProps
   const allLines = chatTranscript(chat, girl, run.dayIndex);
   const dateIsNext = pendingDateStep(chat) !== null;
   const panelRef = useRef<HTMLDivElement>(null);
+  const vibe = chatVibe(statsOf(chat));
+  const calmIndex = ready && !isFinal(step) && run.nightHobby.calm && canCalm(step) ? calmChoice(step) : null;
 
   // 有鋪陳的那一步：她一則一則傳完才出現選項，選項先佔好位子，版面不會跳；按聊天區可以跳過
   const leadTotal = ready && !isFinal(step) && step.lead ? step.lead.length + 1 : 0;
@@ -248,6 +264,11 @@ export function ChatRoom({ run, chat, onReply, onFinish, onBack }: ChatRoomProps
           列表
         </button>
       </div>
+      {vibe.line ? (
+        <p className="shrink-0 border-b-2 border-black bg-[#20203c] px-3 py-1 text-center text-xs italic text-[#a9abc9]">
+          {vibe.line}
+        </p>
+      ) : null}
       <Transcript
         lines={lines}
         herDelayMs={HER_REPLY_DELAY_MS}
@@ -300,6 +321,19 @@ export function ChatRoom({ run, chat, onReply, onFinish, onBack }: ChatRoomProps
                   {renderLine(reply, girl)}
                 </PixelButton>
               ))}
+              {calmIndex !== null ? (
+                <PixelButton
+                  color="#9fd3ff"
+                  textColor="#20203c"
+                  align="left"
+                  silent
+                  className="text-sm"
+                  sub="賢者模式：冷靜下來，看得出哪句最好｜今晚一次"
+                  onClick={() => onReply(calmIndex, panelRef.current?.offsetHeight, true)}
+                >
+                  {renderLine(step.replies[calmIndex], girl)}
+                </PixelButton>
+              ) : null}
             </div>
             {revealing ? (
               <p className="absolute inset-0 flex items-center justify-center text-sm text-[#a9abc9]">她正在輸入……</p>

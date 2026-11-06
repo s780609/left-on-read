@@ -2,9 +2,12 @@
 
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { audioManager } from "@/lib/audio/AudioManager";
+import { progressAchievements } from "@/lib/left-on-read/achievements";
+import { IRIS_ENDING_ID } from "@/lib/left-on-read/constants";
 import { dexProgress } from "@/lib/left-on-read/dex";
 import type { EdEnding } from "@/lib/left-on-read/ed";
 import { advance, createRun, settleRun, type GameAction, type GameEvent, type RunState } from "@/lib/left-on-read/game";
+import type { Profile, ShopItemId } from "@/lib/left-on-read/profile";
 import { generateGirl } from "@/lib/left-on-read/girl";
 import { NOODLES } from "@/lib/left-on-read/meals";
 import { chatTranscript, comebackChat, dueDateChat, visibleChats } from "@/lib/left-on-read/story";
@@ -14,25 +17,59 @@ import { commitSave, getSaveSnapshot, getServerSaveSnapshot, subscribeSave } fro
 import { ChatList, ChatRoom, ComebackScreen, EndingScreen, type EndingInfo } from "./screens/ChatScreens";
 import { DateScreen } from "./screens/DateScreen";
 import { DayScreen, PaydayScreen } from "./screens/DayScreen";
+import { AchievementScreen } from "./screens/AchievementScreen";
 import { DexScreen } from "./screens/DexScreen";
 import { EdScreen } from "./screens/EdScreen";
 import { EveningScreen, MealScreen, type MealNote } from "./screens/EveningScreen";
 import { GraduationScreen } from "./screens/GraduationScreen";
 import IntroScreen from "./screens/IntroScreen";
+import { IrisEndingScreen } from "./screens/IrisEndingScreen";
 import { LadybugScreen, type LadybugEntry } from "./screens/LadybugScreen";
 import { MatchScreen } from "./screens/MatchScreen";
 import MenuScreen from "./screens/MenuScreen";
 import { NightScreen } from "./screens/NightScreen";
 import { PhonePickupScreen } from "./screens/PhonePickupScreen";
+import { ProfileScreen, ShopScreen } from "./screens/ShopScreens";
 import { SwipeScreen } from "./screens/SwipeScreen";
 import { TrueEndingScreen } from "./screens/TrueEndingScreen";
 
-type Screen = "menu" | "intro" | "game" | "dex" | "graduation" | "ladybug" | "trueEnding" | "ed";
+type Screen =
+  | "menu"
+  | "intro"
+  | "game"
+  | "dex"
+  | "achievements"
+  | "graduation"
+  | "ladybug"
+  | "trueEnding"
+  | "irisEnding"
+  | "ed";
 
 /** 開場看完要去哪裡：新遊戲接著玩，重看就回選單 */
 type AfterIntro = "game" | "menu";
 
 const OPENER_TOAST = "訊息送出了。她會看到的。大概。";
+/** 左滑掉業績卡時的那句，輪著出現 */
+const DODGE_TOASTS = [
+  "財務自由的人不會在凌晨滑交友軟體。左滑。",
+  "這張自介我在詐騙宣導影片裡看過。左滑。",
+  "我第一次在交友軟體上躲過一劫。",
+];
+
+/** 一般聊天走到結局的畫面資料 */
+function endingInfo(ended: Extract<GameEvent, { type: "chatEnded" }>, dex: Parameters<typeof dexProgress>[0]): EndingInfo {
+  const { collected, total } = dexProgress(dex);
+  return {
+    storyId: ended.storyId,
+    narration: ended.narration,
+    paid: ended.paid,
+    firstTime: ended.firstTime,
+    antiFraud: ended.antiFraud,
+    girl: generateGirl(ended.girlSeed),
+    collected,
+    total,
+  };
+}
 
 export default function LeftOnReadGame() {
   const save = useSyncExternalStore(subscribeSave, getSaveSnapshot, getServerSaveSnapshot);
@@ -58,6 +95,11 @@ export default function LeftOnReadGame() {
   const [ladybugEntry, setLadybugEntry] = useState<LadybugEntry | null>(null);
   /** 這段結局看完要播哪個片尾；只有真的走到結局才有，從圖鑑重看是 null */
   const [edEnding, setEdEnding] = useState<EdEnding | null>(null);
+  /** 晚上的 Swipy 個人檔案、週末出門打理自己 */
+  const [overlay, setOverlay] = useState<null | "profile" | "shop">(null);
+  const [shopNote, setShopNote] = useState<string | null>(null);
+  /** 白天事件選完的那句；換到晚上就清掉 */
+  const [eventNote, setEventNote] = useState<string | null>(null);
 
   useEffect(() => {
     audioManager.init();
@@ -69,20 +111,38 @@ export default function LeftOnReadGame() {
     if (!run) return [];
     const result = advance(run, meta.dex, action);
     if (result.run === run) return [];
+    const nextRun = settleRun(result);
+    const progress = progressAchievements(
+      meta.counters,
+      meta.achievements,
+      { run: nextRun, dex: result.dex, events: result.events },
+      result.run.dayIndex
+    );
     // 結局和清掉這一局寫在同一次存檔，中間不會留下還能繼續的存檔
-    commitSave(settleRun(result), { ...meta, dex: result.dex });
+    commitSave(nextRun, { ...meta, dex: result.dex, counters: progress.counters, achievements: progress.achievements });
+    if (progress.unlocked.length > 0) {
+      audioManager.chime();
+      setToast(`成就解鎖：${progress.unlocked.map((a) => a.name).join("、")}`);
+    }
     return result.events;
   }, []);
 
   // ---------- 流程 ----------
 
-  const startNewGame = () => {
+  const startNewGame = (ngPlus: boolean) => {
     // 開場音樂要在使用者手勢裡解鎖音訊
     void audioManager.resume();
     audioManager.pop();
     const { meta } = getSaveSnapshot();
     const seed = crypto.getRandomValues(new Uint32Array(1))[0];
-    commitSave(createRun(seed), meta);
+    const run = createRun(seed, { ngPlus });
+    // 新遊戲＋的成就在開局就算
+    const progress = progressAchievements(meta.counters, meta.achievements, { run, dex: meta.dex, events: [] }, 0);
+    commitSave(run, { ...meta, counters: progress.counters, achievements: progress.achievements });
+    if (progress.unlocked.length > 0) setToast(`成就解鎖：${progress.unlocked.map((a) => a.name).join("、")}`);
+    setOverlay(null);
+    setShopNote(null);
+    setEventNote(null);
     setPhone(null);
     setEnding(null);
     setMealNote(null);
@@ -119,14 +179,21 @@ export default function LeftOnReadGame() {
 
   // ---------- 遊戲動作 ----------
 
-  const reply = (chatId: number, choice: number, panelHeight?: number) => {
+  const reply = (chatId: number, choice: number, panelHeight?: number, calm?: boolean) => {
     audioManager.bubble();
     const sourceChat = save.run?.chats.find((c) => c.id === chatId);
     const girlSeed = sourceChat?.girlSeed;
     // 走到結局後聊天會被收掉，紀錄要先留下來
     const girl = sourceChat ? generateGirl(sourceChat.girlSeed) : null;
     const history = sourceChat && girl && save.run ? chatTranscript(sourceChat, girl, save.run.dayIndex) : [];
-    const events = dispatch({ type: "reply", chatId, choice });
+    const events = dispatch({ type: "reply", chatId, choice, ...(calm ? { calm: true } : {}) });
+    // 傳錯人：被傳到的那個人直接走到結局，要給的那個人還在
+    const mixedUp = events.find((e) => e.type === "chatEnded");
+    if (mixedUp?.type === "chatEnded") {
+      audioManager.wrong();
+      setEnding(endingInfo(mixedUp, getSaveSnapshot().meta.dex));
+      return;
+    }
     // 假失敗：演得和一般失敗一樣，但圖鑑和聊天都沒有動
     const fake = events.find((e) => e.type === "fakeEnding");
     if (fake?.type === "fakeEnding" && girlSeed !== undefined) {
@@ -158,17 +225,7 @@ export default function LeftOnReadGame() {
     const ended = events.find((e) => e.type === "chatEnded");
     if (!ended || ended.type !== "chatEnded" || girlSeed === undefined) return;
     audioManager.wrong();
-    const { collected, total } = dexProgress(getSaveSnapshot().meta.dex);
-    setEnding({
-      storyId: ended.storyId,
-      narration: ended.narration,
-      paid: ended.paid,
-      firstTime: ended.firstTime,
-      antiFraud: ended.antiFraud,
-      girl: generateGirl(girlSeed),
-      collected,
-      total,
-    });
+    setEnding(endingInfo(ended, getSaveSnapshot().meta.dex));
     if (events.some((e) => e.type === "dexCompleted")) setGraduationDue(true);
   };
 
@@ -176,9 +233,54 @@ export default function LeftOnReadGame() {
     const events = dispatch({ type: "goOnDate", choice });
     setOnDate(false);
     setPhone(null);
-    if (!events.some((e) => e.type === "gameEnding")) return;
+    const gameEnding = events.find((e) => e.type === "gameEnding");
+    if (gameEnding?.type !== "gameEnding") return;
+    // Iris 的結局沒有片尾，看完直接回選單
+    if (gameEnding.endingId === IRIS_ENDING_ID) {
+      setEdEnding(null);
+      setScreen("irisEnding");
+      return;
+    }
     setEdEnding("true");
     setScreen("trueEnding");
+  };
+
+  const sleep = () => {
+    setOverlay(null);
+    setShopNote(null);
+    setHobbyNote(null);
+    setHobbyKind(null);
+    setEventNote(null);
+    const events = dispatch({ type: "sleep" });
+    // 最討厭已讀不回的她：睡一覺起來，她走了
+    const ended = events.find((e) => e.type === "chatEnded");
+    if (ended?.type === "chatEnded") {
+      audioManager.wrong();
+      setEnding(endingInfo(ended, getSaveSnapshot().meta.dex));
+    }
+  };
+
+  const buy = (item: ShopItemId) => {
+    const bought = dispatch({ type: "buy", item }).find((e) => e.type === "bought");
+    if (bought?.type === "bought") {
+      audioManager.chime();
+      setShopNote(bought.line);
+    }
+  };
+
+  const saveProfile = (profile: Profile) => {
+    dispatch({ type: "editProfile", photo: profile.photo, bio: profile.bio });
+    setOverlay(null);
+    setShopNote(null);
+    setToast("檔案更新了。演算法會重新認識我。");
+  };
+
+  const pickDayEvent = (choice: number) => {
+    const ev = dispatch({ type: "dayEvent", choice }).find((e) => e.type === "dayEvent");
+    if (ev?.type === "dayEvent") {
+      if (ev.money !== 0) audioManager.chime();
+      setEventNote(ev.line);
+    }
   };
 
   const finishEndingBeats = () => setScreen(edEnding ? "ed" : "menu");
@@ -263,6 +365,25 @@ export default function LeftOnReadGame() {
     const toMenu = () => setScreen("menu");
 
     if (ending) return <EndingScreen ending={ending} onClose={closeEnding} />;
+    const closeOverlay = () => {
+      setOverlay(null);
+      setShopNote(null);
+    };
+    if (overlay === "profile" && (run.phase === "night" || run.phase === "nightDone")) {
+      return (
+        <ProfileScreen
+          key={`${run.profile.photo}:${run.profile.bio}`}
+          run={run}
+          note={shopNote}
+          onSave={saveProfile}
+          onBuyGold={() => buy("gold")}
+          onBack={closeOverlay}
+        />
+      );
+    }
+    if (overlay === "shop" && run.phase === "daytime") {
+      return <ShopScreen run={run} note={shopNote} onBuy={buy} onMenu={toMenu} onBack={closeOverlay} />;
+    }
     if (mealNote) {
       return <MealScreen run={run} note={mealNote} onMenu={toMenu} onDone={() => setMealNote(null)} />;
     }
@@ -310,11 +431,15 @@ export default function LeftOnReadGame() {
         return (
           <DayScreen
             run={run}
+            eventNote={eventNote}
             onMenu={toMenu}
             onOpenChats={() => setPhone("list")}
             onGoDate={() => setOnDate(true)}
+            onShop={() => setOverlay("shop")}
+            onDayEvent={pickDayEvent}
             onEndDay={() => {
               setPhone(null);
+              setEventNote(null);
               dispatch({ type: "endDaytime" });
             }}
           />
@@ -343,11 +468,12 @@ export default function LeftOnReadGame() {
             }}
             onJerkOff={() => doHobby("jerkOff")}
             onPlayGames={() => doHobby("playGames")}
-            onSleep={() => {
+            onProfile={() => {
               setHobbyNote(null);
               setHobbyKind(null);
-              dispatch({ type: "sleep" });
+              setOverlay("profile");
             }}
+            onSleep={sleep}
             hobbyNote={hobbyNote}
             hobbyKind={hobbyKind}
           />
@@ -361,6 +487,10 @@ export default function LeftOnReadGame() {
             onSwipe={(dir) => {
               const events = dispatch({ type: "swipe", dir });
               if (events.some((e) => e.type === "matched")) audioManager.success();
+              if (events.some((e) => e.type === "dodged")) {
+                const { meta } = getSaveSnapshot();
+                setToast(DODGE_TOASTS[(meta.counters.dodged ?? 1) % DODGE_TOASTS.length]);
+              }
             }}
             onQuit={() => dispatch({ type: "quitApp" })}
           />
@@ -369,6 +499,7 @@ export default function LeftOnReadGame() {
         return run.pendingMatchSeed === null ? null : (
           <MatchScreen
             girlSeed={run.pendingMatchSeed}
+            ngPlus={run.ngPlus}
             onChoose={(opener) => {
               audioManager.bubble();
               dispatch({ type: "chooseOpener", opener });
@@ -397,8 +528,16 @@ export default function LeftOnReadGame() {
               setEdEnding(null);
               setScreen("trueEnding");
             }}
+            onIrisEnding={() => {
+              setEdEnding(null);
+              setScreen("irisEnding");
+            }}
           />
         );
+      case "achievements":
+        return <AchievementScreen achievements={save.meta.achievements} onBack={() => setScreen("menu")} />;
+      case "irisEnding":
+        return <IrisEndingScreen onDone={() => setScreen("menu")} />;
       case "ladybug":
         return <LadybugScreen entry={ladybugEntry} doneLabel={endingDoneLabel} onDone={finishEndingBeats} />;
       case "trueEnding":
@@ -427,6 +566,7 @@ export default function LeftOnReadGame() {
         onContinue={() => setScreen("game")}
         onNewGame={startNewGame}
         onDex={() => setScreen("dex")}
+        onAchievements={() => setScreen("achievements")}
         onIntro={replayIntro}
         onGraduation={() => {
           setGraduationFrom("menu");

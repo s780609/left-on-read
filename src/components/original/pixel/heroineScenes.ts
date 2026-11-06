@@ -3,6 +3,7 @@
  * 只有最後的標題畫面保留純色星空。
  */
 
+import type { IrisEndingScene } from "@/lib/left-on-read/irisEnding";
 import type { TrueEndingScene } from "@/lib/left-on-read/trueEnding";
 import { pixelText, rect, saw, type Ctx } from "./draw";
 import { SCENE_H, SCENE_W, photoDraw } from "./scenes";
@@ -10,7 +11,7 @@ import { SCENE_H, SCENE_W, photoDraw } from "./scenes";
 type SceneDraw = (ctx: Ctx, t: number) => void;
 
 /** 純色背景、一行字、幾顆慢慢閃的小燈 */
-function captionScene(bg: string, caption: string, light: string): SceneDraw {
+export function captionScene(bg: string, caption: string, light: string): SceneDraw {
   return (ctx, t) => {
     rect(ctx, bg, 0, 0, SCENE_W, SCENE_H);
     for (let i = 0; i < 14; i++) {
@@ -36,4 +37,24 @@ export const TRUE_ENDING_SCENES: Record<TrueEndingScene, SceneDraw> = {
   wedding: photoDraw("epiWedding"),
   baby: photoDraw("epiBaby"),
   title: captionScene("#0f0e20", "", "#ff9fb4"),
+};
+
+/*
+ * Iris 路線：插圖還沒生成，先用純色場景加一行字暫代。
+ * 圖來了之後在 scenes.ts 的 PHOTO_SRC 加一筆，把這裡的 captionScene 換成 photoDraw 就好。
+ */
+
+/** Iris 第幾次約會的場景 */
+export const IRIS_DATE_SCENES: readonly SceneDraw[] = [
+  captionScene("#14261d", "象山", "#ffe08a"),
+  captionScene("#1e2433", "北投", "#9fd3ff"),
+];
+
+export const IRIS_ENDING_SCENES: Record<IrisEndingScene, SceneDraw> = {
+  morning: captionScene("#2b2440", "早安", "#ffb3c4"),
+  mountains: captionScene("#14261d", "合歡山北峰", "#ffe08a"),
+  fight: captionScene("#101018", "已讀", "#55587a"),
+  makeup: captionScene("#2b2440", "晚餐想吃什麼", "#ffb3c4"),
+  proposal: captionScene("#1e2433", "北投", "#9fd3ff"),
+  title: captionScene("#0f0e20", "", "#9fd3ff"),
 };

@@ -3,10 +3,11 @@
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { audioManager } from "@/lib/audio/AudioManager";
-import { DECK_SIZE } from "@/lib/left-on-read/constants";
+import { DECK_SIZE, SUPER_LIKE_PRICE } from "@/lib/left-on-read/constants";
 import { STREAK_HINTS } from "@/lib/left-on-read/flavor";
 import type { Dex } from "@/lib/left-on-read/dex";
-import { deckCardSeed, type RunState } from "@/lib/left-on-read/game";
+import { deckCardSeed, type RunState, type SwipeDir } from "@/lib/left-on-read/game";
+import { holidayOf } from "@/lib/left-on-read/holidays";
 import { educationLine, generateGirl, type Girl } from "@/lib/left-on-read/girl";
 import { interestLabel } from "@/lib/left-on-read/story";
 import { resolveSwipe } from "@/lib/left-on-read/swipe";
@@ -84,14 +85,16 @@ interface DragState {
 interface SwipeScreenProps {
   run: RunState;
   dex: Dex;
-  onSwipe: (dir: "left" | "right") => void;
+  onSwipe: (dir: SwipeDir) => void;
   onQuit: () => void;
 }
 
 export function SwipeScreen({ run, dex, onSwipe, onQuit }: SwipeScreenProps) {
   const girl = useMemo(() => generateGirl(deckCardSeed(run, dex, run.deckIndex)), [run, dex]);
   const nextSeed = deckCardSeed(run, dex, run.deckIndex + 1);
-  const [photoIndex, setPhotoIndex] = useState(0);
+  // 照片頁跟著卡片走：換一張新卡就從第一張照片開始
+  const [photo, setPhoto] = useState({ deckIndex: run.deckIndex, index: 0 });
+  const photoIndex = photo.deckIndex === run.deckIndex ? photo.index : 0;
   const hasNext = run.deckIndex + 1 < DECK_SIZE;
   const nextGirl = useMemo(() => generateGirl(nextSeed), [nextSeed]);
 
@@ -109,10 +112,9 @@ export function SwipeScreen({ run, dex, onSwipe, onQuit }: SwipeScreenProps) {
     []
   );
 
-  // 換一張新卡（key 換了之後舊的 DOM 已經卸載）就可以再滑；照片頁也要歸零
+  // 換一張新卡（key 換了之後舊的 DOM 已經卸載）就可以再滑
   useEffect(() => {
     flyingRef.current = false;
-    setPhotoIndex(0);
   }, [run.deckIndex]);
 
   const place = (x: number, y: number, ms: number) => {
@@ -125,16 +127,23 @@ export function SwipeScreen({ run, dex, onSwipe, onQuit }: SwipeScreenProps) {
   };
 
   /** 手勢和按鈕走同一條飛出路徑，飛行中鎖定輸入，動畫結束才 dispatch */
-  const flyOut = (dir: "left" | "right") => {
+  const flyOut = (dir: SwipeDir) => {
     if (flyingRef.current) return;
     flyingRef.current = true;
     dragRef.current = null;
     audioManager.whoosh();
     const width = cardRef.current?.offsetWidth ?? 320;
+    const height = cardRef.current?.offsetHeight ?? 480;
     const el = cardRef.current;
     if (el) el.style.transition = `transform ${FLY_MS}ms ease-in`;
-    if (el) el.style.transform = `translate(${(dir === "right" ? 1 : -1) * width * 1.6}px, -24px) rotate(${dir === "right" ? 22 : -22}deg)`;
-    if (likeRef.current) likeRef.current.style.opacity = dir === "right" ? "1" : "0";
+    if (el) {
+      // 超級喜歡往上飛
+      el.style.transform =
+        dir === "super"
+          ? `translate(0px, ${-height * 1.4}px)`
+          : `translate(${(dir === "right" ? 1 : -1) * width * 1.6}px, -24px) rotate(${dir === "right" ? 22 : -22}deg)`;
+    }
+    if (likeRef.current) likeRef.current.style.opacity = dir === "left" ? "0" : "1";
     if (nopeRef.current) nopeRef.current.style.opacity = dir === "left" ? "1" : "0";
     timerRef.current = setTimeout(() => onSwipe(dir), FLY_MS);
   };
@@ -175,11 +184,15 @@ export function SwipeScreen({ run, dex, onSwipe, onQuit }: SwipeScreenProps) {
     const dir = resolveSwipe(drag.x, drag.vx, cardRef.current?.offsetWidth ?? 320);
     if (dir) flyOut(dir);
     else place(0, 0, 180);
-    if (!dir && Math.abs(drag.x) < TAP_PX && Math.abs(drag.y) < TAP_PX) setPhotoIndex((i) => i + 1);
+    if (!dir && Math.abs(drag.x) < TAP_PX && Math.abs(drag.y) < TAP_PX) {
+      setPhoto({ deckIndex: run.deckIndex, index: photoIndex + 1 });
+    }
   };
 
+  const holidayHint = holidayOf(run.dayIndex)?.swipeHint ?? null;
   const hint =
-    run.rightStreak >= HINT_FROM_STREAK ? STREAK_HINTS[run.rightStreak % STREAK_HINTS.length] : null;
+    run.rightStreak >= HINT_FROM_STREAK ? STREAK_HINTS[run.rightStreak % STREAK_HINTS.length] : holidayHint;
+  const canSuper = run.money >= SUPER_LIKE_PRICE;
 
   return (
     <div className="flex h-full flex-col bg-[#2a1f3d]">
@@ -235,7 +248,7 @@ export function SwipeScreen({ run, dex, onSwipe, onQuit }: SwipeScreenProps) {
 
       {hint ? <p className="shrink-0 px-4 text-center text-xs text-[#c8cae0]">{hint}</p> : null}
 
-      <div className="flex shrink-0 items-center justify-center gap-10 px-4 py-2.5">
+      <div className="flex shrink-0 items-center justify-center gap-7 px-4 py-2.5">
         <button
           type="button"
           aria-label="略過"
@@ -243,6 +256,15 @@ export function SwipeScreen({ run, dex, onSwipe, onQuit }: SwipeScreenProps) {
           className="h-14 w-14 cursor-pointer border-[3px] border-black bg-[#f4efe0] text-2xl text-[#c9423a] shadow-[4px_4px_0_#000] active:translate-x-[3px] active:translate-y-[3px] active:shadow-[1px_1px_0_#000]"
         >
           ✕
+        </button>
+        <button
+          type="button"
+          aria-label={`超級喜歡，NT$${SUPER_LIKE_PRICE}`}
+          disabled={!canSuper}
+          onClick={() => flyOut("super")}
+          className="flex h-12 w-12 cursor-pointer flex-col items-center justify-center border-[3px] border-black bg-[#ffe08a] text-xl leading-none text-[#20203c] shadow-[4px_4px_0_#000] enabled:active:translate-x-[3px] enabled:active:translate-y-[3px] enabled:active:shadow-[1px_1px_0_#000] disabled:cursor-default disabled:opacity-45"
+        >
+          ★<span className="mt-0.5 text-[9px] leading-none">{SUPER_LIKE_PRICE}</span>
         </button>
         <button
           type="button"

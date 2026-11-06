@@ -1,32 +1,40 @@
 "use client";
 
 import { calendarOf, isWorkday } from "@/lib/left-on-read/calendar";
-import { DAYTIME_REPLY_LIMIT, MONTHLY_RENT, MONTHLY_SALARY } from "@/lib/left-on-read/constants";
+import { MONTHLY_RENT, MONTHLY_SALARY } from "@/lib/left-on-read/constants";
 import { PAYDAY_LINES, QUIET_PHONE_LINES, WEEKEND_LINES, WORK_LINES, dailyLine } from "@/lib/left-on-read/flavor";
-import type { RunState } from "@/lib/left-on-read/game";
-import { HEROINE_DATES } from "@/lib/left-on-read/stories/index";
+import { dayReplyLimit, pendingDayEvent, type RunState } from "@/lib/left-on-read/game";
+import { holidayOf } from "@/lib/left-on-read/holidays";
+import { datesForStory } from "@/lib/left-on-read/stories/index";
 import { dueDateChat, pendingDateStep, readyChats, visibleChats } from "@/lib/left-on-read/story";
 import { drawOfficeScene, drawPaydaySlip, drawWeekendScene } from "../pixel/scenes";
 import { COLOR, DialogBox, PixelButton, Scene, ScreenBody, StatusBar, Typewriter } from "../ui";
 
 interface DayScreenProps {
   run: RunState;
+  /** 白天事件選完的那句 */
+  eventNote: string | null;
   onMenu: () => void;
   onOpenChats: () => void;
   onEndDay: () => void;
   onGoDate: () => void;
+  onShop: () => void;
+  onDayEvent: (choice: number) => void;
 }
 
-/** 白天：平日上班，週末在房間；有訊息可以回時才多一顆按鈕 */
-export function DayScreen({ run, onMenu, onOpenChats, onEndDay, onGoDate }: DayScreenProps) {
+/** 白天：平日上班，週末在房間；有訊息可以回時才多一顆按鈕，有事件時先處理事件 */
+export function DayScreen({ run, eventNote, onMenu, onOpenChats, onEndDay, onGoDate, onShop, onDayEvent }: DayScreenProps) {
   const workday = isWorkday(calendarOf(run.dayIndex));
+  const holiday = holidayOf(run.dayIndex);
+  const event = pendingDayEvent(run);
+  const limit = dayReplyLimit(run);
   const chats = visibleChats(run.chats, run.dayIndex);
   const ready = readyChats(chats, run.dayIndex, run.phase).length;
   const waiting = chats.length - ready;
   const dateChat = dueDateChat(run.chats, run.dayIndex);
   const dateStep = dateChat && pendingDateStep(dateChat);
-  const date = dateStep?.date ? HEROINE_DATES[dateStep.date.index] : null;
-  const line = dailyLine(workday ? WORK_LINES : WEEKEND_LINES, run.dayIndex);
+  const date = dateChat && dateStep?.date ? datesForStory(dateChat.storyId)[dateStep.date.index] : null;
+  const line = holiday?.line ?? dailyLine(workday ? WORK_LINES : WEEKEND_LINES, run.dayIndex);
   const quiet = dailyLine(QUIET_PHONE_LINES, run.dayIndex);
 
   return (
@@ -35,6 +43,22 @@ export function DayScreen({ run, onMenu, onOpenChats, onEndDay, onGoDate }: DayS
       <Scene draw={workday ? drawOfficeScene : drawWeekendScene} label={workday ? "冠宇在辦公室上班" : "週末的租屋處"} />
       <ScreenBody
         actions={
+          event ? (
+            event.choices.map((choice, i) => {
+              const broke = run.money + (choice.money ?? 0) < 0;
+              return (
+                <PixelButton
+                  key={choice.label}
+                  color={i === 0 ? COLOR.pink : COLOR.gray}
+                  disabled={broke}
+                  sub={broke ? "錢不夠" : undefined}
+                  onClick={() => onDayEvent(i)}
+                >
+                  {choice.label}
+                </PixelButton>
+              );
+            })
+          ) : (
           <>
             {date ? (
               <PixelButton
@@ -52,7 +76,7 @@ export function DayScreen({ run, onMenu, onOpenChats, onEndDay, onGoDate }: DayS
                 onClick={onOpenChats}
                 sub={
                   ready > 0
-                    ? `今天還能認真回 ${Math.max(0, DAYTIME_REPLY_LIMIT - run.dayReplies)} 則` +
+                    ? `今天還能認真回 ${Math.max(0, limit - run.dayReplies)} 則` +
                       (waiting > 0 ? `｜另外 ${waiting} 個還沒回` : "")
                     : "沒有新訊息"
                 }
@@ -61,14 +85,26 @@ export function DayScreen({ run, onMenu, onOpenChats, onEndDay, onGoDate }: DayS
                 {ready > 0 ? `（${ready}）` : ""}
               </PixelButton>
             ) : null}
-            <PixelButton color={COLOR.blue} onClick={onEndDay}>
+            {!workday ? (
+              <PixelButton color={COLOR.green} onClick={onShop} sub="剪頭髮、買衣服、拍形象照">
+                出門打理自己
+              </PixelButton>
+            ) : null}
+            <PixelButton color={COLOR.blue} onClick={onEndDay} sub={run.today.overtime ? "加班到十點，今晚不滑了" : undefined}>
               {workday ? "撐到下班" : "撐到晚上"}
             </PixelButton>
           </>
+          )
         }
       >
         <DialogBox>
+          {holiday ? <p className="mb-1 text-xs text-[#ff9fb4]">今天是{holiday.name}</p> : null}
           <Typewriter key={line} text={line} />
+          {event ? <p className="mt-2 border-t-2 border-dashed border-[#55587a] pt-2">{event.text}</p> : null}
+          {!event && eventNote ? <p className="mt-2 text-sm text-[#c8cae0]">{eventNote}</p> : null}
+          {!event && run.today.tired ? (
+            <p className="mt-2 text-sm text-[#a9abc9]">昨晚打電動打太晚，今天一直在打哈欠。</p>
+          ) : null}
           {chats.length > 0 && ready === 0 ? (
             <p className="mt-2 text-sm text-[#a9abc9]">{quiet}</p>
           ) : null}
