@@ -231,8 +231,11 @@ function incomingLine(incoming: Incoming, girl: Girl): TranscriptLine | null {
   }
 }
 
-/** 開場白，再來每步「她的內容、冠宇選的回覆」；目前這一步要 ready 才顯示 */
-export function chatTranscript(chat: Chat, girl: Girl, dayIndex: number): TranscriptLine[] {
+/**
+ * 開場白，再來每步「她的內容、冠宇選的回覆」；目前這一步要 ready 才顯示。
+ * phase 要跟判斷能不能回的地方一致：小晴晚上的加成只有帶 phase 才算，不帶的話選項出現了她的訊息卻沒出現
+ */
+export function chatTranscript(chat: Chat, girl: Girl, dayIndex: number, phase?: ChatPhase): TranscriptLine[] {
   const story = STORY_BY_ID[chat.storyId];
   const opener = openerOptions(girl, true).find((o) => o.kind === chat.opener);
   const lines: TranscriptLine[] = opener ? [{ who: "me", text: opener.text }] : [];
@@ -254,7 +257,7 @@ export function chatTranscript(chat: Chat, girl: Girl, dayIndex: number): Transc
     const answer = step.answers?.[chat.replies[i]] ?? step.answer;
     if (answer) lines.push({ who: "her", text: renderLine(answer, girl) });
   }
-  if (isWaitReady(chat, dayIndex)) {
+  if (isWaitReady(chat, dayIndex, phase)) {
     const current = story.steps[chat.stepIndex];
     pushLead(current);
     pushIncoming(current.incoming);

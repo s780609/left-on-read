@@ -148,7 +148,8 @@ const AFTER_COMEBACK: readonly ReplyStep[] = [
 /** 第一階段：分數順序刻意打散，不能每題都選同一個位置 */
 const CHAT_STEPS: readonly ReplyStep[] = [
   {
-    incoming: { kind: "message", text: "你也喜歡看電影喔？最近看了什麼" },
+    // 開場白不一定有提到電影，「你也喜歡」只接得上興趣句；改成她先講自己
+    incoming: { kind: "message", text: "我很愛看電影欸！你呢？最近看了什麼" },
     replies: [
       "我都在家看，戲院太貴了",
       "上次那部我看到哭，一個人在戲院有點丟臉。妳呢？",

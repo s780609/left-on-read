@@ -412,3 +412,25 @@ test("模糊測試：只在晚上回訊息，不變量永遠成立，晚上真�
   }
   assert.ok(nightReplies > 0 && nightEndings > 0, `晚上回了 ${nightReplies} 次、結局 ${nightEndings} 次`);
 });
+
+test("小晴白天回過、晚上加成那一步：對話紀錄要帶 phase，她的訊息和選項一起出現", () => {
+  const day = 10;
+  const chat: Chat = {
+    id: 1,
+    girlSeed: HEROINE_SEED,
+    storyId: HEROINE_STORY_ID,
+    opener: "memory",
+    stepIndex: 1,
+    lastAdvancedDay: day,
+    replies: [1],
+  };
+  const girl = generateGirl(HEROINE_SEED);
+  const step = STORY_BY_ID[HEROINE_STORY_ID].steps[1];
+  const text = "text" in step.incoming ? step.incoming.text : "";
+  assert.ok(isChatReady(chat, day, "night"), "晚上加成：可以回");
+  const night = chatTranscript(chat, girl, day, "night");
+  assert.ok(night.some((l) => l.who === "her" && l.text === text), "晚上看得到她這一步的訊息");
+  // 白天同一天還不能回，也不顯示
+  assert.ok(!isChatReady(chat, day, "daytime"));
+  assert.ok(!chatTranscript(chat, girl, day, "daytime").some((l) => l.who === "her" && l.text === text));
+});

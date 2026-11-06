@@ -185,7 +185,7 @@ export default function LeftOnReadGame() {
     const girlSeed = sourceChat?.girlSeed;
     // 走到結局後聊天會被收掉，紀錄要先留下來
     const girl = sourceChat ? generateGirl(sourceChat.girlSeed) : null;
-    const history = sourceChat && girl && save.run ? chatTranscript(sourceChat, girl, save.run.dayIndex) : [];
+    const history = sourceChat && girl && save.run ? chatTranscript(sourceChat, girl, save.run.dayIndex, save.run.phase) : [];
     const events = dispatch({ type: "reply", chatId, choice, ...(calm ? { calm: true } : {}) });
     // 傳錯人：被傳到的那個人直接走到結局，要給的那個人還在
     const mixedUp = events.find((e) => e.type === "chatEnded");

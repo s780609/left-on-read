@@ -98,7 +98,7 @@ export function ChatList({ run, onOpen, onClose }: ChatListProps) {
         {visibleChats(run.chats, run.dayIndex).map((chat) => {
           const girl = generateGirl(chat.girlSeed);
           const ready = !chat.closed && isChatReady(chat, run.dayIndex, run.phase);
-          const lines = chatTranscript(chat, girl, run.dayIndex);
+          const lines = chatTranscript(chat, girl, run.dayIndex, run.phase);
           return (
             <button
               key={chat.id}
@@ -231,7 +231,7 @@ export function ChatRoom({ run, chat, onReply, onFinish, onDelete, onBack }: Cha
   const story = STORY_BY_ID[chat.storyId];
   const step = story.steps[chat.stepIndex];
   const ready = isChatReady(chat, run.dayIndex, run.phase);
-  const allLines = chatTranscript(chat, girl, run.dayIndex);
+  const allLines = chatTranscript(chat, girl, run.dayIndex, run.phase);
   const dateIsNext = pendingDateStep(chat) !== null;
   const panelRef = useRef<HTMLDivElement>(null);
   const vibe = chatVibe(statsOf(chat));
