@@ -4,6 +4,7 @@ import { calendarOf, isWorkday } from "@/lib/left-on-read/calendar";
 import { MONTHLY_RENT, MONTHLY_SALARY } from "@/lib/left-on-read/constants";
 import { PAYDAY_LINES, QUIET_PHONE_LINES, WEEKEND_LINES, WORK_LINES, dailyLine } from "@/lib/left-on-read/flavor";
 import { pendingDayEvent, repliesLeft, type RunState } from "@/lib/left-on-read/game";
+import { generateGirl } from "@/lib/left-on-read/girl";
 import { holidayOf } from "@/lib/left-on-read/holidays";
 import { datesForStory } from "@/lib/left-on-read/stories/index";
 import { dueDateChat, pendingDateStep, readyChats, visibleChats } from "@/lib/left-on-read/story";
@@ -34,6 +35,8 @@ export function DayScreen({ run, eventNote, onMenu, onOpenChats, onEndDay, onGoD
   const dateChat = dueDateChat(run.chats, run.dayIndex);
   const dateStep = dateChat && pendingDateStep(dateChat);
   const date = dateChat && dateStep?.date ? datesForStory(dateChat.storyId)[dateStep.date.index] : null;
+  /** 約的是誰：之後可能同時有小晴和 Iris，按鈕要看得出來 */
+  const dateWith = dateChat ? generateGirl(dateChat.girlSeed).nickname : "";
   const line = holiday?.line ?? dailyLine(workday ? WORK_LINES : WEEKEND_LINES, run.dayIndex);
   const quiet = dailyLine(QUIET_PHONE_LINES, run.dayIndex);
 
@@ -65,9 +68,13 @@ export function DayScreen({ run, eventNote, onMenu, onOpenChats, onEndDay, onGoD
                 color={COLOR.pink}
                 disabled={run.money < date.cost}
                 onClick={onGoDate}
-                sub={run.money < date.cost ? "等發薪" : `${date.place}　NT$${date.cost.toLocaleString("en-US")}`}
+                sub={
+                  run.money < date.cost
+                    ? `${date.place}｜等發薪`
+                    : `${date.place}　NT$${date.cost.toLocaleString("en-US")}`
+                }
               >
-                出門約會
+                跟{dateWith}出門約會
               </PixelButton>
             ) : null}
             {chats.length > 0 ? (

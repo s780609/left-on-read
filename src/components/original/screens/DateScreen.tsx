@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 import { IRIS_STORY_ID, datesForStory } from "@/lib/left-on-read/stories/index";
 import { pendingDateStep } from "@/lib/left-on-read/story";
 import type { Chat } from "@/lib/left-on-read/storyTypes";
+import { generateGirl } from "@/lib/left-on-read/girl";
 import { DATE_SCENES, IRIS_DATE_SCENES } from "../pixel/heroineScenes";
 import { COLOR, DialogBox, PixelButton, Scene, ScreenBody, Typewriter, useAdvanceKeys } from "../ui";
 
@@ -26,7 +27,7 @@ export function DateScreen({ chat, onDone }: { chat: Chat; onDone: (choice: numb
 
   return (
     <div className="flex h-full flex-col" onClick={choice === null ? undefined : finishTyping}>
-      <Scene draw={scenes[index]} label={date.place} />
+      <Scene draw={scenes[index]} label={`和${generateGirl(chat.girlSeed).nickname}在${date.place}`} />
       <ScreenBody
         actions={
           choice === null ? (
@@ -50,7 +51,9 @@ export function DateScreen({ chat, onDone }: { chat: Chat; onDone: (choice: numb
         }
       >
         <p className="mb-2 flex justify-between text-sm text-[#f2d675]">
-          <span>{date.place}</span>
+          <span>
+            {date.place}｜和{generateGirl(chat.girlSeed).nickname}
+          </span>
           <span className="text-[#ff9a8f]">花掉 NT${date.cost.toLocaleString("en-US")}</span>
         </p>
         {picked ? (
