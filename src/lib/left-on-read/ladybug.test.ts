@@ -2,11 +2,11 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { LADYBUG_COST, LADYBUG_ENDING_ID, START_MONEY } from "./constants.ts";
 import { dexProgress } from "./dex.ts";
-import { advance, checkInvariants, createRun, legalActions } from "./game.ts";
+import { advance, checkInvariants, createRun, legalActions, settleRun } from "./game.ts";
 import type { RunState } from "./game.ts";
 import { deckSeed, generateGirl } from "./girl.ts";
 import { LADYBUG_BEATS } from "./ladybug.ts";
-import { parseMeta, serializeMeta } from "./save.ts";
+import { blankMeta, parseMeta, parseRun, serializeMeta, serializeRun } from "./save.ts";
 import { SPECIAL_STORIES, STORIES, STORY_BY_ID } from "./stories/index.ts";
 import { storyWeights, validateStory } from "./story.ts";
 import type { Chat } from "./storyTypes.ts";
@@ -117,6 +117,53 @@ test("選去：扣 3000、聊天結束、記到圖鑑、發出結局事件", () 
     r.events.find((e) => e.type === "gameEnding"),
     { type: "gameEnding", endingId: LADYBUG_ENDING_ID }
   );
+});
+
+for (const phase of ["daytime", "night", "nightDone"] as const) {
+  test(`選去會結束這一局（${phase}）：沒有可以存的 run，圖鑑留著`, () => {
+    const { run, chat } = atDecision();
+    const r = advance({ ...run, phase }, {}, { type: "reply", chatId: chat.id, choice: decisionChoice() });
+    assert.equal(settleRun(r), null);
+    // 存回去再讀出來：這一局不見了，圖鑑還在
+    const meta = parseMeta(serializeMeta({ ...blankMeta(), dex: r.dex }));
+    assert.equal(meta.dex[LADYBUG_ENDING_ID].count, 1);
+  });
+}
+
+test("從配對一路聊到 1h2s 再選去：這一局結束，身上還有別的聊天也一樣", () => {
+  const story = STORY_BY_ID[STUDIO];
+  const decisionStep = story.steps.findIndex((s) => "decision" in s);
+  let run = matchStudio();
+  let dex = {};
+  // 還在聊的另一個人不能讓這一局活下來
+  const other: Chat = { ...run.chats[0], id: 99, storyId: STORIES[0].id, lastAdvancedDay: 0 };
+  run = { ...run, phase: "daytime", chats: [...run.chats, other] };
+  const chatId = run.chats[0].id;
+  for (let i = 0; i < decisionStep; i++) {
+    run = { ...run, dayIndex: run.dayIndex + 1 };
+    const r = advance(run, dex, { type: "reply", chatId, choice: 0 });
+    assert.notEqual(r.run, run);
+    assert.notEqual(settleRun(r), null, `還沒到抉擇就結束了（第 ${i} 步）`);
+    run = r.run;
+    dex = r.dex;
+  }
+  run = { ...run, dayIndex: run.dayIndex + 1 };
+  const end = advance(run, dex, { type: "reply", chatId, choice: decisionChoice() });
+  assert.equal(end.run.chats.length, 1);
+  assert.equal(settleRun(end), null);
+  assert.equal(end.dex[LADYBUG_ENDING_ID].count, 1);
+});
+
+test("沒有走到結局的動作，這一局都還在", () => {
+  const { run, chat } = atDecision();
+  const refuse = advance(run, {}, { type: "reply", chatId: chat.id, choice: decisionChoice() === 0 ? 1 : 0 });
+  assert.equal(settleRun(refuse), refuse.run);
+  assert.deepEqual(parseRun(serializeRun(refuse.run)), refuse.run);
+
+  // 錢不夠，選去不算數
+  const poor = atDecision(LADYBUG_COST - 1);
+  const denied = advance(poor.run, {}, { type: "reply", chatId: poor.chat.id, choice: decisionChoice() });
+  assert.equal(settleRun(denied), poor.run);
 });
 
 test("錢不夠就去不了：動作不合法，回傳同一個 run", () => {

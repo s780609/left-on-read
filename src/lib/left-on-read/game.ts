@@ -77,7 +77,7 @@ export type GameEvent =
   /** 演得像失敗結局，但沒有記圖鑑，聊天也還在 */
   | { type: "fakeEnding"; storyId: string; narration: string }
   | { type: "dateFinished"; index: number; cost: number }
-  /** 這一局走到結局了，存檔由畫面清掉 */
+  /** 這一局走到結局了，存檔要用 settleRun 清掉 */
   | { type: "gameEnding"; endingId: string };
 
 export type RngFactory = (purpose: "meal" | "match" | "story", ...keys: number[]) => Rng;
@@ -89,6 +89,11 @@ export interface AdvanceResult {
 }
 
 const PURPOSE_KEY = { meal: 1, match: 2, story: 3 } as const;
+
+/** 這個動作之後要存哪一局：走到結局（瓢蟲、真結局）這一局就沒了，null 代表不能再繼續，圖鑑另外留著 */
+export function settleRun(result: AdvanceResult): RunState | null {
+  return result.events.some((e) => e.type === "gameEnding") ? null : result.run;
+}
 
 export function createRun(runSeed: number): RunState {
   return {

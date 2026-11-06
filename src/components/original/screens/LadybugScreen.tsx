@@ -147,6 +147,8 @@ export function LadybugScreen({ entry, onDone }: { entry: LadybugEntry | null; o
       }
       chatHistory={entry?.history}
       panelFromHeight={entry?.panelHeight}
+      // 從圖鑑重看沒有結束任何一局，只有真的走到這裡才講
+      lastNote={entry ? "這一局到這裡結束。" : undefined}
       onLast={playEndingSound}
       onDone={onDone}
     />

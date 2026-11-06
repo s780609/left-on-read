@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { audioManager } from "@/lib/audio/AudioManager";
 import { dexProgress } from "@/lib/left-on-read/dex";
-import { advance, createRun, type GameAction, type GameEvent, type RunState } from "@/lib/left-on-read/game";
+import { advance, createRun, settleRun, type GameAction, type GameEvent, type RunState } from "@/lib/left-on-read/game";
 import { generateGirl } from "@/lib/left-on-read/girl";
 import { NOODLES } from "@/lib/left-on-read/meals";
 import { chatTranscript, comebackChat, dueDateChat, visibleChats } from "@/lib/left-on-read/story";
@@ -60,7 +60,8 @@ export default function LeftOnReadGame() {
     if (!run) return [];
     const result = advance(run, meta.dex, action);
     if (result.run === run) return [];
-    commitSave(result.run, { ...meta, dex: result.dex });
+    // 結局和清掉這一局寫在同一次存檔，中間不會留下還能繼續的存檔
+    commitSave(settleRun(result), { ...meta, dex: result.dex });
     return result.events;
   }, []);
 
@@ -132,8 +133,6 @@ export default function LeftOnReadGame() {
       return;
     }
     if (!events.some((e) => e.type === "gameEnding")) return;
-    // 走到結局這一局就結束了，圖鑑留著
-    commitSave(null, getSaveSnapshot().meta);
     setPhone(null);
     // 最後一句是 1h2s 那題，結局的第一段會接著顯示
     setLadybugEntry(girl ? { girl, history: history.slice(0, -1), panelHeight } : null);
@@ -165,8 +164,6 @@ export default function LeftOnReadGame() {
     setOnDate(false);
     setPhone(null);
     if (!events.some((e) => e.type === "gameEnding")) return;
-    // 走到結局這一局就結束了，圖鑑留著
-    commitSave(null, getSaveSnapshot().meta);
     setScreen("trueEnding");
   };
 

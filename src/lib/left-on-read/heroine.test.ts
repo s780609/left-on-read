@@ -14,7 +14,7 @@ import {
 } from "./constants.ts";
 import { dexProgress, endingProgress } from "./dex.ts";
 import type { Dex } from "./dex.ts";
-import { advance, checkInvariants, createRun, deckCardSeed, heroineCardIndex, legalActions } from "./game.ts";
+import { advance, checkInvariants, createRun, deckCardSeed, heroineCardIndex, legalActions, settleRun } from "./game.ts";
 import type { GameAction, GameEvent, RunState } from "./game.ts";
 import { deckSeed, generateGirl } from "./girl.ts";
 import { INTERESTS } from "./girlData.ts";
@@ -550,6 +550,7 @@ test("第三次約會後：發出 true-love、記進圖鑑、聊天結束、不�
   assert.equal(r.run.money, START_MONEY - 300);
   assert.equal(r.run.chats.length, 0);
   assert.equal(r.dex[TRUE_ENDING_ID].count, 1);
+  assert.equal(settleRun(r), null);
   assert.deepEqual(
     r.events.find((e) => e.type === "gameEnding"),
     { type: "gameEnding", endingId: "true-love" }

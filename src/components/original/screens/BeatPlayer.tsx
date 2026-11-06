@@ -36,6 +36,8 @@ interface BeatPlayerProps<S extends string> {
   chatHistory?: readonly TranscriptLine[];
   /** 底部按鈕區從這個高度慢慢收，接在選項區後面才不會跳 */
   panelFromHeight?: number;
+  /** 片名底下的小字 */
+  lastNote?: string;
   onLast?: () => void;
   onDone: () => void;
 }
@@ -53,6 +55,7 @@ export function BeatPlayer<S extends string>({
   chatHeader,
   chatHistory,
   panelFromHeight,
+  lastNote,
   onLast,
   onDone,
 }: BeatPlayerProps<S>) {
@@ -123,6 +126,7 @@ export function BeatPlayer<S extends string>({
                     {line}
                   </p>
                 ))}
+                {lastNote ? <p className="mt-5 text-sm text-[#a9abc9]">{lastNote}</p> : null}
               </div>
             ) : (
               chapter.map((b, i) => {
