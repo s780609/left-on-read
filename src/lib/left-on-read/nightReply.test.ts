@@ -76,8 +76,8 @@ test("晚上回完還是可以打開 Swipy 或去睡覺", () => {
   const replied = act(at("night", [chatOf(replyStory())]), {}, { type: "reply", chatId: 1, choice: 0 }).run;
   assert.deepEqual([...legalActions(replied)].sort(), ["buy", "editProfile", "jerkOff", "openApp", "playGames", "sleep"]);
   assert.equal(act(replied, {}, { type: "openApp" }).run.phase, "swiping");
-  // 第 32 天是週六，睡醒跳過週日，是第 34 天
-  assert.equal(act(replied, {}, { type: "sleep" }).run.dayIndex, 34);
+  // 第 32 天是週六，睡醒跳過週日週一，是第 35 天
+  assert.equal(act(replied, {}, { type: "sleep" }).run.dayIndex, 35);
 });
 
 test("晚上也可以看完結局，圖鑑和花費都跟白天一樣", () => {
@@ -165,9 +165,10 @@ test("白天回和晚上回，走出來的對話紀錄完全相同", () => {
     let run = at(phase, [chatOf(story)]);
     for (let i = 0; i < story.steps.length - 1; i++) {
       run = advance(run, {}, { type: "reply", chatId: 1, choice: 0 }).run;
-      // 往後跳 8 天，落在週日就再往後一天
-      const next = run.dayIndex + 8;
-      run = { ...run, dayIndex: calendarOf(next).weekday === 0 ? next + 1 : next, phase };
+      // 往後跳 8 天，落在週日、週一就挪到週二
+      let next = run.dayIndex + 8;
+      while ([0, 1].includes(calendarOf(next).weekday)) next++;
+      run = { ...run, dayIndex: next, phase };
     }
     return run.chats[0];
   };

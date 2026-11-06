@@ -332,7 +332,7 @@ test("晚上只能做兩件事：滑 Swipy、打手槍、打電動任選", async
   assert.equal(slept.today.dayAction, null);
 });
 
-test("存檔：白天那件事和晚上做了幾件會留著；舊存檔停在週日會挪到週一", async () => {
+test("存檔：白天那件事和晚上做了幾件會留著；舊存檔停在週日、週一會挪到週二", async () => {
   const { parseRun, serializeRun } = await import("./save.ts");
   const run: RunState = {
     ...createRun(1),
@@ -350,7 +350,7 @@ test("存檔：白天那件事和晚上做了幾件會留著；舊存檔停在�
   delete raw.nightActions;
   raw.nightHobby = { solo: true, games: false };
   const moved = parseRun(JSON.stringify(raw))!;
-  assert.equal(moved.dayIndex, 6);
-  assert.equal(calendarOf(moved.dayIndex).weekday, 1);
+  assert.equal(moved.dayIndex, 7);
+  assert.equal(calendarOf(moved.dayIndex).weekday, 2);
   assert.equal(moved.nightActions, 1, "舊存檔用打過的消遣補");
 });

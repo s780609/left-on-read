@@ -32,28 +32,30 @@ test("畫面上的日期不顯示年份", () => {
   assert.equal(formatDate(calendarOf(0)), "9月15日 週二");
 });
 
-test("dayIndex 4 是週六；週日（dayIndex 5）要跳過，週六睡醒是週一", () => {
+test("dayIndex 4 是週六；週日、週一（dayIndex 5、6）要跳過，週六睡醒是週二", () => {
   assert.deepEqual(calendarOf(4), { year: 2026, month: 9, day: 19, weekday: 6 });
   assert.equal(isPlayDay(calendarOf(4)), true);
   assert.equal(isPlayDay(calendarOf(5)), false);
-  assert.equal(nextPlayDay(4), 6);
-  assert.equal(calendarOf(6).weekday, 1);
+  assert.equal(isPlayDay(calendarOf(6)), false);
+  assert.equal(nextPlayDay(4), 7);
+  assert.equal(calendarOf(7).weekday, 2);
   for (let i = 0; i < 400; i++) assert.ok(isPlayDay(calendarOf(nextPlayDay(i))), `dayIndex ${i}`);
 });
 
-test("dayIndex 20 是 10/5，是領薪日", () => {
-  const c = calendarOf(20);
-  assert.deepEqual(c, { year: 2026, month: 10, day: 5, weekday: 1 });
-  assert.equal(isPayday(c), true);
-});
-
-test("5 號落在週六照常入帳；落在週日（被跳過）就改到 6 號週一", () => {
+test("5 號落在週六照常入帳", () => {
   assert.deepEqual(calendarOf(81), { year: 2026, month: 12, day: 5, weekday: 6 });
   assert.equal(isPayday(calendarOf(81)), true);
+});
+
+test("5 號落在週一或週日（被跳過）就改到之後的週二", () => {
+  // 10/5 是週一 → 10/6 週二
+  assert.deepEqual(calendarOf(20), { year: 2026, month: 10, day: 5, weekday: 1 });
+  assert.equal(nextPlayDay(18), 21);
+  assert.equal(isPayday(calendarOf(21)), true);
+  // 2027/9/5 是週日 → 9/7 週二
   assert.equal(calendarOf(355).weekday, 0);
-  assert.equal(calendarOf(355).day, 5);
-  assert.equal(nextPlayDay(354), 356);
-  assert.equal(isPayday(calendarOf(356)), true);
+  assert.equal(nextPlayDay(354), 357);
+  assert.equal(isPayday(calendarOf(357)), true);
 });
 
 test("一路照遊戲的日子走 365 天，每個月剛好領一次薪水", () => {
@@ -123,9 +125,9 @@ test("firstDayIndexOnOrAfter：一週內一定找到正確的星期", () => {
   }
 });
 
-test("週一到週六都能回訊息，週日跳過", () => {
-  // dayIndex 0 = 9/15 週二；週一到週六都能回，週日（dayIndex 5）跳過
+test("週二到週六都能回訊息，週日、週一跳過", () => {
+  // dayIndex 0 = 9/15 週二；週日、週一（dayIndex 5、6）跳過
   for (let i = 0; i < 7; i++) {
-    assert.equal(isPhoneChatDay(calendarOf(i)), i !== 5, `dayIndex ${i}`);
+    assert.equal(isPhoneChatDay(calendarOf(i)), i !== 5 && i !== 6, `dayIndex ${i}`);
   }
 });

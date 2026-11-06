@@ -337,10 +337,10 @@ test("never-read：最後一步等 7 天", () => {
   assert.equal(firstReadyDay(10, step.wait) - 10, 7);
 });
 
-test("stood-up 等到週六、coworker 等到週一，每個起始日都正確", () => {
+test("stood-up 等到週六、coworker 等到週二，每個起始日都正確", () => {
   const cases: [string, number][] = [
     ["stood-up", 6],
-    ["coworker", 1],
+    ["coworker", 2],
   ];
   for (const [id, weekday] of cases) {
     const step = STORY_BY_ID[id].steps.find((s) => s.wait && "weekday" in s.wait);
@@ -385,14 +385,14 @@ test("isChatReady：配對當天不算，到了等待日才算，之後都算", 
 test("isChatReady：看的是目前這一步的等待", () => {
   const story = STORY_BY_ID["fading-replies"];
   story.steps.forEach((step, stepIndex) => {
-    // 第 41 天是週一（第 40 天是週日，遊戲裡不會停在那天）
-    const chat = makeChat(story, { stepIndex, lastAdvancedDay: 41, replies: new Array<number>(stepIndex).fill(0) });
+    // 第 42 天是週二（第 40、41 天是週日、週一，遊戲裡不會停在那兩天）
+    const chat = makeChat(story, { stepIndex, lastAdvancedDay: 42, replies: new Array<number>(stepIndex).fill(0) });
     if (isFinal(step)) {
       // 結局步不等待，當天就能關
-      assert.equal(isChatReady(chat, 41), true, `第 ${stepIndex} 步結局`);
+      assert.equal(isChatReady(chat, 42), true, `第 ${stepIndex} 步結局`);
       return;
     }
-    const ready = firstReadyDay(41, step.wait);
+    const ready = firstReadyDay(42, step.wait);
     assert.equal(isChatReady(chat, ready - 1), false, `第 ${stepIndex} 步`);
     assert.equal(isChatReady(chat, nextPhoneDay(ready)), true, `第 ${stepIndex} 步`);
   });

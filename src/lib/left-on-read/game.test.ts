@@ -536,23 +536,23 @@ test("dexCompleted：只在未滿變已滿時發一次", () => {
 
 // ---------- 領薪 ----------
 
-test("睡到 5 號進 payday，其他日子進 daytime；週六睡醒直接是週一", () => {
-  // 第 18 天是週六 10/3，週日跳過，醒來是 10/5 週一領薪日
+test("睡到領薪日進 payday，其他日子進 daytime；週六睡醒直接是週二", () => {
+  // 第 18 天是週六 10/3；10/5 是週一被跳過，醒來是 10/6 週二領薪
   const before = session(at({ phase: "night", dayIndex: 18 }));
   before.act({ type: "sleep" });
-  assert.equal(before.run.dayIndex, 20);
+  assert.equal(before.run.dayIndex, 21);
   assert.equal(before.run.phase, "payday");
 
-  const normal = session(at({ phase: "night", dayIndex: 20 }));
+  const normal = session(at({ phase: "night", dayIndex: 21 }));
   normal.act({ type: "sleep" });
-  assert.equal(normal.run.dayIndex, 21);
+  assert.equal(normal.run.dayIndex, 22);
   assert.equal(normal.run.phase, "daytime");
 });
 
-test("5 號落在週六照常進 payday；落在週日就改成 6 號週一", () => {
+test("5 號落在週六照常進 payday；落在週日、週一就改到之後的週二", () => {
   for (const [from, to] of [
     [80, 81],
-    [354, 356],
+    [354, 357],
   ]) {
     const s = session(at({ phase: "nightDone", dayIndex: from }));
     s.act({ type: "sleep" });
@@ -581,19 +581,19 @@ test("身上沒錢也領得到薪水", () => {
   assert.equal(s.run.money, NET_PAY);
 });
 
-test("跨月跨年：一年領 12 次薪水，週日跳過，金額正確", () => {
+test("跨月跨年：一年領 12 次薪水，週日週一跳過，金額正確", () => {
   const s = session(createRun(1), NO_MATCH);
   const paydays: number[] = [];
   let played = 0;
   while (s.run.dayIndex < 365) {
     const day = s.run.dayIndex;
-    assert.notEqual(calendarOf(day).weekday, 0, `第 ${day} 天是週日`);
+    assert.ok(![0, 1].includes(calendarOf(day).weekday), `第 ${day} 天是週日或週一`);
     if (s.run.phase === "payday") paydays.push(day);
     assert.equal(s.run.phase === "payday", isPayday(calendarOf(day)), `第 ${day} 天`);
     finishDay(s);
     played++;
     const next = s.run.dayIndex;
-    assert.ok(next === day + 1 || (next === day + 2 && calendarOf(day + 1).weekday === 0), `第 ${day} 天之後跳到 ${next}`);
+    assert.ok(next === day + 1 || (next === day + 3 && calendarOf(day).weekday === 6), `第 ${day} 天之後跳到 ${next}`);
   }
   assert.equal(paydays.length, 12);
   assert.ok(paydays.includes(112)); // 2027-01-05 週二

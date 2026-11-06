@@ -30,25 +30,31 @@ export function isWorkday(c: CalendarDay): boolean {
   return c.weekday >= 1 && c.weekday <= 5;
 }
 
-/** 週一到週六都能回訊息（週日整天跳過）；約會只在週六 */
+/** 週二到週六都能回訊息（週日、週一整天跳過）；約會只在週六 */
 export function isPhoneChatDay(c: CalendarDay): boolean {
   return isPlayDay(c);
 }
 
-/** 週日直接跳過，遊戲裡不會停在週日 */
+/** 週日、週一直接跳過，遊戲裡只有週二到週六 */
 export function isPlayDay(c: CalendarDay): boolean {
-  return c.weekday !== 0;
+  return c.weekday !== 0 && c.weekday !== 1;
 }
 
-/** 睡一覺之後的下一天：週六睡醒就是週一 */
+/** 第一個玩得到的日子（當天是就回傳當天） */
+export function playDayOnOrAfter(dayIndex: number): number {
+  let d = dayIndex;
+  while (!isPlayDay(calendarOf(d))) d++;
+  return d;
+}
+
+/** 睡一覺之後的下一天：週六睡醒就是週二 */
 export function nextPlayDay(dayIndex: number): number {
-  const next = dayIndex + 1;
-  return isPlayDay(calendarOf(next)) ? next : next + 1;
+  return playDayOnOrAfter(dayIndex + 1);
 }
 
-/** 每月 5 號入帳；5 號剛好是週日（被跳過）就改到 6 號週一 */
+/** 每月 5 號入帳；5 號剛好是週日或週一（被跳過）就改到之後的週二（6 號或 7 號） */
 export function isPayday(c: CalendarDay): boolean {
-  return c.day === 5 || (c.day === 6 && c.weekday === 1);
+  return c.day === 5 || (c.weekday === 2 && (c.day === 6 || c.day === 7));
 }
 
 export function firstDayIndexOnOrAfter(from: number, weekday: number): number {

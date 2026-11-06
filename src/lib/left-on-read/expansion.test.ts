@@ -6,7 +6,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { ACHIEVEMENTS, earnedAchievements, progressAchievements, tallyEvents } from "./achievements.ts";
-import { calendarOf } from "./calendar.ts";
+import { calendarOf, isPlayDay } from "./calendar.ts";
 import { CALM_DELTA, calmChoice, canCalm, chatVibe } from "./chatStats.ts";
 import {
   DAYTIME_REPLY_LIMIT,
@@ -425,7 +425,7 @@ test("F：白天事件由 runSeed、dayIndex 決定，大約四分之一的日�
 test("F：加班：拿加班費，下班直接回家，今晚不能滑", () => {
   const day = findDay((d) => {
     const e = dayEventOf(1, d);
-    return e?.id === "overtime" && calendarOf(d).day !== 5;
+    return e?.id === "overtime" && calendarOf(d).day !== 5 && isPlayDay(calendarOf(d));
   });
   let run = at({ phase: "daytime", dayIndex: day });
   const choice = todayEvent(run)!.choices.findIndex((c) => c.overtime);
@@ -629,7 +629,7 @@ test("成就：局面上的條件", () => {
 test("存檔：新欄位往返相等；舊存檔沒有新欄位也讀得進來", () => {
   const run: RunState = {
     ...createRun(5, { ngPlus: true }),
-    dayIndex: 20,
+    dayIndex: 21,
     phase: "night",
     profile: { photo: "pro", bio: "stats" },
     grooming: { goldUntil: 30, haircutUntil: 25, outfit: true, proPhoto: true },

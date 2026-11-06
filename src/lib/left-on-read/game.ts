@@ -821,7 +821,7 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
 
     case "sleep": {
       if (run.phase !== "night" && run.phase !== "nightDone") return same;
-      // 週六睡醒就是週一
+      // 週日、週一跳過：週六睡醒就是週二
       const dayIndex = nextPlayDay(run.dayIndex);
       // 已讀壓力：今天能回卻沒回的聊天，隔天壓力 +1；打電動的晚上不算（在打排位，沒看到）
       let chats = run.chats.map((chat) => {
@@ -1005,7 +1005,7 @@ export function checkInvariants(run: RunState): string[] {
   if (!Number.isInteger(run.nightActions) || run.nightActions < 0 || run.nightActions > NIGHT_ACTION_LIMIT) {
     errors.push(`今晚做的事不合法：${run.nightActions}`);
   }
-  if (!isPlayDay(calendarOf(run.dayIndex))) errors.push("停在週日：週日要跳過");
+  if (!isPlayDay(calendarOf(run.dayIndex))) errors.push("停在週日或週一：這兩天要跳過");
   const dayAction = run.today?.dayAction ?? null;
   if (dayAction !== null && !DAY_ACTIONS.includes(dayAction)) errors.push(`白天的事不合法：${dayAction}`);
 

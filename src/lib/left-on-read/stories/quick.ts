@@ -120,8 +120,8 @@ export const QUICK_STORIES: readonly Story[] = [
         replies: ["喔喔喔 那台卡紙的", "對 印表機後來還好嗎", "這樣好像有點尷尬 要不要當作沒發生"],
       },
       {
-        incoming: { kind: "narration", text: "（週一早上，電梯）門關上。她看樓層顯示。我看樓層顯示。樓層顯示很忙。" },
-        wait: { weekday: 1 },
+        incoming: { kind: "narration", text: "（週二早上，電梯）門關上。她看樓層顯示。我看樓層顯示。樓層顯示很忙。" },
+        wait: { weekday: 2 },
         ending: { narration: "從此我們在電梯裡都看樓層顯示。我大概是全公司最清楚 12 樓幾秒會到的人。" },
       },
     ],

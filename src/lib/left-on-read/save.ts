@@ -6,7 +6,7 @@
 import { ACHIEVEMENT_BY_ID, COUNTER_IDS } from "./achievements.ts";
 import type { Achievements, MetaCounters } from "./achievements.ts";
 import { DECK_SIZE, HEROINE_SEED, IRIS_SEED, MAX_MONEY, NIGHT_ACTION_LIMIT, START_MONEY } from "./constants.ts";
-import { calendarOf, isPlayDay } from "./calendar.ts";
+import { playDayOnOrAfter } from "./calendar.ts";
 import { ENDING_IDS } from "./dex.ts";
 import type { Dex } from "./dex.ts";
 import { OPENER_KINDS, PHASES, drawMeal, seededRngs } from "./game.ts";
@@ -123,8 +123,8 @@ export function parseRun(raw: string | null): RunState | null {
     const { runSeed, dayIndex: rawDay, phase: rawPhase } = data;
     if (typeof runSeed !== "number" || !Number.isFinite(runSeed)) return null;
     if (!isCount(rawDay)) return null;
-    // 週日要跳過：舊存檔（起始日改過）可能剛好停在週日，往後挪到週一
-    const dayIndex = isPlayDay(calendarOf(rawDay)) ? rawDay : rawDay + 1;
+    // 週日、週一要跳過：舊存檔（起始日、規則改過）可能剛好停在這兩天，往後挪到週二
+    const dayIndex = playDayOnOrAfter(rawDay);
     if (!PHASES.includes(rawPhase as Phase)) return null;
 
     let phase = rawPhase as Phase;
