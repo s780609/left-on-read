@@ -32,6 +32,7 @@ const PHOTO_SRC = {
   epiWedding: "/left-on-read/scene/epi-wedding.jpg",
   epiNoodles: "/left-on-read/scene/epi-noodles.jpg",
   epiIntimate: "/left-on-read/scene/epi-intimate.jpg",
+  epiIntimateSex: "/left-on-read/scene/epi-intimate-sex.jpg",
   epiBaby: "/left-on-read/scene/epi-baby.jpg",
   ladybugAlley: "/left-on-read/scene/ladybug-alley.jpg",
   ladybugDoor: "/left-on-read/scene/ladybug-door.jpg",

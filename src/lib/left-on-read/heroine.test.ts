@@ -571,7 +571,20 @@ test("結局進度：瓢蟲和真結局一起算 n / 2", () => {
 });
 
 test("腳本：六段加片名，都有文字", () => {
-  assert.deepEqual(TRUE_ENDING_BEATS.map((b) => b.scene), ["noodles", "intimate", "chiayi", "proposal", "wedding", "baby", "title"]);
+  assert.deepEqual(TRUE_ENDING_BEATS.map((b) => b.scene), [
+    "noodles",
+    "intimate",
+    "intimate",
+    "intimate",
+    "intimateSex",
+    "intimateSex",
+    "intimateSex",
+    "chiayi",
+    "proposal",
+    "wedding",
+    "baby",
+    "title",
+  ]);
   for (const b of TRUE_ENDING_BEATS) assert.ok(b.text.trim().length > 0);
   assert.equal(TRUE_ENDING_BEATS.at(-1)?.text, "真結局\n已讀。\n然後她回了。");
 });
@@ -582,6 +595,11 @@ test("腳本：床邊那段寫明是交往滿兩個月，排在求婚和婚禮�
   assert.ok(intimate.text.startsWith("交往滿兩個月"));
   assert.ok(scenes.indexOf("intimate") < scenes.indexOf("proposal"));
   assert.ok(scenes.indexOf("intimate") < scenes.indexOf("wedding"));
+  assert.ok(scenes.indexOf("intimate") < scenes.indexOf("intimateSex"));
+  assert.ok(scenes.indexOf("intimateSex") < scenes.indexOf("chiayi"));
+  const sexBeats = TRUE_ENDING_BEATS.filter((b) => b.scene === "intimateSex");
+  assert.ok(sexBeats.length >= 2);
+  assert.ok(sexBeats.some((b) => /進去|射|乳頭|濕|腰/.test(b.text)), "露骨段要真的寫到性行為");
 });
 
 test("validateStory 抓得到她路線的壞資料", () => {
@@ -667,17 +685,17 @@ const LEGACY_STEPS: readonly { newStep: number; resume?: number; reply: string }
   { newStep: 2, reply: "老實說都在家。但我有點想改變，妳有推薦的地方嗎" },
   { newStep: 3, reply: "根據我們的訊息頻率，我認為時機成熟了" },
   { newStep: 4, reply: "好，我查一下場次" },
-  { newStep: 5, reply: HEROINE_DATES[0].options[0].text },
+  { newStep: 6, reply: HEROINE_DATES[0].options[0].text },
   // 第一次約會回來還沒收到邀約：先玩到新的聊天
-  { newStep: 8, resume: 6, reply: "好啊，我去" },
-  { newStep: 9, reply: HEROINE_DATES[1].options[0].text },
+  { newStep: 9, resume: 7, reply: "好啊，週六傍晚六點半那邊見" },
+  { newStep: 10, reply: HEROINE_DATES[1].options[0].text },
   // 第二次約會回來、假失敗還沒開始：先聊煙火
-  { newStep: 11, resume: 10, reply: "下週末有空嗎？想約妳" },
-  { newStep: 12, reply: "那再下週呢" },
-  { newStep: 13, reply: "好，那妳有空再說" },
-  { newStep: 14, reply: "……就這樣了" },
-  { newStep: 15, reply: "週末。我週末有空。" },
-  { newStep: 18, reply: HEROINE_DATES[2].options[0].text },
+  { newStep: 12, resume: 11, reply: "下週末有空嗎？想約妳" },
+  { newStep: 13, reply: "那再下週呢" },
+  { newStep: 14, reply: "好，那妳有空再說" },
+  { newStep: 15, reply: "……就這樣了" },
+  { newStep: 16, reply: "週六下午四點。趕得上夕陽。" },
+  { newStep: 19, reply: HEROINE_DATES[2].options[0].text },
 ];
 
 function legacySave(stepIndex: number, patch: Partial<Chat> = {}) {
@@ -688,7 +706,7 @@ function legacySave(stepIndex: number, patch: Partial<Chat> = {}) {
 test("舊存檔：對照表和新路線的每一步都對得上", () => {
   assert.equal(STORY_BY_ID[LEGACY_HEROINE_STORY_ID], undefined);
   LEGACY_STEPS.forEach(({ newStep, reply }) => assert.equal(stepAt(newStep).replies[0], reply, `第 ${newStep} 步`));
-  assert.equal(STORY.steps.length, 19);
+  assert.equal(STORY.steps.length, 20);
 });
 
 test("舊存檔的每一步都讀得進來：狀態合法，存回去再讀不會遷移第二次", () => {
@@ -711,8 +729,8 @@ test("舊存檔：選過的回覆、總分都留著，補上的聊天不影響�
   assert.equal(chatScore(parsed.chats[0]), 4);
   const lines = chatTranscript(parsed.chats[0], generateGirl(HEROINE_SEED), parsed.dayIndex);
   const mine = lines.flatMap((l) => (l.who === "me" ? [l.text] : []));
-  assert.ok(mine.includes("煙火幾點？我先查捷運末班車"), "第 6 步選第二句要留著");
-  assert.ok(mine.includes("我看一下行事曆……週末有空。"), "第 12 步選第二句要留著");
+  assert.ok(mine.includes("煙火七點半開始？我六點半到，順便查末班車"), "第 6 步選第二句要留著");
+  assert.ok(mine.includes("我看一下行事曆……週六四點可以。"), "第 12 步選第二句要留著");
 });
 
 test("舊存檔：手上在等的事情不變", () => {

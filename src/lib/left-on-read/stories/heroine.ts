@@ -170,6 +170,16 @@ export const HEROINE_STORY: Story = {
     {
       incoming: { kind: "message", text: "週末信義威秀有一部我想看。一起去？" },
       replies: ["好，我查一下場次", "好。我把那天空下來了，雖然本來就是空的"],
+      answers: [
+        "我剛查了，週六下午 14:30 那場評價還不錯。可以嗎？",
+        "那就週六。14:30 那場我看過預告，好像還行？",
+      ],
+    },
+    {
+      // 把場次講死，狀態列「約好了」才接得上
+      incoming: { kind: "none" },
+      replies: ["可以，週六 14:30 信義威秀見", "14:30 沒問題。票我來訂"],
+      answers: ["好～那週六下午見。別遲到喔。", "哇你真的會訂。那我等你傳訂單。"],
     },
     dateStep(0),
     ...AFTER_FIRST_DATE,
@@ -177,7 +187,11 @@ export const HEROINE_STORY: Story = {
       // 至少隔兩天，第二次約會一定是另一個週末
       wait: { days: 2 },
       incoming: { kind: "message", text: "下週末大稻埕有煙火，要不要去？" },
-      replies: ["好啊，我去", "煙火幾點？我先查捷運末班車"],
+      replies: ["好啊，週六傍晚六點半那邊見", "煙火七點半開始？我六點半到，順便查末班車"],
+      answers: [
+        "嗯，六點半大稻埕碼頭集合。我穿比較好認的顏色。",
+        "對，七點半開始。那六點半見，別為了末班車跑太兇。",
+      ],
     },
     dateStep(1),
     AFTER_SECOND_DATE,
@@ -194,8 +208,9 @@ export const HEROINE_STORY: Story = {
     },
     {
       incoming: { kind: "message", text: "欸，你什麼時候有空？淡水漁人碼頭我一直想去看夕陽。這次換我約。" },
-      // 中間還有兩天的聊天，赴約不一定趕得上這個週末，不要寫「這週末」
-      replies: ["週末。我週末有空。", "我看一下行事曆……週末有空。"],
+      // 中間還有兩天聊天；具體鐘點可以講，但不要寫死「這週末」害時間軸打架
+      replies: ["週六下午四點。趕得上夕陽。", "我看一下行事曆……週六四點可以。"],
+      answers: ["好，四點漁人碼頭。記得穿厚一點。", "週六四點見。我等你。"],
       comeback: { stamp: "下次吧", aside: "這是第二個主動找我的人。第一個要我加 LINE 看盤。" },
     },
     ...AFTER_COMEBACK,
@@ -203,14 +218,14 @@ export const HEROINE_STORY: Story = {
   ],
 };
 
-/** 舊路線 14 步，每一步在新路線的位置；中間空出來的 6、7、10、16、17 是約會之間的聊天 */
-const LEGACY_STEP_POSITIONS: readonly number[] = [0, 1, 2, 3, 4, 5, 8, 9, 11, 12, 13, 14, 15, 18];
+/** 舊路線 14 步，每一步在新路線的位置；中間空出來的是約會之間的聊天，以及威秀場次確認 */
+const LEGACY_STEP_POSITIONS: readonly number[] = [0, 1, 2, 3, 4, 6, 9, 10, 12, 13, 14, 15, 16, 19];
 
 /**
  * 舊存檔還沒走到這一步時，改從哪裡接：新聊天排在這一步之前，舊存檔也玩得到。
  * 其他情況原地不動，已經約好的約會和演到一半的假失敗不會被往後推。
  */
-const LEGACY_RESUME_AT: Readonly<Record<number, number>> = { 6: 6, 8: 10 };
+const LEGACY_RESUME_AT: Readonly<Record<number, number>> = { 6: 7, 8: 11 };
 
 /**
  * 舊存檔的 stepIndex、replies 換成新路線的位置。

@@ -74,3 +74,19 @@ test("全部劇情的每個回覆步驟：replies 與 answers／scores 長度一
     }
   }
 });
+
+test("heroine：三次約會邀約都要落到具體時間，不能只說週末", () => {
+  const steps = HEROINE_STORY.steps;
+  const movie = steps[4] as ReplyStep;
+  assert.equal(movie.incoming.kind, "message");
+  assert.match((movie.incoming as { text: string }).text, /信義威秀/);
+  assert.ok(movie.answers?.every((a) => /14:30|週六/.test(a)));
+  const confirm = steps[5] as ReplyStep;
+  assert.ok(confirm.replies.every((r) => /14:30|週六/.test(r)));
+  const fireworks = steps.find((s) => !("date" in s) && "incoming" in s && s.incoming.kind === "message" && /大稻埕/.test((s.incoming as { text: string }).text)) as ReplyStep;
+  assert.ok(fireworks);
+  assert.ok(fireworks.replies.every((r) => /六點半|七點半/.test(r)));
+  const tamsui = steps.find((s) => "comeback" in s) as ReplyStep;
+  assert.ok(tamsui.replies.every((r) => /四點|週六/.test(r)));
+  assert.ok(tamsui.answers?.every((a) => /四點/.test(a)));
+});
