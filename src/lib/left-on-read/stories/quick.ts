@@ -147,7 +147,7 @@ export const QUICK_STORIES: readonly Story[] = [
       {
         incoming: {
           kind: "message",
-          text: "很抱歉，我無法取得即時天氣資訊。建議您查詢當地氣象單位。祝您有美好的一天！",
+          text: "17×23 等於 391。很抱歉，我無法取得即時天氣資訊。建議您查詢當地氣象單位。祝您有美好的一天！",
         },
         ending: { narration: "她是我這個月聊最久的對象。關掉視窗之前，我打了一句謝謝。不知道為什麼。" },
       },

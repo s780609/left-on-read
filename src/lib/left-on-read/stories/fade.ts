@@ -106,9 +106,9 @@ export const FADE_STORIES: readonly Story[] = [
       {
         incoming: { kind: "narration", text: "（三個月後）話題還在。她問我週末都在幹嘛。" },
         replies: [
-          "在家 我上次好像講過了",
+          "在家 妳呢 這次要不要出來晃晃",
           "沒幹嘛 所以妳這週末有空嗎",
-          "我可以做一份週末摘要給妳 就不用一直問了",
+          "週末摘要：我有空。結論：妳呢",
         ],
       },
       {

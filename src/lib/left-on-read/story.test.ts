@@ -536,14 +536,24 @@ function expectedTranscript(story: Story, chat: Chat, girl: Girl, revealed: bool
   const opener = openerOptions(girl).find((o) => o.kind === chat.opener);
   assert.ok(opener);
   const lines: TranscriptLine[] = [{ who: "me", text: opener.text }];
+  const pushLead = (step: ReplyStep | FinalStep) => {
+    if ("lead" in step) for (const text of step.lead ?? []) lines.push({ who: "her", text: renderLine(text, girl) });
+  };
   for (let i = 0; i < chat.stepIndex; i++) {
     const step = story.steps[i] as ReplyStep;
+    pushLead(step);
     lines.push(incomingLine(step.incoming, girl));
-    lines.push({ who: "me", text: renderLine(step.replies[chat.replies[i]], girl) });
-    const answer = step.answers?.[chat.replies[i]];
+    if (!step.date && !step.fakeEnding) {
+      lines.push({ who: "me", text: renderLine(step.replies[chat.replies[i]], girl) });
+    }
+    const answer = step.answers?.[chat.replies[i]] ?? step.answer;
     if (answer) lines.push({ who: "her", text: renderLine(answer, girl) });
   }
-  if (revealed) lines.push(incomingLine(story.steps[chat.stepIndex].incoming, girl));
+  if (revealed) {
+    const current = story.steps[chat.stepIndex];
+    pushLead(current);
+    lines.push(incomingLine(current.incoming, girl));
+  }
   return lines;
 }
 

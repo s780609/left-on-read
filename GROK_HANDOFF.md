@@ -312,3 +312,5 @@ assets/heroine/                     真結局女角素材 01～11.jpg，只有 0
 - **Commit**：Conventional Commits，主旨用繁體中文，例如 `feat(left-on-read): 新增真結局路線`
 - **Commit 和 push**：開新分支發 PR，不要直接推 `main`
 - **驗證**：畫面的改動要實際開瀏覽器走過。測試環境的視窗在背景時 `requestAnimationFrame` 可能被節流，動畫看起來會變慢
+
+- 2026-11-06：對白連貫性檢查——`scripts/dump-dialogue-branches.ts` 可攤平全路線；阿沐 tech-support 修好要隔兩天；相關回歸在 `dialogueContinuity.test.ts`。
