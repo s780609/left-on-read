@@ -178,7 +178,7 @@ export const FADE_STORIES: readonly Story[] = [
         ],
       },
       {
-        incoming: { kind: "message", text: "好啊 週六下午兩點？咖啡廳你挑" },
+        incoming: { kind: "message", text: "好啊 週六下午兩點 古亭站那間「慢慢來」咖啡？" },
         replies: [
           "好！我會提早到",
           "我查了 從 2 號出口最近 我畫地圖給妳",
@@ -196,7 +196,7 @@ export const FADE_STORIES: readonly Story[] = [
         },
         wait: { weekday: 6 },
         ending: {
-          narration: "拿鐵一百五，看門兩小時。她沒傳訊息，我也沒問。回程的捷運上才想起來，我那天有洗頭。",
+          narration: "店名叫「慢慢來」，她真的慢慢來，來到現在還沒到。拿鐵一百五，看門兩小時。她沒傳訊息，我也沒問。回程的捷運上才想起來，我那天有洗頭。",
           cost: 150,
         },
       },
