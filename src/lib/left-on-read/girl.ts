@@ -49,7 +49,7 @@ import type {
   PhotoBgId,
   SkinId,
 } from "./girlData.ts";
-import { HEROINE_PHOTOS, HEROINE_SEED, IRIS_SEED, LURE_RATE, STUDIO_RATE } from "./constants.ts";
+import { HEROINE_PHOTOS, HEROINE_SEED, IRIS_PHOTOS, IRIS_SEED, LURE_RATE, STUDIO_RATE } from "./constants.ts";
 import { createRng, mixSeed, pick, randInt, weightedPick } from "./rng.ts";
 
 export type { BodyType } from "./girlData.ts";
@@ -130,7 +130,7 @@ const HEROINE: Girl = {
   photos: HEROINE_PHOTOS,
 };
 
-/** 第二條真結局的 Iris：卡片固定，沒有照片，用像素算圖 */
+/** 第二條真結局的 Iris：卡片固定，用照片 */
 const IRIS: Girl = {
   seed: IRIS_SEED,
   nickname: "Iris",
@@ -162,6 +162,7 @@ const IRIS: Girl = {
   body: "slim",
   outfit: "hoodie",
   outfitColor: "moss",
+  photos: IRIS_PHOTOS,
 };
 
 /** 每個變因用自己的亂數，調整某個資料表不會連帶改變其他變因 */
