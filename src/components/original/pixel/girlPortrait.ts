@@ -66,14 +66,12 @@ const mirrorPoints = (points: readonly Point[]): Point[] => points.map(([x, y]) 
 const symmetric = (right: readonly Point[]): Point[] => [...right, ...mirrorPoints(right).reverse()];
 const checker = (x: number, y: number) => (x + y) % 2 === 0;
 
-/** 通用的柔和明暗：光從左上來，右下是暗面，交界用抖色過渡 */
+/** 通用明暗：光從左上來；階帶乾淨、少抖色，放大後比較像精緻像素 */
 function softShade(m: Mask, x: number, y: number, r: Ramp): Rgb {
   if (isEdge(m, x, y)) return r.line;
   const dark = depthToward(m, x, y, 1, 1, 6);
   if (dark <= 2) return r.deep;
-  if (dark === 3) return checker(x, y) ? r.deep : r.shade;
-  if (dark === 4) return r.shade;
-  if (dark === 5) return checker(x, y) ? r.shade : r.base;
+  if (dark <= 4) return r.shade;
   const lit = depthToward(m, x, y, -1, -1, 3);
   if (lit <= 1) return r.light;
   if (lit === 2) return checker(x, y) ? r.light : r.base;
@@ -1213,7 +1211,8 @@ export function renderPortrait(look: PortraitLook): Picture {
   const hairShadowSoft = shifted(frontMask, 0, 4);
   paint(pic, faceMask, (x, y) => {
     const rel = y - hy;
-    if (isEdge(faceMask, x, y) && rel > 18) return skin.line;
+    // 臉廓整圈描線，放大後輪廓才清楚
+    if (isEdge(faceMask, x, y) && rel > 10) return skin.line;
     if (has(hairShadow, x, y)) return skin.shade;
     if (has(hairShadowSoft, x, y) && checker(x, y)) return skin.shade;
     const dark = depthToward(faceMask, x, y, -1, 0, 4);
@@ -1262,5 +1261,29 @@ export function renderPortrait(look: PortraitLook): Picture {
 
   // 配件
   ACCESSORY_DRAW[face.accessory](pic, { hy, ny, skin, side: flip ? 1 : -1 });
+  crispSilhouette(pic);
   return pic;
+}
+
+/** 整身外緣一圈深色描邊：Swipy／頭像放大時不會糊成一團 */
+function crispSilhouette(p: Picture, ink: Rgb = 0x1a1228) {
+  const { w, h, d } = p;
+  const mark = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = y * w + x;
+      if (d[i] < 0) continue;
+      const open =
+        x === 0 ||
+        y === 0 ||
+        x === w - 1 ||
+        y === h - 1 ||
+        d[i - 1] < 0 ||
+        d[i + 1] < 0 ||
+        d[i - w] < 0 ||
+        d[i + w] < 0;
+      if (open) mark[i] = 1;
+    }
+  }
+  for (let i = 0; i < mark.length; i++) if (mark[i]) d[i] = mix(d[i], ink, 0.72);
 }

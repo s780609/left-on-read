@@ -194,11 +194,9 @@ export function faceCrop(girl: Girl, size: number) {
 
 const AVATAR_CROP = 72;
 
-/** 聊天室用的小頭像：把臉裁出來縮成 40×40，開平滑才不會把細線吃掉 */
+/** 聊天室用的小頭像：臉裁成 40×40，最近鄰縮放保留像素感 */
 export function drawGirlAvatar(ctx: Ctx, girl: Girl, source: HTMLCanvasElement) {
   const { x, y } = faceCrop(girl, AVATAR_CROP);
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = "high";
-  ctx.drawImage(source, x, y, AVATAR_CROP, AVATAR_CROP, 0, 0, 40, 40);
   ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(source, x, y, AVATAR_CROP, AVATAR_CROP, 0, 0, 40, 40);
 }
