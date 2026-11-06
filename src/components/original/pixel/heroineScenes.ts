@@ -21,16 +21,15 @@ export function captionScene(bg: string, caption: string, light: string): SceneD
   };
 }
 
-/** 第幾次約會的場景 */
+/** 第幾次約會的場景（選擇／結帳時的主圖） */
 export const DATE_SCENES: readonly SceneDraw[] = [
-  photoDraw("dateMovieHands"),
-  photoDraw("dateNightMarket"),
-  photoDraw("dateTreePhoto"),
+  photoDraw("dateMovie"),
+  photoDraw("dateFireworks"),
+  photoDraw("dateBanqiao"),
 ];
 
 /**
  * 約會裡選擇之前的曖昧片段（HeroineDate.moments 的 scene）。
- * 約會裡選擇之前的曖昧片段（對應 HeroineDate.moments 的 scene）。
  */
 export const DATE_MOMENT_SCENES: Record<string, SceneDraw> = {
   movieHands: photoDraw("dateMovieHands"),
