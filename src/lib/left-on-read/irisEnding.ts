@@ -1,6 +1,6 @@
 /**
  * 第二條真結局：Iris 告白之後，照時間順序一段一段按著看。畫面在 screens/IrisEndingScreen.tsx。
- * 插圖還沒生成，先用純色場景加一行字暫代；之後換圖只要改 pixel/irisScenes.ts。
+ * 插圖在 pixel/heroineScenes.ts 的 IRIS_ENDING_SCENES（scene/iris-*.jpg）。
  */
 
 import type { Beat } from "./beats.ts";
