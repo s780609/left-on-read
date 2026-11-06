@@ -944,12 +944,6 @@ function concrete(type: GameAction["type"], run: RunState, rng: () => number): G
   const ready = readyChats(run.chats, run.dayIndex, run.phase);
   const stepOf = (chat: Chat) => STORY_BY_ID[chat.storyId].steps[chat.stepIndex];
   switch (type) {
-    case "reply": {
-      const candidates = ready.filter((c) => c && STORY_BY_ID[c.storyId] && !isFinal(stepOf(c)));
-      assert.ok(candidates.length > 0, "legal 有 reply 卻沒有可回的聊天");
-      const chat = pick(rng, candidates);
-      return { type, chatId: chat.id, choice: randInt(rng, 0, (stepOf(chat) as ReplyStep).replies.length - 1) };
-    }
     case "closeChat": {
       const finals = ready.filter((c) => c && STORY_BY_ID[c.storyId] && isFinal(stepOf(c)));
       assert.ok(finals.length > 0, "legal 有 closeChat 卻沒有可收的聊天");

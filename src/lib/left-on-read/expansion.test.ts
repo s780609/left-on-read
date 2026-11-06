@@ -68,7 +68,6 @@ import {
 import { chatScore, chatTranscript, isChatReady, openerOptions, storyWeights, validateStory } from "./story.ts";
 import type { Chat, ReplyStep, Story } from "./storyTypes.ts";
 
-const MATCH: RngFactory = () => () => 0;
 const NO_MATCH: RngFactory = () => () => 0.999;
 const at = (patch: Partial<RunState>): RunState => ({ ...createRun(1), ...patch });
 const eventOf = <T extends GameEvent["type"]>(events: readonly GameEvent[], type: T) =>

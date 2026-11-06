@@ -733,7 +733,7 @@ test("chooseOpener：建立聊天，配對當晚不算 ready，然後回 swiping
 
 test("配對回覆開場白後，下一張卡是不同的人（seed 與暱稱都不重複）", () => {
   const MATCH_ALL: RngFactory = () => () => 0;
-  let collisions = 0;
+  const collisions = 0;
   for (let runSeed = 1; runSeed <= 200; runSeed++) {
     for (let dayIndex = 0; dayIndex < 5; dayIndex++) {
       const s = session(at({ phase: "swiping", runSeed, dayIndex, heroineMet: true }), MATCH_ALL);

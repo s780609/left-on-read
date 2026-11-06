@@ -57,7 +57,7 @@ test("隱性數值：scores 會轉成好感／尷尬／壓力", () => {
 });
 
 test("尷尬爆表會提早跳到結局步", () => {
-  let run = atDay([chatAt(0, { stats: { affection: 0, awkward: AWKWARD_END - 1, pressure: 0 } })]);
+  const run = atDay([chatAt(0, { stats: { affection: 0, awkward: AWKWARD_END - 1, pressure: 0 } })]);
   // pick last reply to add awkward if no scores — force via high awkward already almost at limit
   const step = story.steps[0] as ReplyStep;
   const bad = step.scores ? step.scores.indexOf(-1) : step.replies.length - 1;
@@ -104,7 +104,7 @@ test("晚上可以打手槍、打電動，各一次", () => {
 test("睡覺會把沒回的聊天已讀壓力 +1，並重置白天回覆與消遣", () => {
   const day = nextPhoneDay(1);
   const chat = chatAt(0, { lastAdvancedDay: day - 1 });
-  let run: RunState = {
+  const run: RunState = {
     ...createRun(1),
     phase: "night",
     dayIndex: day,
