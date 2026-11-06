@@ -109,14 +109,14 @@ test("睡覺會把沒回的聊天已讀壓力 +1，並重置白天回覆與消�
     phase: "night",
     dayIndex: day,
     dayReplies: 2,
-    nightHobby: { solo: true, games: true },
+    nightHobby: { solo: true, games: false, calm: true },
     chats: [chat],
     nextChatId: 2,
   };
   assert.ok(isChatReady(chat, day, "night"));
   const r = advance(run, {}, { type: "sleep" });
   assert.equal(r.run.dayReplies, 0);
-  assert.deepEqual(r.run.nightHobby, { solo: false, games: false });
+  assert.deepEqual(r.run.nightHobby, { solo: false, games: false, calm: false });
   assert.equal(statsOf(r.run.chats[0]).pressure, 1);
 });
 

@@ -208,6 +208,8 @@ test("存檔：結局和隱藏失敗都留得住，亂寫的 id 不會", () => {
     v: 1 as const,
     introSeen: true,
     graduationSeen: false,
+    counters: {},
+    achievements: {},
     dex: {
       [LADYBUG_ENDING_ID]: { count: 2, firstDayIndex: 9 },
       [STUDIO]: { count: 1, firstDayIndex: 3 },

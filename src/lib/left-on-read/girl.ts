@@ -19,6 +19,8 @@ import {
   INTERESTS,
   JOBS,
   LIP_COLORS,
+  LURE_BIOS,
+  LURE_JOBS,
   MOUTHS,
   NICKNAMES,
   OUTFITS,
@@ -47,7 +49,7 @@ import type {
   PhotoBgId,
   SkinId,
 } from "./girlData.ts";
-import { HEROINE_PHOTOS, HEROINE_SEED, STUDIO_RATE } from "./constants.ts";
+import { HEROINE_PHOTOS, HEROINE_SEED, IRIS_SEED, LURE_RATE, STUDIO_RATE } from "./constants.ts";
 import { createRng, mixSeed, pick, randInt, weightedPick } from "./rng.ts";
 
 export type { BodyType } from "./girlData.ts";
@@ -83,6 +85,8 @@ export interface Girl {
   pickiness: number;
   /** 個工（個人工作室）：走隱藏路線 */
   studio: boolean;
+  /** 有業績：自介和職業看得出來，配對後只會走業績學程 */
+  lure: boolean;
   face: GirlFace;
   body: BodyType;
   outfit: OutfitId;
@@ -105,6 +109,7 @@ const HEROINE: Girl = {
   photoBg: "books",
   pickiness: 0,
   studio: false,
+  lure: false,
   face: {
     shape: "oval",
     hair: "long",
@@ -123,6 +128,40 @@ const HEROINE: Girl = {
   outfit: "shirt",
   outfitColor: "white",
   photos: HEROINE_PHOTOS,
+};
+
+/** 第二條真結局的 Iris：卡片固定，沒有照片，用像素算圖 */
+const IRIS: Girl = {
+  seed: IRIS_SEED,
+  nickname: "Iris",
+  age: 29,
+  distanceKm: 4,
+  city: "台北市中山區",
+  bio: "我會先傳訊息。你會回嗎？",
+  interest: "hiking",
+  education: "master",
+  job: "UX 研究員",
+  photoBg: "mountain",
+  pickiness: 0,
+  studio: false,
+  lure: false,
+  face: {
+    shape: "heart",
+    hair: "ponytail",
+    hairColor: "chestnut",
+    hairSide: "right",
+    skin: "light",
+    eyes: "smile",
+    eyeColor: "hazel",
+    brow: "arched",
+    mouth: "grin",
+    lip: "coral",
+    mark: "freckles",
+    accessory: "cap",
+  },
+  body: "slim",
+  outfit: "hoodie",
+  outfitColor: "moss",
 };
 
 /** 每個變因用自己的亂數，調整某個資料表不會連帶改變其他變因 */
@@ -153,6 +192,7 @@ const ROLL = {
   lip: 24,
   mark: 25,
   outfitColor: 26,
+  lure: 27,
 } as const;
 
 const MIN_AGE = 22;
@@ -188,9 +228,11 @@ export function citiesWithin(distanceKm: number): readonly string[] {
 export function generateGirl(seed: number): Girl {
   const s = seed >>> 0;
   if (s === HEROINE_SEED) return HEROINE;
+  if (s === IRIS_SEED) return IRIS;
   const roll = (key: keyof typeof ROLL) => createRng(mixSeed(s, ROLL[key]));
   const interest = pick(roll("interest"), INTERESTS);
   const studio = roll("studio")() < STUDIO_RATE;
+  const lure = !studio && roll("lure")() < LURE_RATE;
   const distanceKm = randInt(roll("distance"), 1, 35);
   const hair = pick(roll("hair"), HAIRS).id;
   const outfit = pick(roll("outfit"), OUTFITS).id;
@@ -201,13 +243,18 @@ export function generateGirl(seed: number): Girl {
     age: randInt(roll("age"), MIN_AGE, MAX_AGE),
     distanceKm,
     city: pick(roll("city"), citiesWithin(distanceKm)),
-    bio: studio ? pick(roll("bio"), STUDIO_BIOS) : pick(roll("bio"), interest.bios),
+    bio: studio
+      ? pick(roll("bio"), STUDIO_BIOS)
+      : lure
+        ? pick(roll("bio"), LURE_BIOS)
+        : pick(roll("bio"), interest.bios),
     interest: interest.id,
     education: pick(roll("education"), EDUCATIONS).id,
-    job: studio ? STUDIO_JOB : pick(roll("job"), JOBS),
+    job: studio ? STUDIO_JOB : lure ? pick(roll("job"), LURE_JOBS) : pick(roll("job"), JOBS),
     photoBg: pick(roll("photoBg"), PHOTO_BGS).id,
     pickiness: roll("pickiness")(),
     studio,
+    lure,
     face: {
       shape: pick(roll("shape"), FACE_SHAPES).id,
       hair,
@@ -228,11 +275,16 @@ export function generateGirl(seed: number): Girl {
   };
 }
 
+/** 小晴和 Iris 的 seed 只能代表她們 */
+export function avoidFixedSeeds(seed: number): number {
+  return seed === HEROINE_SEED || seed === IRIS_SEED ? seed ^ 1 : seed;
+}
+
 /** 每晚牌組：不存游標，由局、天、第幾張決定 */
 export function deckSeed(runSeed: number, dayIndex: number, cardIndex: number): number {
   const seed = mixSeed(runSeed, dayIndex, cardIndex, 0xca4d);
-  // 一般的牌不可以剛好撞到她的 seed
-  return seed === HEROINE_SEED ? seed ^ 1 : seed;
+  // 一般的牌不可以剛好撞到她們的 seed
+  return avoidFixedSeeds(seed);
 }
 
 /** 只顯示一行的學經歷：「學校類型｜工作」 */

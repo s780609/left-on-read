@@ -3,11 +3,16 @@
  * 壞資料一律修復或回傳 null，不丟例外。
  */
 
-import { DECK_SIZE, HEROINE_SEED, LADYBUG_ENDING_ID, MAX_MONEY, START_MONEY, TRUE_ENDING_ID } from "./constants.ts";
+import { ACHIEVEMENT_BY_ID, COUNTER_IDS } from "./achievements.ts";
+import type { Achievements, MetaCounters } from "./achievements.ts";
+import { DECK_SIZE, HEROINE_SEED, IRIS_SEED, MAX_MONEY, START_MONEY } from "./constants.ts";
+import { ENDING_IDS } from "./dex.ts";
 import type { Dex } from "./dex.ts";
 import { OPENER_KINDS, PHASES, drawMeal, seededRngs } from "./game.ts";
 import type { Phase, RunState } from "./game.ts";
 import { MEALS } from "./meals.ts";
+import { DEFAULT_GROOMING, DEFAULT_PROFILE, canUsePhoto, isProfileBioId, isProfilePhotoId } from "./profile.ts";
+import type { Grooming, Profile } from "./profile.ts";
 import { HEROINE_STORY_ID, HEROINE_V2_STORY_ID, LEGACY_HEROINE_STORY_ID, STORY_BY_ID, upgradeHeroineV2Chat, upgradeLegacyHeroineChat } from "./stories/index.ts";
 import type { Chat, OpenerKind, Story } from "./storyTypes.ts";
 
@@ -16,6 +21,9 @@ export interface MetaState {
   introSeen: boolean;
   graduationSeen: boolean;
   dex: Dex;
+  /** 跨局累計的次數（成就用）；舊存檔沒有就從 0 起算 */
+  counters: MetaCounters;
+  achievements: Achievements;
 }
 
 type Json = Record<string, unknown>;
@@ -134,6 +142,20 @@ export function parseRun(raw: string | null): RunState | null {
     }
 
     const chats = parseChats(data.chats, dayIndex);
+    const ngPlus = data.ngPlus === true;
+    // 新遊戲＋的開場白只有新遊戲＋能用；壞資料就當一般開場白
+    if (!ngPlus) for (const chat of chats) if (chat.opener === "memory") chat.opener = "hi";
+    const grooming = parseGrooming(data.grooming);
+    const nightHobby = isObject(data.nightHobby)
+      ? {
+          solo: data.nightHobby.solo === true,
+          games: data.nightHobby.games === true,
+          calm: data.nightHobby.solo === true && data.nightHobby.calm === true,
+        }
+      : { solo: false, games: false, calm: false };
+    const nightLog = isObject(data.nightLog) ? data.nightLog : {};
+    const rights = isCount(nightLog.rights) ? Math.min(nightLog.rights, DECK_SIZE) : 0;
+    const today = isObject(data.today) ? data.today : {};
     return {
       v: 1,
       runSeed,
@@ -150,20 +172,65 @@ export function parseRun(raw: string | null): RunState | null {
       heroineMet:
         data.heroineMet === true || pendingMatchSeed === HEROINE_SEED || chats.some((c) => c.girlSeed === HEROINE_SEED),
       dayReplies: isCount(data.dayReplies) ? data.dayReplies : 0,
-      nightHobby: isObject(data.nightHobby)
-        ? {
-            solo: data.nightHobby.solo === true,
-            games: data.nightHobby.games === true,
-          }
-        : { solo: false, games: false },
+      nightHobby,
+      profile: parseProfile(data.profile, grooming),
+      grooming,
+      today: {
+        eventDone: today.eventDone === true,
+        overtime: today.overtime === true,
+        tired: today.tired === true,
+      },
+      ngPlus,
+      irisMet:
+        data.irisMet === true || pendingMatchSeed === IRIS_SEED || chats.some((c) => c.girlSeed === IRIS_SEED),
+      // 舊存檔沒有：從今天開始算
+      lastMatchDay: isCount(data.lastMatchDay) ? Math.min(data.lastMatchDay, dayIndex) : dayIndex,
+      nightLog: { rights, matches: isCount(nightLog.matches) ? Math.min(nightLog.matches, rights) : 0 },
     };
   } catch {
     return null;
   }
 }
 
+function parseGrooming(raw: unknown): Grooming {
+  if (!isObject(raw)) return { ...DEFAULT_GROOMING };
+  return {
+    goldUntil: isCount(raw.goldUntil) ? raw.goldUntil : 0,
+    haircutUntil: isCount(raw.haircutUntil) ? raw.haircutUntil : 0,
+    outfit: raw.outfit === true,
+    proPhoto: raw.proPhoto === true,
+  };
+}
+
+/** 還沒拍的照片不能用，退回預設 */
+function parseProfile(raw: unknown, grooming: Grooming): Profile {
+  if (!isObject(raw)) return { ...DEFAULT_PROFILE };
+  const photo = isProfilePhotoId(raw.photo) && canUsePhoto(raw.photo, grooming) ? raw.photo : DEFAULT_PROFILE.photo;
+  const bio = isProfileBioId(raw.bio) ? raw.bio : DEFAULT_PROFILE.bio;
+  return { photo, bio };
+}
+
+
 export function blankMeta(): MetaState {
-  return { v: 1, introSeen: false, graduationSeen: false, dex: {} };
+  return { v: 1, introSeen: false, graduationSeen: false, dex: {}, counters: {}, achievements: {} };
+}
+
+function parseCounters(raw: unknown): MetaCounters {
+  const counters: MetaCounters = {};
+  if (!isObject(raw)) return counters;
+  for (const id of COUNTER_IDS) if (isCount(raw[id])) counters[id] = raw[id] as number;
+  return counters;
+}
+
+function parseAchievements(raw: unknown): Achievements {
+  const out: Achievements = {};
+  if (!isObject(raw)) return out;
+  for (const [id, day] of Object.entries(raw)) {
+    // 只收認得的成就，__proto__ 這類名稱不會進入結果
+    if (!Object.hasOwn(ACHIEVEMENT_BY_ID, id)) continue;
+    out[id] = isCount(day) ? day : 0;
+  }
+  return out;
 }
 
 export function parseMeta(raw: string | null): MetaState {
@@ -174,12 +241,19 @@ export function parseMeta(raw: string | null): MetaState {
     if (isObject(data.dex)) {
       for (const [id, entry] of Object.entries(data.dex)) {
         // 只複製存在的劇情，__proto__ 這類名稱不會進入結果
-        if ((!STORY_BY_ID[id] && id !== LADYBUG_ENDING_ID && id !== TRUE_ENDING_ID) || !isObject(entry)) continue;
+        if ((!STORY_BY_ID[id] && !ENDING_IDS.includes(id)) || !isObject(entry)) continue;
         if (!isCount(entry.count) || entry.count < 1) continue;
         dex[id] = { count: entry.count, firstDayIndex: isCount(entry.firstDayIndex) ? entry.firstDayIndex : 0 };
       }
     }
-    return { v: 1, introSeen: data.introSeen === true, graduationSeen: data.graduationSeen === true, dex };
+    return {
+      v: 1,
+      introSeen: data.introSeen === true,
+      graduationSeen: data.graduationSeen === true,
+      dex,
+      counters: parseCounters(data.counters),
+      achievements: parseAchievements(data.achievements),
+    };
   } catch {
     return blankMeta();
   }

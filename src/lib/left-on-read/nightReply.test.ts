@@ -72,7 +72,7 @@ test("晚上和滑完之後都可以回訊息，而且不會改變階段", () =>
 
 test("晚上回完還是可以打開 Swipy 或去睡覺", () => {
   const replied = act(at("night", [chatOf(replyStory())]), {}, { type: "reply", chatId: 1, choice: 0 }).run;
-  assert.deepEqual([...legalActions(replied)].sort(), ["jerkOff", "openApp", "playGames", "sleep"]);
+  assert.deepEqual([...legalActions(replied)].sort(), ["buy", "editProfile", "jerkOff", "openApp", "playGames", "sleep"]);
   assert.equal(act(replied, {}, { type: "openApp" }).run.phase, "swiping");
   assert.equal(act(replied, {}, { type: "sleep" }).run.dayIndex, 33);
 });
@@ -115,7 +115,7 @@ test("領薪通知、吃飯、滑卡和配對畫面中不能回", () => {
 test("沒有等滿的、不合法的回覆，晚上一樣不接受", () => {
   const story = replyStory();
   const waiting = at("night", [chatOf(story, { lastAdvancedDay: 32 })]);
-  assert.deepEqual([...legalActions(waiting)].sort(), ["jerkOff", "openApp", "playGames", "sleep"]);
+  assert.deepEqual([...legalActions(waiting)].sort(), ["buy", "editProfile", "jerkOff", "openApp", "playGames", "sleep"]);
   assert.equal(advance(waiting, {}, { type: "reply", chatId: 1, choice: 0 }).run, waiting);
   const ready = at("nightDone", [chatOf(story)]);
   for (const action of [
@@ -151,7 +151,7 @@ test("今晚才配對的人，要等到隔天才有回覆", () => {
   const run = act(swiping, {}, { type: "chooseOpener", opener: "hi" }).run;
   assert.equal(run.phase, "nightDone");
   assert.deepEqual(readyChats(run.chats, run.dayIndex), []);
-  assert.deepEqual(legalActions(run), ["sleep"]);
+  assert.deepEqual(legalActions(run), ["editProfile", "buy", "sleep"]);
 });
 
 test("白天回和晚上回，走出來的對話紀錄完全相同", () => {
@@ -258,7 +258,7 @@ test("約會還是只有週末白天能去，晚上只回得了訊息", () => {
   const dateStep = HEROINE.steps.findIndex((s) => "date" in s && s.date);
   // 第 5 天是週六，晚上不能赴約，也不能拿回訊息繞過約會
   const run = at("night", [heroineChat(dateStep)], { dayIndex: 5, heroineMet: true });
-  assert.deepEqual([...legalActions(run)].sort(), ["jerkOff", "openApp", "playGames", "sleep"]);
+  assert.deepEqual([...legalActions(run)].sort(), ["buy", "editProfile", "jerkOff", "openApp", "playGames", "sleep"]);
   assert.equal(advance(run, {}, { type: "goOnDate", choice: 0 }).run, run);
   assert.equal(advance(run, {}, { type: "reply", chatId: 1, choice: 0 }).run, run);
 });
@@ -353,7 +353,14 @@ test("模糊測試：只在晚上回訊息，不變量永遠成立，晚上真�
     let dex: Dex = {};
     for (let i = 0; i < 3000; i++) {
       const where = `seed ${seed} 第 ${i} 步（${run.phase}）`;
-      const legal = legalActions(run).filter((t) => run.phase !== "daytime" || (t !== "reply" && t !== "closeChat"));
+      // 這裡只測晚上回訊息；買東西、改檔案、白天事件有自己的測試
+      const legal = legalActions(run).filter(
+        (t) =>
+          (run.phase !== "daytime" || (t !== "reply" && t !== "closeChat")) &&
+          t !== "buy" &&
+          t !== "editProfile" &&
+          t !== "dayEvent"
+      );
       assert.ok(legal.length > 0, where);
       // 偏向先回訊息；白天的回覆動作上面已經濾掉
       const type = legal.includes("closeChat") ? "closeChat" : legal.includes("reply") ? "reply" : pick(rng, legal);

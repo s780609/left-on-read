@@ -5,8 +5,11 @@
 import { LADYBUG_COST, LADYBUG_ENDING_ID } from "../constants.ts";
 import type { Story } from "../storyTypes.ts";
 import { HEROINE_ALMOST_STORY, HEROINE_STORY } from "./heroine.ts";
+import { IRIS_ALMOST_STORY, IRIS_LEFT_STORY, IRIS_STORY } from "./iris.ts";
 
 export const STUDIO_STORY_ID = "studio";
+/** 同時聊太多人，把要傳給 A 的那句傳給了 B：B 那邊直接結束 */
+export const MIXUP_STORY_ID = "mixup";
 
 export const SPECIAL_STORIES: readonly Story[] = [
   {
@@ -88,4 +91,20 @@ export const SPECIAL_STORIES: readonly Story[] = [
   },
   HEROINE_STORY,
   HEROINE_ALMOST_STORY,
+  {
+    id: MIXUP_STORY_ID,
+    dexName: "傳錯人",
+    dexQuip: "同時聊三個人的時候，我以為我在經營人脈。其實我在經營三個結局。",
+    category: "quick",
+    steps: [
+      {
+        incoming: { kind: "message", text: "？？你在跟誰講話" },
+        // 結局的旁白由 game.ts 帶入兩個人的名字，這句只是備用
+        ending: { narration: "我把要傳給別人的那句，傳給了她。" },
+      },
+    ],
+  },
+  IRIS_STORY,
+  IRIS_ALMOST_STORY,
+  IRIS_LEFT_STORY,
 ];

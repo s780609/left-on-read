@@ -1,5 +1,5 @@
 /**
- * 配對機率。合法輸入實際落在 2.35%～28.89%，夾值只有覆寫 baseRate 時才碰得到。
+ * 配對機率。沒有任何加成時落在 2.35%～28.89%；加上冠宇的檔案、付費、超級喜歡等倍率（mult）之後才會碰到上限。
  */
 
 import { GUANYU_AGE } from "./constants.ts";
@@ -7,7 +7,7 @@ import type { Rng } from "./rng.ts";
 
 const BASE_RATE = 0.22;
 const MIN_PROBABILITY = 0.02;
-const MAX_PROBABILITY = 0.45;
+export const MAX_PROBABILITY = 0.45;
 /** 演算法笑話：連續右滑越多，曝光越低 */
 const STREAK_DECAY = 0.93;
 const STREAK_FLOOR = 0.4;
@@ -18,6 +18,10 @@ export interface MatchInput {
   rightStreak: number;
   age: number;
   eduMod: -1 | 0 | 1;
+  /** 冠宇的檔案、付費、節日、她是不是有業績……乘在一起；沒寫就是 1 */
+  mult?: number;
+  /** 超級喜歡的上限比較高；沒寫就是一般上限 */
+  maxP?: number;
 }
 
 export interface MatchParams {
@@ -25,14 +29,15 @@ export interface MatchParams {
 }
 
 export function matchProbability(input: MatchInput, params: MatchParams = { baseRate: BASE_RATE }): number {
-  const { pickiness, rightStreak, age, eduMod } = input;
+  const { pickiness, rightStreak, age, eduMod, mult = 1, maxP = MAX_PROBABILITY } = input;
   const p =
     params.baseRate *
     (1.3 - pickiness) *
     Math.max(STREAK_FLOOR, STREAK_DECAY ** rightStreak) *
     (1 - 0.01 * Math.min(10, Math.abs(age - GUANYU_AGE))) *
-    (1 + 0.01 * eduMod);
-  return Math.min(MAX_PROBABILITY, Math.max(MIN_PROBABILITY, p));
+    (1 + 0.01 * eduMod) *
+    mult;
+  return Math.min(maxP, Math.max(MIN_PROBABILITY, p));
 }
 
 export function rollMatch(p: number, rng: Rng): boolean {

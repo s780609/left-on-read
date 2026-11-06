@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { newGameplayAction } from "./testing.ts";
 import { DECK_SIZE, MAX_MONEY, META_SAVE_KEY, RUN_SAVE_KEY, START_MONEY } from "./constants.ts";
 import { isDexComplete, recordFailure } from "./dex.ts";
 import type { Dex } from "./dex.ts";
@@ -83,6 +84,8 @@ const stateIn = (phase: RunState["phase"]) => {
 };
 
 function concreteAction(type: GameAction["type"], run: RunState, rng: Rng): GameAction {
+  const extra = newGameplayAction(type, run, rng);
+  if (extra) return extra;
   const ready = readyChats(run.chats, run.dayIndex);
   const stepOf = (chat: Chat) => STORY_BY_ID[chat.storyId].steps[chat.stepIndex];
   switch (type) {
@@ -100,7 +103,8 @@ function concreteAction(type: GameAction["type"], run: RunState, rng: Rng): Game
     case "chooseOpener":
       return { type, opener: pick(rng, OPENERS) };
     default:
-      return { type };
+      // 剩下的都是不帶參數的動作；帶參數的新動作在 newGameplayAction 處理
+      return { type } as GameAction;
   }
 }
 
@@ -347,7 +351,7 @@ test("evening 但餐點 id 無效：重新決定一道有效的餐點，結果�
 
 test("meta 往返相等", () => {
   const dex = recordFailure(recordFailure({}, STORIES[0].id, 3), STORIES[1].id, 8);
-  const meta: MetaState = { v: 1, introSeen: true, graduationSeen: false, dex };
+  const meta: MetaState = { v: 1, introSeen: true, graduationSeen: false, dex, counters: {}, achievements: {} };
   const parsed = parseMeta(serializeMeta(meta));
   assert.equal(parsed.v, 1);
   assert.equal(parsed.introSeen, true);
@@ -415,7 +419,7 @@ test("parseMeta：__proto__ 和 Object 內建名稱不會進入結果，也不�
 
 test("parseMeta：只讀回全部有效資料時，圖鑑仍然是集滿的", () => {
   const dex: Dex = Object.fromEntries(STORIES.map((s) => [s.id, { count: 1, firstDayIndex: 0 }]));
-  const parsed = parseMeta(serializeMeta({ v: 1, introSeen: true, graduationSeen: true, dex }));
+  const parsed = parseMeta(serializeMeta({ v: 1, introSeen: true, graduationSeen: true, dex, counters: {}, achievements: {} }));
   assert.equal(isDexComplete(parsed.dex), true);
   assert.equal(parsed.graduationSeen, true);
 });

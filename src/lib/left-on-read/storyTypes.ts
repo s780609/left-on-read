@@ -64,9 +64,12 @@ export interface Story {
   dexQuip: string;
   category: StoryCategory;
   steps: readonly (ReplyStep | FinalStep)[];
+  /** 她最討厭已讀不回：已讀壓力累積到 max，睡一覺起來她就走了，換到 leaveStoryId 的結局 */
+  patience?: { max: number; leaveStoryId: string };
 }
 
-export type OpenerKind = "hi" | "whatsup" | "eaten" | "interest";
+/** memory 是新遊戲＋才有的開場白 */
+export type OpenerKind = "hi" | "whatsup" | "eaten" | "interest" | "memory";
 
 export interface Chat {
   id: number;

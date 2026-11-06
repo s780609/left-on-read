@@ -62,3 +62,44 @@ export function jumpToEnding(chat: Chat, story: Story, choiceJustMade: number): 
   while (replies.length < last) replies.push(0);
   return { ...chat, stepIndex: last, replies: replies.slice(0, last) };
 }
+
+// ---------- C：數值看得出來，但不顯示數字 ----------
+
+export type Vibe = "warm" | "cold" | "awkward" | "neutral";
+
+/** 聊天室上方冠宇的觀察；neutral 沒有句子 */
+export function chatVibe(stats: ChatStats): { vibe: Vibe; line: string | null } {
+  if (stats.awkward >= 2) return { vibe: "awkward", line: "她的回覆越來越短。上一則只有兩個字。" };
+  if (stats.pressure >= 2 && stats.affection < 2) {
+    return { vibe: "cold", line: "上次隔太久才回。她這次也回得很慢，像在等我反省。" };
+  }
+  if (stats.affection >= 2) return { vibe: "warm", line: "她回訊息開始會加表情符號了。我截圖存起來。" };
+  return { vibe: "neutral", line: null };
+}
+
+// ---------- E：打手槍之後的賢者模式 ----------
+
+/** 賢者模式那一句：好感 +1，尷尬和壓力各 -1 */
+export const CALM_DELTA: ChatStats = { affection: 1, awkward: -1, pressure: -1 };
+
+/** 這一步能不能用賢者模式：要有得選，而且不是計分題、抉擇、約會或假失敗 */
+export function canCalm(step: ReplyStep): boolean {
+  return (
+    step.replies.length >= 2 && !step.scores && !step.decision && !step.date && !step.fakeEnding && !step.comeback
+  );
+}
+
+/** 冷靜下來就看得出哪一句最好：好感最高、尷尬和壓力最低的那句，同分取前面 */
+export function calmChoice(step: ReplyStep): number {
+  let best = 0;
+  let bestValue = -Infinity;
+  step.replies.forEach((_, i) => {
+    const d = replyDelta(step, i);
+    const value = d.affection - d.awkward - d.pressure;
+    if (value > bestValue) {
+      best = i;
+      bestValue = value;
+    }
+  });
+  return best;
+}

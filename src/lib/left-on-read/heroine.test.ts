@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { newGameplayAction } from "./testing.ts";
 import { calendarOf, isPhoneChatDay, isWorkday } from "./calendar.ts";
 import {
   DECK_SIZE,
@@ -597,16 +598,16 @@ test("第三次約會後：發出 true-love、記進圖鑑、聊天結束、不�
   assert.equal(dexProgress(r.dex).collected, dexProgress(UNLOCKED).collected);
 });
 
-test("結局進度：瓢蟲和真結局一起算 n / 2", () => {
-  assert.deepEqual(endingProgress({}), { collected: 0, total: 2 });
-  assert.deepEqual(endingProgress({ [TRUE_ENDING_ID]: { count: 1, firstDayIndex: 0 } }), { collected: 1, total: 2 });
+test("結局進度：瓢蟲、真結局、Iris 一起算 n / 3", () => {
+  assert.deepEqual(endingProgress({}), { collected: 0, total: 3 });
+  assert.deepEqual(endingProgress({ [TRUE_ENDING_ID]: { count: 1, firstDayIndex: 0 } }), { collected: 1, total: 3 });
   assert.deepEqual(
     endingProgress({
       [TRUE_ENDING_ID]: { count: 1, firstDayIndex: 0 },
       [LADYBUG_ENDING_ID]: { count: 1, firstDayIndex: 0 },
       studio: { count: 1, firstDayIndex: 0 },
     }),
-    { collected: 2, total: 2 }
+    { collected: 2, total: 3 }
   );
 });
 
@@ -706,6 +707,8 @@ test("圖鑑存檔：真結局和差一點留得住", () => {
     v: 1 as const,
     introSeen: true,
     graduationSeen: false,
+    counters: {},
+    achievements: {},
     dex: {
       [TRUE_ENDING_ID]: { count: 1, firstDayIndex: 40 },
       [HEROINE_ALMOST_STORY_ID]: { count: 2, firstDayIndex: 8 },
@@ -936,6 +939,8 @@ test("模糊測試涵蓋新路線：隨機走合法動作，不變量永遠成�
 });
 
 function concrete(type: GameAction["type"], run: RunState, rng: () => number): GameAction {
+  // 回訊息交給共用的：錢不夠的 1h2s 不會被按到，偶爾用賢者模式
+  if (type === "reply") return newGameplayAction(type, run, rng)!;
   const ready = readyChats(run.chats, run.dayIndex, run.phase);
   const stepOf = (chat: Chat) => STORY_BY_ID[chat.storyId].steps[chat.stepIndex];
   switch (type) {
@@ -957,6 +962,6 @@ function concrete(type: GameAction["type"], run: RunState, rng: () => number): G
     case "chooseOpener":
       return { type, opener: pick(rng, ["hi", "whatsup", "eaten", "interest"] as const) };
     default:
-      return { type } as GameAction;
+      return newGameplayAction(type, run, rng) ?? ({ type } as GameAction);
   }
 }

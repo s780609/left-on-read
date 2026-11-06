@@ -3,7 +3,7 @@
  */
 
 import { calendarOf, isPhoneChatDay, isWorkday } from "./calendar.ts";
-import { HEROINE_SEED, HEROINE_INTEREST_OPENER_SCORE } from "./constants.ts";
+import { HEROINE_SEED, HEROINE_INTEREST_OPENER_SCORE, NON_LURE_PITCH_MULT } from "./constants.ts";
 import type { Dex } from "./dex.ts";
 import type { Girl } from "./girl.ts";
 import { HEROINE_INTEREST, INTERESTS } from "./girlData.ts";
@@ -26,6 +26,24 @@ export const UNCOLLECTED_MULT = 8;
 
 const GENERIC_MULT: Record<StoryCategory, number> = { ghost: 3, fade: 1, pitch: 1, quick: 1 };
 const INTEREST_MULT: Record<StoryCategory, number> = { ghost: 0.5, fade: 3, pitch: 1, quick: 1 };
+/** 新遊戲＋的開場白：上一輪學到要先關心她，比較不會被已讀，業績也比較少 */
+const MEMORY_MULT: Record<StoryCategory, number> = { ghost: 1, fade: 2, pitch: 0.5, quick: 1 };
+
+/** 新遊戲＋才有的開場白 */
+export const MEMORY_OPENER = { kind: "memory" as const, text: "妳今天過得怎麼樣？我是真的想知道，不是開場白。" };
+
+/** 有好感加成的開場白：興趣句和新遊戲＋那句 */
+export function isWarmOpener(opener: OpenerKind): boolean {
+  return opener === "interest" || opener === "memory";
+}
+
+/** 抽劇情時，卡片和冠宇檔案的影響 */
+export interface StoryPickContext {
+  /** 有業績的卡：只走業績學程 */
+  lure?: boolean;
+  /** 冠宇的照片和自介讓哪一類比較容易發生 */
+  categoryMult?: Partial<Record<StoryCategory, number>>;
+}
 
 const GENERIC_OPENERS: readonly { kind: OpenerKind; text: string }[] = [
   { kind: "hi", text: "嗨，很高興認識妳" },
@@ -61,26 +79,41 @@ export function renderLine(text: string, girl: Girl): string {
     .replaceAll("{interest}", interestOf(girl)?.label ?? "");
 }
 
-export function openerOptions(girl: Girl): { kind: OpenerKind; text: string }[] {
+/** 配對畫面的開場白；新遊戲＋多一句 */
+export function openerOptions(girl: Girl, ngPlus = false): { kind: OpenerKind; text: string }[] {
   return [
     ...GENERIC_OPENERS.map((o) => ({ ...o })),
     { kind: "interest", text: renderLine(interestOf(girl)?.openerLine ?? "", girl) },
+    ...(ngPlus ? [{ ...MEMORY_OPENER }] : []),
   ];
 }
 
+/**
+ * 沒有 context 時是原本的權重；有 context 才套用卡片（業績）和冠宇檔案的倍率。
+ * 有業績的卡只抽業績學程，業績學程全被占用時才退回一般權重。
+ */
 export function storyWeights(
   opener: OpenerKind,
   dex: Dex,
-  activeStoryIds: readonly string[]
+  activeStoryIds: readonly string[],
+  context?: StoryPickContext
 ): { item: Story; weight: number }[] {
-  const table = opener === "interest" ? INTEREST_MULT : GENERIC_MULT;
+  const table = opener === "interest" ? INTEREST_MULT : opener === "memory" ? MEMORY_MULT : GENERIC_MULT;
   const active = new Set(activeStoryIds);
   // 全部被占用時才解除，一定抽得到東西
   const allOccupied = STORIES.every((s) => active.has(s.id));
+  const free = (s: Story) => allOccupied || !active.has(s.id);
+  const lureOnly = Boolean(context?.lure) && STORIES.some((s) => s.category === "pitch" && free(s));
   return STORIES.map((item) => {
-    if (!allOccupied && active.has(item.id)) return { item, weight: 0 };
+    if (!free(item)) return { item, weight: 0 };
+    if (lureOnly && item.category !== "pitch") return { item, weight: 0 };
     const collected = Object.hasOwn(dex, item.id);
-    return { item, weight: table[item.category] * (collected ? 1 : UNCOLLECTED_MULT) };
+    let weight = table[item.category] * (collected ? 1 : UNCOLLECTED_MULT);
+    if (context) {
+      if (!context.lure && item.category === "pitch") weight *= NON_LURE_PITCH_MULT;
+      weight *= context.categoryMult?.[item.category] ?? 1;
+    }
+    return { item, weight };
   });
 }
 
@@ -88,9 +121,10 @@ export function pickStory(
   opener: OpenerKind,
   dex: Dex,
   activeStoryIds: readonly string[],
-  rng: Rng
+  rng: Rng,
+  context?: StoryPickContext
 ): Story {
-  return weightedPick(rng, storyWeights(opener, dex, activeStoryIds));
+  return weightedPick(rng, storyWeights(opener, dex, activeStoryIds, context));
 }
 
 export function firstReadyDay(lastAdvancedDay: number, wait: StepWait = DEFAULT_WAIT): number {
@@ -143,7 +177,7 @@ export function chatScore(chat: Chat): number {
       const step = steps[i];
       return total + (step && "replies" in step ? (step.scores?.[choice] ?? 0) : 0);
     },
-    chat.opener === "interest" ? HEROINE_INTEREST_OPENER_SCORE : 0
+    isWarmOpener(chat.opener) ? HEROINE_INTEREST_OPENER_SCORE : 0
   );
 }
 
@@ -197,7 +231,7 @@ function incomingLine(incoming: Incoming, girl: Girl): TranscriptLine | null {
 /** 開場白，再來每步「她的內容、冠宇選的回覆」；目前這一步要 ready 才顯示 */
 export function chatTranscript(chat: Chat, girl: Girl, dayIndex: number): TranscriptLine[] {
   const story = STORY_BY_ID[chat.storyId];
-  const opener = openerOptions(girl).find((o) => o.kind === chat.opener);
+  const opener = openerOptions(girl, true).find((o) => o.kind === chat.opener);
   const lines: TranscriptLine[] = opener ? [{ who: "me", text: opener.text }] : [];
   const pushIncoming = (incoming: Incoming) => {
     const line = incomingLine(incoming, girl);

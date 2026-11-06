@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { newGameplayAction } from "./testing.ts";
 import { calendarOf, isPhoneChatDay } from "./calendar.ts";
 import {
   DECK_SIZE,
@@ -118,6 +119,8 @@ const longStories = () => {
 
 /** 把合法動作的類型變成可以送出的動作 */
 function concreteAction(type: GameAction["type"], run: RunState, rng: Rng): GameAction {
+  const extra = newGameplayAction(type, run, rng);
+  if (extra) return extra;
   const ready = readyChats(run.chats, run.dayIndex, run.phase);
   const stepOf = (chat: Chat) => STORY_BY_ID[chat.storyId].steps[chat.stepIndex];
   switch (type) {
@@ -140,7 +143,8 @@ function concreteAction(type: GameAction["type"], run: RunState, rng: Rng): Game
     case "chooseOpener":
       return { type, opener: pick(rng, OPENERS) };
     default:
-      return { type };
+      // 剩下的都是不帶參數的動作；帶參數的新動作在 newGameplayAction 處理
+      return { type } as GameAction;
   }
 }
 
@@ -179,15 +183,15 @@ test("applyCost：扣到 0 為止，不會變負數", () => {
 
 const PHASE_CASES: Record<Phase, { state: RunState; legal: GameAction["type"][] }> = {
   payday: { state: at({ phase: "payday", dayIndex: 3 }), legal: ["ackPayday"] },
-  daytime: { state: at({ phase: "daytime" }), legal: ["endDaytime"] },
+  daytime: { state: at({ phase: "daytime" }), legal: ["buy", "endDaytime"] },
   evening: {
     state: at({ phase: "evening", offeredMealId: MEALS[0].id, money: 100_000 }),
     legal: ["eatOut", "goHome"],
   },
-  night: { state: at({ phase: "night" }), legal: ["jerkOff", "playGames", "openApp", "sleep"] },
+  night: { state: at({ phase: "night" }), legal: ["jerkOff", "playGames", "openApp", "editProfile", "buy", "sleep"] },
   swiping: { state: at({ phase: "swiping" }), legal: ["swipe", "quitApp"] },
   matched: { state: at({ phase: "matched", pendingMatchSeed: 123, deckIndex: 1 }), legal: ["chooseOpener"] },
-  nightDone: { state: at({ phase: "nightDone" }), legal: ["sleep"] },
+  nightDone: { state: at({ phase: "nightDone" }), legal: ["editProfile", "buy", "sleep"] },
 };
 
 const ONE_OF_EACH: GameAction[] = [
@@ -205,6 +209,8 @@ const ONE_OF_EACH: GameAction[] = [
   { type: "sleep" },
   { type: "jerkOff" },
   { type: "playGames" },
+  { type: "buy", item: "gold" },
+  { type: "editProfile", photo: "cat", bio: "joke" },
 ];
 
 test("legalActions：每個階段只列出該階段的動作", () => {
@@ -290,7 +296,7 @@ test("legalActions：reply 和 closeChat 只在有對應的聊天時出現", () 
   const waiting = chatOf(story, { lastAdvancedDay: 32 });
   assert.deepEqual(
     legalActions(at({ phase: "daytime", dayIndex: 32, chats: [waiting], nextChatId: 2 })),
-    ["endDaytime"]
+    ["buy", "endDaytime"]
   );
   const replyable = at({ phase: "daytime", dayIndex: 60, chats: [chatOf(story)], nextChatId: 2 });
   assert.ok(legalActions(replyable).includes("reply"));
@@ -662,7 +668,8 @@ test("提早放棄：到 nightDone，只剩 sleep，也不能再打開 App", () 
   const s = session(at({ phase: "swiping", deckIndex: 3 }));
   s.act({ type: "quitApp" });
   assert.equal(s.run.phase, "nightDone");
-  assert.deepEqual(legalActions(s.run), ["sleep"]);
+  // 還能改 Swipy 檔案、買 Gold，但不能再滑
+  assert.deepEqual(legalActions(s.run), ["editProfile", "buy", "sleep"]);
   assert.equal(advance(s.run, s.dex, { type: "openApp" }).run, s.run);
 });
 
