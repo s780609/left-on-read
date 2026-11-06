@@ -180,6 +180,7 @@ export function parseRun(raw: string | null): RunState | null {
         eventDone: today.eventDone === true,
         overtime: today.overtime === true,
         tired: today.tired === true,
+        ...(today.outing === true ? { outing: true } : {}),
       },
       ngPlus,
       irisMet:

@@ -16,6 +16,8 @@ export interface DayEventChoice {
   money?: number;
   /** 加班：今晚不能滑 Swipy，晚餐公司出 */
   overtime?: boolean;
+  /** 下班跟同事出去：晚餐在外面吃過了，回到家直接是深夜 */
+  outing?: boolean;
 }
 
 export interface DayEvent {
@@ -38,7 +40,8 @@ export const DAY_EVENTS: readonly DayEvent[] = [
       {
         label: "去（NT$600）",
         money: -600,
-        line: "我點了一首，唱到副歌才發現大家在聊天。但走的時候，有人說下次再一起來。",
+        outing: true,
+        line: "我點了一首，唱到副歌才發現大家在聊天。但走的時候，有人說下次再一起來。回到家已經十一點，晚餐在包廂吃過了。",
       },
       { label: "說我有事", line: "我說我有事。我沒有事。回家的路上，我一直在想他們唱到哪一首了。" },
     ],

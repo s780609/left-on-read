@@ -24,7 +24,7 @@ const SOLAR: readonly (Holiday & { month: number; day: number })[] = [
     day: 14,
     id: "valentine",
     name: "情人節",
-    line: "情人節。公司樓下的花店排到馬路上。我買了一杯珍奶，店員問要不要兩杯。",
+    line: "情人節。巷口的花店排到馬路上。我買了一杯珍奶，店員問要不要兩杯。",
     matchMult: 0.5,
     swipeHint: "系統提示：今晚大家都有約了。",
     couple: true,

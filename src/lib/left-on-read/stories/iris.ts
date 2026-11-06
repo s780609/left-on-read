@@ -93,7 +93,7 @@ const IRIS_CHAT_STEPS: readonly ReplyStep[] = [
       "我先排一下時程，下個月第二週可能有空",
       "象山？我體力很差，但我想去",
     ],
-    answers: ["改天是哪天？", "下個月……好吧。", "好！週末。不准反悔。"],
+    answers: ["改天是哪天？", "下個月也太久了吧。這週六不行嗎？", "好！週末。不准反悔。"],
     scores: [0, -1, 1],
     gate: { minScore: IRIS_PASS_SCORE, failStoryId: IRIS_ALMOST_STORY_ID },
   }),

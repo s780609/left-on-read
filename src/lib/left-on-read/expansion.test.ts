@@ -435,6 +435,17 @@ test("F：加班：拿加班費，下班直接回家，今晚不能滑", () => {
   assert.equal(run.today.overtime, false);
 });
 
+test("F：跟同事去唱歌：晚餐吃過了，下班直接到深夜，還能滑", () => {
+  const day = findDay((d) => dayEventOf(1, d)?.id === "karaoke" && calendarOf(d).day !== 5);
+  let run = act(at({ phase: "daytime", dayIndex: day }), {}, { type: "dayEvent", choice: 0 }).run;
+  assert.equal(run.today.outing, true);
+  run = act(run, {}, { type: "endDaytime" }).run;
+  assert.equal(run.phase, "night");
+  assert.ok(legalActions(run).includes("openApp"));
+  assert.deepEqual(parseRun(serializeRun(run))?.today, run.today);
+  assert.equal(act(run, {}, { type: "sleep" }).run.today.outing, undefined);
+});
+
 test("F：颱風假白天多回兩則；錢不夠的選項不能選", () => {
   const day = findDay((d) => dayEventOf(1, d)?.id === "typhoon");
   const run = at({ phase: "daytime", dayIndex: day });

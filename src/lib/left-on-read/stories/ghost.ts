@@ -87,8 +87,8 @@ export const GHOST_STORIES: readonly Story[] = [
       {
         incoming: { kind: "read" },
         replies: [
-          "早安 今天週三 再撐兩天",
-          "早安！連續第五天 我沒有斷過",
+          "早安 又是新的一天 妳也要撐住",
+          "早安！連續第三天 我沒有斷過",
           "早安 這張的字會閃",
         ],
       },
@@ -141,7 +141,7 @@ export const GHOST_STORIES: readonly Story[] = [
     category: "ghost",
     steps: [
       {
-        incoming: { kind: "message", text: "你好～你是做什麼的呀" },
+        incoming: { kind: "message", text: "你好～我上班族啦 那你呢 你是做什麼的呀" },
         replies: [
           "我先自我介紹，分成學經歷、興趣、未來規劃三個部分，大約三百字，妳有空再看",
           "軟體工程師。但這樣講不夠精確，我傳完整版給妳",
@@ -204,7 +204,7 @@ export const GHOST_STORIES: readonly Story[] = [
     steps: [
       {
         incoming: { kind: "message", text: "跟你聊得好開心 感覺你可以信任" },
-        replies: ["我也是 很少人這樣說", "信任要慢慢累積 但謝謝", "妳這樣講我會当真"],
+        replies: ["我也是 很少人這樣說", "信任要慢慢累積 但謝謝", "妳這樣講我會當真"],
       },
       {
         incoming: { kind: "message", text: "那個……我這個月房租差一點 能不能先借我兩萬 下個月發薪立刻還" },

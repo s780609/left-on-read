@@ -99,6 +99,8 @@ export interface TodayState {
   overtime: boolean;
   /** 昨晚打電動，今天睡太晚 */
   tired: boolean;
+  /** 下班跟同事出去，晚餐吃過了 */
+  outing?: boolean;
 }
 
 export const FRESH_TODAY: TodayState = { eventDone: false, overtime: false, tired: false };
@@ -617,6 +619,8 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
       if (run.phase !== "daytime") return same;
       // 加班：公司便當，回到家只剩回訊息的力氣
       if (run.today.overtime) return { run: { ...run, phase: "nightDone", offeredMealId: null }, dex, events: [] };
+      // 跟同事出去：晚餐吃過了，回到家直接是深夜，還能滑
+      if (run.today.outing) return { run: { ...run, phase: "night", offeredMealId: null }, dex, events: [] };
       const meal = drawMeal(factory("meal", run.dayIndex));
       return { run: { ...run, phase: "evening", offeredMealId: meal.id }, dex, events: [] };
     }
@@ -832,7 +836,12 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
         run: {
           ...run,
           money: Math.min(MAX_MONEY, run.money + delta),
-          today: { ...run.today, eventDone: true, overtime: Boolean(choice.overtime) },
+          today: {
+            ...run.today,
+            eventDone: true,
+            overtime: Boolean(choice.overtime),
+            ...(choice.outing ? { outing: true } : {}),
+          },
         },
         dex,
         events: [

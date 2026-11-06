@@ -12,7 +12,7 @@ export const FADE_STORIES: readonly Story[] = [
     category: "fade",
     steps: [
       {
-        incoming: { kind: "message", text: "哈哈哈你好好笑" },
+        incoming: { kind: "message", text: "哈哈哈 你的自介好好笑" },
         replies: [
           "真假 我同事都說我講話很像說明文件",
           "我還有更好笑的 妳聽過 UDP 的笑話嗎 不一定聽得到",
@@ -104,7 +104,8 @@ export const FADE_STORIES: readonly Story[] = [
         replies: ["在家 妳呢", "沒幹嘛 妳要不要出來吃個飯", "我剛好也想問妳這題"],
       },
       {
-        incoming: { kind: "narration", text: "（三個月後）話題還在。她問我週末都在幹嘛。" },
+        incoming: { kind: "narration", text: "（隔了幾天）話題還在原地。她又問我週末都在幹嘛。" },
+        wait: { days: 3 },
         replies: [
           "在家 妳呢 這次要不要出來晃晃",
           "沒幹嘛 所以妳這週末有空嗎",
@@ -116,7 +117,8 @@ export const FADE_STORIES: readonly Story[] = [
         replies: ["好 那下下週", "老家在哪 我可以順路 我住台北", "沒問題 下次是幾號 我記一下"],
       },
       {
-        incoming: { kind: "narration", text: "（又三個月後）她問我週末都在幹嘛。" },
+        incoming: { kind: "narration", text: "（又隔了幾天，感覺像過了一季）她問我週末都在幹嘛。" },
+        wait: { days: 3 },
         replies: [
           "在家",
           "在家。跟半年前一樣。妳要不要來確認一下",
@@ -125,7 +127,7 @@ export const FADE_STORIES: readonly Story[] = [
       },
       {
         incoming: { kind: "message", text: "哈哈你好好笑 下次約啦" },
-        ending: { narration: "半年了。我知道她貓的名字、她主管的綽號、她討厭香菜。我不知道她的聲音。" },
+        ending: { narration: "感覺像聊了半年。我知道她貓的名字、她主管的綽號、她討厭香菜。我不知道她的聲音。" },
       },
     ],
   },
@@ -152,7 +154,7 @@ export const FADE_STORIES: readonly Story[] = [
         ],
       },
       {
-        incoming: { kind: "message", text: "那週可能要回家 再看看喔" },
+        incoming: { kind: "message", text: "下週可能要回家 再看看喔" },
         replies: ["好 我都可以", "那再下週呢 我可以一直往後排", "這個再看看大概是多久的再看看"],
       },
       {
@@ -176,7 +178,7 @@ export const FADE_STORIES: readonly Story[] = [
         ],
       },
       {
-        incoming: { kind: "message", text: "好啊 週六下午兩點 約在那間咖啡廳？" },
+        incoming: { kind: "message", text: "好啊 週六下午兩點？咖啡廳你挑" },
         replies: [
           "好！我會提早到",
           "我查了 從 2 號出口最近 我畫地圖給妳",
@@ -231,7 +233,7 @@ export const FADE_STORIES: readonly Story[] = [
     category: "fade",
     steps: [
       {
-        incoming: { kind: "message", text: "哈哈對啊 你今天上班還好嗎" },
+        incoming: { kind: "message", text: "哈哈 你好 你今天過得還好嗎" },
         replies: [
           "還好 今天修了三個 bug 生出四個",
           "妳回得好快 我好開心",

@@ -109,7 +109,7 @@ export const PROFILE_BIOS: readonly ProfileBio[] = [
   },
   {
     id: "stats",
-    text: "172 公分，年收 52 萬，不菸不酒，有存款。",
+    text: "172 公分，年收 47 萬，不菸不酒，有存款。",
     note: "規格寫清楚，比較有效率。有些人看完規格就來推銷了。",
     matchMult: 0.95,
     categoryMult: { pitch: 2.5 },

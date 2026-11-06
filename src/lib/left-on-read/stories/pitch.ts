@@ -79,6 +79,7 @@ export const PITCH_STORIES: readonly Story[] = [
       },
       {
         incoming: { kind: "narration", text: "（週六）她說下次帶朋友一起來，效果更好。" },
+        wait: { weekday: 6 },
         ending: { narration: "會場有很多人跟我握手，比我這一年加起來都多。我沒有加入，但回家的捷運上，手還是熱的。" },
       },
     ],
@@ -101,7 +102,7 @@ export const PITCH_STORIES: readonly Story[] = [
           "沒問題 順便幫妳把桌面整理成七個資料夾",
         ],
         answers: [
-          "好啊！那我週六拿過去給你 你住哪",
+          "好啊！那我拿過去給你 你住哪",
           "好長喔……我先從第一步試 不行再拿給你",
           "好啊哈哈哈 週末拿去給你整理",
         ],
@@ -230,11 +231,12 @@ export const PITCH_STORIES: readonly Story[] = [
         replies: ["好啊！哪裡", "妳請我 我是不是該準備什麼", "可以 但我不太會喝酒 可以喝無糖茶嗎"],
       },
       {
-        incoming: { kind: "message", text: "就那間KTV旁邊的燒烤 你到了傳訊息 我朋友可能也在" },
+        incoming: { kind: "message", text: "週六晚上六點半 那間KTV旁邊的燒烤 你到了傳訊息 我朋友可能也在" },
         replies: ["好 我六點半到", "朋友也在喔 好熱鬧", "地址發我 我設導航"],
       },
       {
-        incoming: { kind: "narration", text: "（週末）門口站的不是她。是戴金鍊的男人，旁邊還有兩個兄弟。" },
+        incoming: { kind: "narration", text: "（週六）門口站的不是她。是戴金鍊的男人，旁邊還有兩個兄弟。" },
+        wait: { weekday: 6 },
         ending: {
           narration:
             "他說：「兄弟怎麼不進來坐，我女朋友叫你來的啊。喝茶錢先算三千。」我轉頭就走。回家把 Swipy 刪了又裝回來，只為了把她封鎖得徹底一點。",
