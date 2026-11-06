@@ -55,7 +55,7 @@ export const LADYBUG_BEATS: readonly Beat<LadybugScene>[] = [
   { scene: "hallway", who: "her", text: "就是啊 等一下喔 我開門" },
   {
     scene: "taiwanShop",
-    text: "門開了。外面看是普通住家，裡面卻黑黑的，只有幾盞小夜燈。沙發上坐著穿得很少的女生，跟照片不太一樣。",
+    text: "門開了。外面看是普通住家，裡面卻黑黑的，只有幾盞小夜燈。房間裡站著一個穿得很露、很少的女生，跟照片不太一樣。",
   },
   { scene: "taiwanShop", who: "her", text: "你就是哥哥喔？比你自介寫的矮一點耶。" },
   { scene: "taiwanShop", who: "me", text: "……自介有多寫兩公分。" },
@@ -106,11 +106,11 @@ export const LADYBUG_BEATS: readonly Beat<LadybugScene>[] = [
   {
     scene: "yoshiwaraShop",
     fade: "slow",
-    text: "格子門開著，穿得很少的女人坐在玄關裡朝外看。有人朝我笑，有人叫我進來，紙燈籠照在她們臉上，比台北那些小夜燈更亮。",
+    text: "格子門開著，一個女人站在玄關裡朝外招客。她朝我笑、叫我進來，紙燈籠照在她臉上，比台北那些小夜燈更亮。",
   },
   {
     scene: "yoshiwaraShop",
-    text: "回訊一樣快。價錢標好。我忽然覺得自己很輕，輕到可以一直坐下去。",
+    text: "價錢標好。招客的人就在旁邊。我忽然覺得自己很輕，輕到可以一直坐下去。",
   },
   {
     scene: "bangkok",
@@ -129,6 +129,6 @@ export const LADYBUG_BEATS: readonly Beat<LadybugScene>[] = [
   {
     scene: "title",
     fade: "slow",
-    text: "瓢蟲結局\n他飛去飛田新地，也去了牛仔街。\n回訊很快。價錢標好。每天都有人等他。",
+    text: "瓢蟲結局\n他飛去飛田新地，也去了牛仔街。\n床很熱。價錢標好。人就在旁邊。",
   },
 ];

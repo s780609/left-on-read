@@ -236,5 +236,7 @@ test("結局腳本：每段都有文字，最後一段是片名，不含露骨�
   assert.ok(LADYBUG_BEATS.some((b) => b.scene === "bangkok"));
   assert.ok(LADYBUG_BEATS.some((b) => b.scene === "bangkokShop"));
   assert.ok(!/按摩/.test(all), "台灣段不再用按摩巷");
+  assert.ok(!/回訊一樣快|回訊很快/.test(all), "現場段不再寫回訊很快");
+  assert.ok(!/沙發上坐著/.test(all), "台灣店內改成一人站著");
   assert.ok(!/脫|胸|裸|床上|高潮|插|射/.test(all), "結局不寫露骨內容");
 });
