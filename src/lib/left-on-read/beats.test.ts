@@ -114,7 +114,7 @@ test("瓢蟲結局：對話有來有回，兩邊都講得夠多，誰都不會�
 });
 
 test("瓢蟲結局：轉折的黑幕放慢，同一幕不會有兩句重複（台詞用文字當 key）", () => {
-  for (const scene of ["alley", "black", "title"]) {
+  for (const scene of ["hallway", "black", "title"]) {
     const first = LADYBUG_BEATS.find((b) => b.scene === scene);
     assert.equal(first?.fade, "slow", scene);
   }

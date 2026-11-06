@@ -227,11 +227,14 @@ test("結局腳本：每段都有文字，最後一段是片名，不含露骨�
   assert.match(LADYBUG_BEATS.at(-1)?.text ?? "", /瓢蟲結局/);
   const all = LADYBUG_BEATS.map((b) => b.text).join("");
   assert.match(all, /風俗/);
-  assert.match(all, /吉原/);
+  assert.match(all, /飛田新地/);
   assert.match(all, /牛仔街/);
+  assert.ok(LADYBUG_BEATS.some((b) => b.scene === "hallway"));
+  assert.ok(LADYBUG_BEATS.some((b) => b.scene === "taiwanShop"));
   assert.ok(LADYBUG_BEATS.some((b) => b.scene === "yoshiwara"));
   assert.ok(LADYBUG_BEATS.some((b) => b.scene === "yoshiwaraShop"));
   assert.ok(LADYBUG_BEATS.some((b) => b.scene === "bangkok"));
   assert.ok(LADYBUG_BEATS.some((b) => b.scene === "bangkokShop"));
+  assert.ok(!/按摩/.test(all), "台灣段不再用按摩巷");
   assert.ok(!/脫|胸|裸|床上|高潮|插|射/.test(all), "結局不寫露骨內容");
 });

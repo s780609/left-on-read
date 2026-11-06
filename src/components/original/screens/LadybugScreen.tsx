@@ -10,7 +10,7 @@ import {
   SCENE_H,
   SCENE_W,
   drawCommuteScene,
-  drawLadybugAlleyScene,
+  drawLadybugHallwayScene,
   drawNightScene,
   photoDraw,
   preloadPhotos,
@@ -29,7 +29,7 @@ function drawLedger(ctx: Ctx, t: number) {
     ["4 月", "3", "9,000"],
     ["5 月", "5", "15,000"],
     ["6 月", "7", "21,000"],
-    ["7 月", "吉原", "¥"],
+    ["7 月", "飛田", "¥"],
     ["8 月", "牛仔", "฿"],
   ];
   const shown = Math.min(rows.length, 1 + Math.floor(t / 650));
@@ -56,8 +56,8 @@ function drawBlack(ctx: Ctx) {
 }
 
 const DRAW: Record<Exclude<LadybugScene, "chat">, (ctx: Ctx, t: number) => void> = {
-  alley: drawLadybugAlleyScene,
-  door: photoDraw("ladybugDoor"),
+  hallway: drawLadybugHallwayScene,
+  taiwanShop: photoDraw("ladybugTaiwanShop"),
   black: drawBlack,
   commute: drawCommuteScene,
   ledger: drawLedger,
@@ -90,7 +90,7 @@ export function LadybugScreen({
   onDone: () => void;
 }) {
   useEffect(
-    () => preloadPhotos(["ladybugAlley", "ladybugDoor", "ladybugYoshiwara", "ladybugYoshiwaraShop", "ladybugBangkok", "ladybugBangkokShop"]),
+    () => preloadPhotos(["ladybugHallway", "ladybugTaiwanShop", "ladybugYoshiwara", "ladybugYoshiwaraShop", "ladybugBangkok", "ladybugBangkokShop"]),
     [],
   );
   return (

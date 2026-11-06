@@ -100,8 +100,8 @@ export const ED_SEQUENCES: Record<EdEnding, readonly EdFrame[]> = {
     {
       id: "yoshiwara",
       src: `${SRC}/03-yoshiwara.jpg`,
-      alt: "東京吉原夜街，提燈與霓虹底下，冠宇背影站在風俗店門口",
-      caption: "吉原。提燈比訊息還亮，店門一開就有人叫哥哥。",
+      alt: "大阪飛田新地夜街，低矮木造店屋與紙燈籠，冠宇背影走在風俗店屋門口",
+      caption: "飛田新地。紙燈籠比訊息還亮，格子門一開就有人朝外叫。",
       holdMs: CAPTION_HOLD_MS,
       focus: { x: 50, y: 42 },
       glows: [

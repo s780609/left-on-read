@@ -1,6 +1,7 @@
 /**
  * 瓢蟲結局的腳本：答應了 1h2s 之後，從此沉溺於風俗店。
- * 門一關就切黑，只寫他的日子怎麼變了；後半飛去吉原與曼谷牛仔街，並走進店裡。
+ * 門一關就切黑，只寫他的日子怎麼變了；後半飛去大阪飛田新地與曼谷牛仔街，並走進店裡。
+ * 台灣段是老電梯大樓走廊 → 普通房門後的小夜燈房間。
  * 畫面在 screens/LadybugScreen.tsx。
  *
  * 前兩段就是聊天室最後那兩句（1h2s 那題和「好」），畫面接得上才不會硬切。
@@ -11,8 +12,8 @@ import { CHAT_SCENE, type Beat } from "./beats.ts";
 
 export type LadybugScene =
   | typeof CHAT_SCENE
-  | "alley"
-  | "door"
+  | "hallway"
+  | "taiwanShop"
   | "black"
   | "commute"
   | "ledger"
@@ -32,7 +33,7 @@ export const LADYBUG_BEATS: readonly Beat<LadybugScene>[] = [
   { scene: CHAT, who: "her", text: "想來的話 1h2s 3000，現金喔" },
   { scene: CHAT, who: "me", text: "……好。地址傳給我。" },
   { scene: CHAT, who: "her", text: "好喔 我傳給你" },
-  { scene: CHAT, who: "her", text: "巷子走進來第二間 招牌寫按摩那個" },
+  { scene: CHAT, who: "her", text: "老舊電梯大樓 四樓右邊第二間 跟一般住家一樣" },
   { scene: CHAT, who: "me", text: "好。請問需要準備什麼嗎" },
   { scene: CHAT, who: "her", text: "帶錢就好啊 哈哈哈 哥哥你以為是來面試喔" },
   { scene: CHAT, who: "me", text: "沒有 我只是想說第一次 不要造成妳的困擾" },
@@ -44,23 +45,26 @@ export const LADYBUG_BEATS: readonly Beat<LadybugScene>[] = [
   { scene: CHAT, who: "me", text: "抱歉 習慣了" },
   { scene: CHAT, who: "her", text: "不用抱歉啦 到了傳訊息跟我說 不要按電鈴喔" },
   {
-    scene: "alley",
+    scene: "hallway",
     fade: "slow",
-    text: "那天下班，我沒有回租屋處。地圖帶我走進一條沒走過的巷子，導航說：「您已抵達目的地。」這句話我等了兩年。",
+    text: "那天下班，我沒有回租屋處。地址帶我走進一棟老舊電梯大樓。走廊兩邊都是房門，日光燈嗡嗡響，聞得到久沒清的地板味。",
   },
-  { scene: "alley", who: "me", text: "我到了 在第二間門口" },
-  { scene: "alley", who: "her", text: "看到你了 你站那邊好像在等公車" },
-  { scene: "alley", who: "me", text: "那我要進去嗎" },
-  { scene: "alley", who: "her", text: "等一下喔 我開門" },
-  { scene: "door", text: "鐵門開了。她跟照片不太一樣，我也跟我的自介不太一樣。" },
-  { scene: "door", who: "her", text: "你就是哥哥喔？比你自介寫的矮一點耶。" },
-  { scene: "door", who: "me", text: "……自介有多寫兩公分。" },
-  { scene: "door", who: "her", text: "哈哈哈，你還真的講。要不要喝水？" },
-  { scene: "door", text: "來台北之後，這是第一次有人在門口等我。" },
-  { scene: "door", who: "me", text: "好，謝謝。鞋子要放哪裡？" },
-  { scene: "door", who: "her", text: "放那邊就好。你在緊張喔？" },
-  { scene: "door", who: "me", text: "……很明顯嗎？" },
-  { scene: "door", who: "her", text: "有一點。沒關係，進來吧。" },
+  { scene: "hallway", who: "me", text: "我到了 四樓右邊第二間" },
+  { scene: "hallway", who: "her", text: "看到你了 你站那邊好像在等鄰居開門" },
+  { scene: "hallway", who: "me", text: "這扇門看起來跟別間沒差耶" },
+  { scene: "hallway", who: "her", text: "就是啊 等一下喔 我開門" },
+  {
+    scene: "taiwanShop",
+    text: "門開了。外面看是普通住家，裡面卻黑黑的，只有幾盞小夜燈。沙發上坐著穿得很少的女生，跟照片不太一樣。",
+  },
+  { scene: "taiwanShop", who: "her", text: "你就是哥哥喔？比你自介寫的矮一點耶。" },
+  { scene: "taiwanShop", who: "me", text: "……自介有多寫兩公分。" },
+  { scene: "taiwanShop", who: "her", text: "哈哈哈，你還真的講。要不要喝水？" },
+  { scene: "taiwanShop", text: "來台北之後，這是第一次有人在這種房間裡等我。" },
+  { scene: "taiwanShop", who: "me", text: "好，謝謝。鞋子要放哪裡？" },
+  { scene: "taiwanShop", who: "her", text: "放那邊就好。你在緊張喔？" },
+  { scene: "taiwanShop", who: "me", text: "……很明顯嗎？" },
+  { scene: "taiwanShop", who: "her", text: "有一點。沒關係，進來吧。" },
   { scene: "black", fade: "slow", text: "（門關上了。）" },
   {
     scene: "commute",
@@ -92,17 +96,17 @@ export const LADYBUG_BEATS: readonly Beat<LadybugScene>[] = [
   {
     scene: "black",
     fade: "slow",
-    text: "台灣的巷子待膩了。年假我買了便宜機票。護照蓋上第一個章那天，我對自己說：這次是去玩。",
+    text: "台灣那些看起來像住家的門，我推膩了。年假我買了便宜機票。護照蓋上第一個章那天，我對自己說：這次是去玩。",
   },
   {
     scene: "yoshiwara",
     fade: "slow",
-    text: "東京。吉原的燈比台北更亮。店名、時段、價目，我記在同一個 Excel，只是幣別換成日圓。",
+    text: "大阪。飛田新地一整排低矮木造店屋，門口掛著紙燈籠。店名、時段、價目，我記在同一個 Excel，只是幣別換成日圓。",
   },
   {
     scene: "yoshiwaraShop",
     fade: "slow",
-    text: "推開門，沙發上坐著幾個穿得很亮的女人。有人朝我笑，有人遞酒，有人叫我哥哥。提燈照在她們臉上，比街上的霓虹更近。",
+    text: "格子門開著，穿得很少的女人坐在玄關裡朝外看。有人朝我笑，有人叫我進來，紙燈籠照在她們臉上，比台北那些小夜燈更亮。",
   },
   {
     scene: "yoshiwaraShop",
@@ -125,6 +129,6 @@ export const LADYBUG_BEATS: readonly Beat<LadybugScene>[] = [
   {
     scene: "title",
     fade: "slow",
-    text: "瓢蟲結局\n他飛去吉原，也去了牛仔街。\n回訊很快。價錢標好。每天都有人等他。",
+    text: "瓢蟲結局\n他飛去飛田新地，也去了牛仔街。\n回訊很快。價錢標好。每天都有人等他。",
   },
 ];

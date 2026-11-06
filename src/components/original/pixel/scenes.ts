@@ -34,8 +34,8 @@ const PHOTO_SRC = {
   epiIntimate: "/left-on-read/scene/epi-intimate.jpg",
   epiIntimateSex: "/left-on-read/scene/epi-intimate-sex.jpg",
   epiBaby: "/left-on-read/scene/epi-baby.jpg",
-  ladybugAlley: "/left-on-read/scene/ladybug-alley.jpg",
-  ladybugDoor: "/left-on-read/scene/ladybug-door.jpg",
+  ladybugHallway: "/left-on-read/scene/ladybug-hallway.jpg",
+  ladybugTaiwanShop: "/left-on-read/scene/ladybug-taiwan-shop.jpg",
   ladybugYoshiwara: "/left-on-read/scene/ladybug-yoshiwara.jpg",
   ladybugYoshiwaraShop: "/left-on-read/scene/ladybug-yoshiwara-shop.jpg",
   ladybugBangkok: "/left-on-read/scene/ladybug-bangkok.jpg",
@@ -80,19 +80,12 @@ export function photoDraw(id: PhotoId): (ctx: Ctx, t: number) => void {
   return (ctx, t) => photoScene(ctx, id, 0, t);
 }
 
-/** 瓢蟲結局的巷口：圖上的霓虹招牌會閃，用沒有邊的柔光疊上去，鏡頭推拉時才不會對不準 */
-export function drawLadybugAlleyScene(ctx: Ctx, t: number) {
-  photoScene(ctx, "ladybugAlley", 0, t);
-  const stutter = saw(t, 3100) > 0.92 && blink(t, 90);
-  const alpha = stutter ? 0 : 0.2 + 0.08 * Math.sin(t / 700);
-  const sign = ctx.createRadialGradient(132, 24, 4, 132, 24, 38);
-  sign.addColorStop(0, `rgba(255, 111, 145, ${alpha})`);
-  sign.addColorStop(1, "rgba(255, 111, 145, 0)");
-  ctx.save();
-  ctx.globalCompositeOperation = "lighter";
-  ctx.fillStyle = sign;
-  ctx.fillRect(90, 0, 84, 66);
-  ctx.restore();
+/** 瓢蟲結局的電梯大樓走廊：日光燈偶爾閃一下，不用粉紅霓虹 */
+export function drawLadybugHallwayScene(ctx: Ctx, t: number) {
+  photoScene(ctx, "ladybugHallway", 0, t);
+  const stutter = saw(t, 2800) > 0.94 && blink(t, 70);
+  if (!stutter) return;
+  rect(ctx, "rgba(8,8,12,0.35)", 0, 0, SCENE_W, SCENE_H);
 }
 
 export function drawOfficeScene(ctx: Ctx, t: number) {
