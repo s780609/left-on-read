@@ -237,7 +237,8 @@ export const HEROINE_STORY: Story = {
     ...CHAT_STEPS.slice(0, 3),
     PASSED_GATE_STEP,
     {
-      // 上一句已經講好要去看電影，這裡只定哪一部
+      // 上一句已經講好要去看電影，她馬上接著講哪一部，不要隔天才來
+      wait: { days: 0 },
       incoming: { kind: "message", text: "信義威秀那部新上的，我一直想看。就那部？" },
       replies: ["好，我查一下場次", "好。我把那天空下來了，雖然本來就是空的"],
       // 冠宇說要查，她就等他回場次，不要自己先講好了

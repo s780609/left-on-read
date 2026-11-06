@@ -121,3 +121,9 @@ test("小晴：過門檻那句她會先回，差一點那份不會；兩個訂�
   const pick = HEROINE_STORY.steps[4];
   assert.ok("text" in pick.incoming && !/一起去/.test(pick.incoming.text));
 });
+
+test("小晴：過門檻她說好之後，馬上接著講哪一部片，不用等到隔天", () => {
+  const pick = HEROINE_STORY.steps[4] as ReplyStep;
+  assert.deepEqual(pick.wait, { days: 0 });
+  assert.ok("text" in pick.incoming && /就那部/.test(pick.incoming.text));
+});
