@@ -1,6 +1,6 @@
 /**
  * 瓢蟲結局的腳本：答應了 1h2s 之後，從此沉溺於風俗店。
- * 門一關就切黑，只寫他的日子怎麼變了；後半飛去吉原與曼谷牛仔街。
+ * 門一關就切黑，只寫他的日子怎麼變了；後半飛去吉原與曼谷牛仔街，並走進店裡。
  * 畫面在 screens/LadybugScreen.tsx。
  *
  * 前兩段就是聊天室最後那兩句（1h2s 那題和「好」），畫面接得上才不會硬切。
@@ -18,7 +18,9 @@ export type LadybugScene =
   | "ledger"
   | "bed"
   | "yoshiwara"
+  | "yoshiwaraShop"
   | "bangkok"
+  | "bangkokShop"
   | "title";
 
 /** 從聊天室進來時已經顯示到這一段，也就是冠宇的「好」 */
@@ -98,8 +100,13 @@ export const LADYBUG_BEATS: readonly Beat<LadybugScene>[] = [
     text: "東京。吉原的燈比台北更亮。店名、時段、價目，我記在同一個 Excel，只是幣別換成日圓。",
   },
   {
-    scene: "yoshiwara",
-    text: "這裡的人也叫我哥哥。回訊一樣快。走在提燈底下，我忽然覺得自己很輕，輕到可以一直走下去。",
+    scene: "yoshiwaraShop",
+    fade: "slow",
+    text: "推開門，沙發上坐著幾個穿得很亮的女人。有人朝我笑，有人遞酒，有人叫我哥哥。提燈照在她們臉上，比街上的霓虹更近。",
+  },
+  {
+    scene: "yoshiwaraShop",
+    text: "回訊一樣快。價錢標好。我忽然覺得自己很輕，輕到可以一直坐下去。",
   },
   {
     scene: "bangkok",
@@ -107,8 +114,13 @@ export const LADYBUG_BEATS: readonly Beat<LadybugScene>[] = [
     text: "下一站曼谷。牛仔街的霓虹一整排往下燒，熱風裡都是煙味和香水。Nana 的招牌亮得像不會關。",
   },
   {
-    scene: "bangkok",
-    text: "我站在那條街上很久。沒有人問我來自哪裡，也沒有人已讀不回。風俗店的門一開一關，我知道自己回不去了。",
+    scene: "bangkokShop",
+    fade: "slow",
+    text: "店裡比街上更熱。鏡子、高跟鞋、短洋裝，幾個女孩坐在吧台邊朝門口看。沒有人問我來自哪裡。",
+  },
+  {
+    scene: "bangkokShop",
+    text: "風俗店的門一開一關，有人過來牽我的手。我知道自己回不去了。",
   },
   {
     scene: "title",

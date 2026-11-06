@@ -125,7 +125,7 @@ assets/heroine/                     真結局女角素材 01～11.jpg，只有 0
 | 個工路線、瓢蟲結局 | 完成；結局改成冠宇和她有來有回的對話，從聊天室無縫接過去 |
 | 從 TinyTap 獨立成這個 repo | 完成 |
 | Swipy 女角精緻像素化 | 完成：120×150 原寸算圖，所有圖層由 seed 決定；小晴仍然用照片 |
-| 遊戲內場景換插圖 | 部分完成：吃飯、週末是合成的暫代圖；瓢蟲結局的巷口、開門、吉原、牛仔街已換成 `scene/ladybug-alley.jpg`、`ladybug-door.jpg`、`ladybug-yoshiwara.jpg`、`ladybug-bangkok.jpg` |
+| 遊戲內場景換插圖 | 部分完成：吃飯、週末是合成的暫代圖；瓢蟲結局的巷口、開門、吉原、牛仔街與店內已換成 `scene/ladybug-alley.jpg`、`ladybug-door.jpg`、`ladybug-yoshiwara.jpg`、`ladybug-yoshiwara-shop.jpg`、`ladybug-bangkok.jpg`、`ladybug-bangkok-shop.jpg` |
 | 晚上回訊息 | 完成：夜間入口在 `screens/NightScreen.tsx`，手機畫面和白天共用，測試在 `nightReply.test.ts`；沒有新增存檔欄位 |
 | 真結局女角素材 | 08、09 已接進遊戲，其他幾張等擁有者決定 |
 | 真結局 | 完成，在 `feat/true-ending` 等審；三次約會和尾聲都已換成 `scene/date-*.jpg`、`scene/epi-*.jpg` 插圖 |

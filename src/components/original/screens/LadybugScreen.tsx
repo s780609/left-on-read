@@ -63,7 +63,9 @@ const DRAW: Record<Exclude<LadybugScene, "chat">, (ctx: Ctx, t: number) => void>
   ledger: drawLedger,
   bed: drawNightScene,
   yoshiwara: photoDraw("ladybugYoshiwara"),
+  yoshiwaraShop: photoDraw("ladybugYoshiwaraShop"),
   bangkok: photoDraw("ladybugBangkok"),
+  bangkokShop: photoDraw("ladybugBangkokShop"),
   title: drawTitle,
 };
 
@@ -88,7 +90,7 @@ export function LadybugScreen({
   onDone: () => void;
 }) {
   useEffect(
-    () => preloadPhotos(["ladybugAlley", "ladybugDoor", "ladybugYoshiwara", "ladybugBangkok"]),
+    () => preloadPhotos(["ladybugAlley", "ladybugDoor", "ladybugYoshiwara", "ladybugYoshiwaraShop", "ladybugBangkok", "ladybugBangkokShop"]),
     [],
   );
   return (

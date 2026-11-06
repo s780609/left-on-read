@@ -230,6 +230,8 @@ test("結局腳本：每段都有文字，最後一段是片名，不含露骨�
   assert.match(all, /吉原/);
   assert.match(all, /牛仔街/);
   assert.ok(LADYBUG_BEATS.some((b) => b.scene === "yoshiwara"));
+  assert.ok(LADYBUG_BEATS.some((b) => b.scene === "yoshiwaraShop"));
   assert.ok(LADYBUG_BEATS.some((b) => b.scene === "bangkok"));
+  assert.ok(LADYBUG_BEATS.some((b) => b.scene === "bangkokShop"));
   assert.ok(!/脫|胸|裸|床上|高潮|插|射/.test(all), "結局不寫露骨內容");
 });
