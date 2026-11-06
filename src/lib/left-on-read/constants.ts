@@ -27,8 +27,8 @@ export const STUDIO_RATE = 0.05;
 export const STUDIO_MATCH_P = 0.9;
 
 /** 真結局：圖鑑收集滿幾種失敗才解鎖、解鎖後每晚出現的機率 */
-export const HEROINE_UNLOCK_FAILURES = 10;
-export const HEROINE_NIGHT_RATE = 0.15;
+export const HEROINE_UNLOCK_FAILURES = 5;
+export const HEROINE_NIGHT_RATE = 1;
 /** 第一階段聊天總分要到多少才會進入約會；開場白挑興趣句加的分 */
 export const HEROINE_PASS_SCORE = 2;
 export const HEROINE_INTEREST_OPENER_SCORE = 1;

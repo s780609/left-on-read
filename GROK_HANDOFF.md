@@ -140,8 +140,8 @@ assets/heroine/                     真結局女角素材 01～11.jpg，只有 0
 
 ### 6.1 觸發條件
 
-1. 失敗圖鑑收集滿 10 種（`dexProgress(dex).collected >= HEROINE_UNLOCK_FAILURES`，隱藏失敗不算）。
-2. 解鎖後，每晚有 15% 機率她會出現在當晚牌組裡（由 `runSeed`、`dayIndex` 決定，重新載入不能重擲）。同一局已經在走她的路線、或已經走回失敗，當局就不再出現。
+1. 失敗圖鑑收集滿 5 種（`dexProgress(dex).collected >= HEROINE_UNLOCK_FAILURES`，隱藏失敗不算）。
+2. 解鎖後，每晚她一定會出現在當晚牌組裡（由 `runSeed`、`dayIndex` 決定位置，重新載入不能重擲）。同一局已經在走她的路線、或已經走回失敗，當局就不再出現。
 3. 她的卡片固定是：暱稱「小晴」、27 歲、自介「週末喜歡去沒去過的地方，也喜歡待在家。」興趣「看電影」。
 4. 右滑一定配對，不看一般機率。左滑就錯過，之後的夜晚還可能再遇到。
 5. 配對後一定走她的路線，不會被隨機抽到別的劇情，也不算進 27 種。
@@ -229,7 +229,7 @@ assets/heroine/                     真結局女角素材 01～11.jpg，只有 0
 
 ### 6.6 要改的地方
 
-- `constants.ts`：`HEROINE_UNLOCK_FAILURES = 10`、`HEROINE_NIGHT_RATE = 0.15`、`HEROINE_PASS_SCORE = 2`、三次約會的金額、`TRUE_ENDING_ID`
+- `constants.ts`：`HEROINE_UNLOCK_FAILURES = 5`、`HEROINE_NIGHT_RATE = 1`、`HEROINE_PASS_SCORE = 2`、三次約會的金額、`TRUE_ENDING_ID`
 - `storyTypes.ts`、`game.ts`、`story.ts`：回覆計分、分數門檻、約會節點、假失敗。**不要動 27 種一般失敗的行為**
 - `girl.ts`：她的固定卡片
 - `save.ts`：`parseRun`、`parseMeta` 接受新欄位，舊存檔和壞資料都不能當機
@@ -245,7 +245,7 @@ assets/heroine/                     真結局女角素材 01～11.jpg，只有 0
 
 ### 6.8 驗收
 
-- [ ] 收集 9 種時她絕對不會出現，10 種時才可能出現，同一個 seed 結果相同
+- [ ] 收集 4 種時她絕對不會出現，5 種時每晚一定出現，同一個 seed 結果相同
 - [ ] 右滑她一定配對，左滑不會，配對後一定走她的路線
 - [ ] 分數邊界：1 分走回失敗、2 分進入約會，失敗記一筆隱藏失敗，不影響 27 種的進度
 - [ ] 約會只有週末能赴約，錢不夠不能去，金額扣得正確

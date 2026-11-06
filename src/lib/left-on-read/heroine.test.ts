@@ -109,34 +109,33 @@ function answerChat(opener: OpenerKind, scores: readonly number[]) {
 // ---------- 觸發條件 ----------
 
 test("常數符合規格", () => {
-  assert.equal(HEROINE_UNLOCK_FAILURES, 10);
-  assert.equal(HEROINE_NIGHT_RATE, 0.15);
+  assert.equal(HEROINE_UNLOCK_FAILURES, 5);
+  assert.equal(HEROINE_NIGHT_RATE, 1);
   assert.equal(HEROINE_PASS_SCORE, 2);
   assert.deepEqual([...HEROINE_DATE_COSTS], [800, 500, 300]);
   assert.equal(TRUE_ENDING_ID, "true-love");
 });
 
-test("收集 9 種時她絕對不會出現，10 種才可能，機率約 15%", () => {
-  const nine = dexOf(9);
-  const nights = 20_000;
+test("收集 4 種時她絕對不會出現，5 種時每晚一定出現", () => {
+  const four = dexOf(4);
+  const nights = 2_000;
   let seen = 0;
   for (let day = 0; day < nights; day++) {
     const run: RunState = { ...createRun(day % 97), dayIndex: day };
-    assert.equal(heroineCardIndex(run, nine), null);
-    for (let i = 0; i < DECK_SIZE; i++) assert.notEqual(deckCardSeed(run, nine, i), HEROINE_SEED);
+    assert.equal(heroineCardIndex(run, four), null);
+    for (let i = 0; i < DECK_SIZE; i++) assert.notEqual(deckCardSeed(run, four, i), HEROINE_SEED);
     const index = heroineCardIndex(run, UNLOCKED);
-    if (index !== null) {
-      seen++;
-      assert.ok(Number.isInteger(index) && index >= 0 && index < DECK_SIZE);
-      assert.equal(deckCardSeed(run, UNLOCKED, index), HEROINE_SEED);
-    }
+    assert.notEqual(index, null);
+    seen++;
+    assert.ok(Number.isInteger(index) && index! >= 0 && index! < DECK_SIZE);
+    assert.equal(deckCardSeed(run, UNLOCKED, index!), HEROINE_SEED);
   }
-  const rate = seen / nights;
-  assert.ok(rate > 0.13 && rate < 0.17, `比例 ${rate}`);
+  assert.equal(seen, nights);
+  assert.equal(HEROINE_NIGHT_RATE, 1);
 });
 
-test("隱藏失敗和結局不算進解鎖的 10 種", () => {
-  const dex: Dex = { ...dexOf(9), studio: { count: 3, firstDayIndex: 0 }, [HEROINE_ALMOST_STORY_ID]: { count: 3, firstDayIndex: 0 }, [LADYBUG_ENDING_ID]: { count: 1, firstDayIndex: 0 }, [TRUE_ENDING_ID]: { count: 1, firstDayIndex: 0 } };
+test("隱藏失敗和結局不算進解鎖的 5 種", () => {
+  const dex: Dex = { ...dexOf(4), studio: { count: 3, firstDayIndex: 0 }, [HEROINE_ALMOST_STORY_ID]: { count: 3, firstDayIndex: 0 }, [LADYBUG_ENDING_ID]: { count: 1, firstDayIndex: 0 }, [TRUE_ENDING_ID]: { count: 1, firstDayIndex: 0 } };
   for (let day = 0; day < 2000; day++) {
     assert.equal(heroineCardIndex({ ...createRun(1), dayIndex: day }, dex), null);
   }
