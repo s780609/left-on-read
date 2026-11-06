@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { HEROINE_DATE_COSTS, HEROINE_SEED, LADYBUG_COST, LADYBUG_ENDING_ID, TRUE_ENDING_ID } from "./constants.ts";
 import type { Dex } from "./dex.ts";
+import { calendarOf } from "./calendar.ts";
 import { advance, checkInvariants, createRun, heroineCardIndex, legalActions } from "./game.ts";
 import type { GameAction, GameEvent, Phase, RunState } from "./game.ts";
 import { createRng, pick, randInt } from "./rng.ts";
@@ -75,7 +76,8 @@ test("晚上回完還是可以打開 Swipy 或去睡覺", () => {
   const replied = act(at("night", [chatOf(replyStory())]), {}, { type: "reply", chatId: 1, choice: 0 }).run;
   assert.deepEqual([...legalActions(replied)].sort(), ["buy", "editProfile", "jerkOff", "openApp", "playGames", "sleep"]);
   assert.equal(act(replied, {}, { type: "openApp" }).run.phase, "swiping");
-  assert.equal(act(replied, {}, { type: "sleep" }).run.dayIndex, 33);
+  // 第 32 天是週六，睡醒跳過週日，是第 34 天
+  assert.equal(act(replied, {}, { type: "sleep" }).run.dayIndex, 34);
 });
 
 test("晚上也可以看完結局，圖鑑和花費都跟白天一樣", () => {
@@ -153,7 +155,7 @@ test("今晚才配對的人，要等到隔天才有回覆", () => {
   const run = act(swiping, {}, { type: "chooseOpener", opener: "hi" }).run;
   assert.equal(run.phase, "nightDone");
   assert.deepEqual(readyChats(run.chats, run.dayIndex), []);
-  assert.deepEqual(legalActions(run), ["editProfile", "buy", "sleep"]);
+  assert.deepEqual(legalActions(run), ["jerkOff", "playGames", "editProfile", "buy", "sleep"]);
 });
 
 test("白天回和晚上回，走出來的對話紀錄完全相同", () => {
@@ -163,7 +165,9 @@ test("白天回和晚上回，走出來的對話紀錄完全相同", () => {
     let run = at(phase, [chatOf(story)]);
     for (let i = 0; i < story.steps.length - 1; i++) {
       run = advance(run, {}, { type: "reply", chatId: 1, choice: 0 }).run;
-      run = { ...run, dayIndex: run.dayIndex + 8, phase };
+      // 往後跳 8 天，落在週日就再往後一天
+      const next = run.dayIndex + 8;
+      run = { ...run, dayIndex: calendarOf(next).weekday === 0 ? next + 1 : next, phase };
     }
     return run.chats[0];
   };

@@ -3,7 +3,7 @@
 import { calendarOf, isWorkday } from "@/lib/left-on-read/calendar";
 import { MONTHLY_RENT, MONTHLY_SALARY } from "@/lib/left-on-read/constants";
 import { PAYDAY_LINES, QUIET_PHONE_LINES, WEEKEND_LINES, WORK_LINES, dailyLine } from "@/lib/left-on-read/flavor";
-import { pendingDayEvent, repliesLeft, type RunState } from "@/lib/left-on-read/game";
+import { dayReplyLimit, pendingDayEvent, repliesLeft, type DayAction, type RunState } from "@/lib/left-on-read/game";
 import { generateGirl } from "@/lib/left-on-read/girl";
 import { holidayOf } from "@/lib/left-on-read/holidays";
 import { datesForStory } from "@/lib/left-on-read/stories/index";
@@ -23,7 +23,9 @@ interface DayScreenProps {
   onDayEvent: (choice: number) => void;
 }
 
-/** 白天：平日上班，週末在房間；有訊息可以回時才多一顆按鈕，有事件時先處理事件 */
+const DAY_ACTION_LABEL: Record<DayAction, string> = { reply: "回訊息", date: "約會", shop: "打理自己" };
+
+/** 白天：平日上班，週六在房間。白天只能做一件事：回訊息、約會、打理自己三選一；有事件時先處理事件 */
 export function DayScreen({ run, eventNote, onMenu, onOpenChats, onEndDay, onGoDate, onShop, onDayEvent }: DayScreenProps) {
   const workday = isWorkday(calendarOf(run.dayIndex));
   const holiday = holidayOf(run.dayIndex);
@@ -39,6 +41,10 @@ export function DayScreen({ run, eventNote, onMenu, onOpenChats, onEndDay, onGoD
   const dateWith = dateChat ? generateGirl(dateChat.girlSeed).nickname : "";
   const line = holiday?.line ?? dailyLine(workday ? WORK_LINES : WEEKEND_LINES, run.dayIndex);
   const quiet = dailyLine(QUIET_PHONE_LINES, run.dayIndex);
+  const chosen = run.today.dayAction ?? null;
+  /** 今天白天已經拿去做別的事：這顆按鈕停用 */
+  const usedOtherThan = (action: DayAction) => chosen !== null && chosen !== action;
+  const usedSub = chosen ? `今天白天已經拿去${DAY_ACTION_LABEL[chosen]}了` : "";
 
   return (
     <>
@@ -66,12 +72,14 @@ export function DayScreen({ run, eventNote, onMenu, onOpenChats, onEndDay, onGoD
             {date ? (
               <PixelButton
                 color={COLOR.pink}
-                disabled={run.money < date.cost}
+                disabled={run.money < date.cost || usedOtherThan("date")}
                 onClick={onGoDate}
                 sub={
-                  run.money < date.cost
-                    ? `${date.place}｜等發薪`
-                    : `${date.place}　NT$${date.cost.toLocaleString("en-US")}`
+                  usedOtherThan("date")
+                    ? usedSub
+                    : run.money < date.cost
+                      ? `${date.place}｜等發薪`
+                      : `${date.place}　NT$${date.cost.toLocaleString("en-US")}`
                 }
               >
                 跟{dateWith}出門約會
@@ -79,13 +87,17 @@ export function DayScreen({ run, eventNote, onMenu, onOpenChats, onEndDay, onGoD
             ) : null}
             {chats.length > 0 ? (
               <PixelButton
-                color={ready > 0 ? COLOR.pink : COLOR.gray}
+                color={ready > 0 && !usedOtherThan("reply") ? COLOR.pink : COLOR.gray}
                 onClick={onOpenChats}
                 sub={
-                  ready > 0
-                    ? `今天還能認真回 ${repliesLeft(run)} 則` +
-                      (waiting > 0 ? `｜另外 ${waiting} 個還沒回` : "")
-                    : "沒有新訊息"
+                  usedOtherThan("reply")
+                    ? `${usedSub}｜晚上再回`
+                    : ready > 0
+                      ? (chosen === "reply"
+                          ? `今天還能認真回 ${repliesLeft(run)} 則`
+                          : `白天做這件事｜最多回 ${dayReplyLimit(run)} 則`) +
+                        (waiting > 0 ? `｜另外 ${waiting} 個還沒回` : "")
+                      : "沒有新訊息"
                 }
               >
                 {workday ? "偷偷拿手機回訊息" : "看手機回訊息"}
@@ -93,7 +105,12 @@ export function DayScreen({ run, eventNote, onMenu, onOpenChats, onEndDay, onGoD
               </PixelButton>
             ) : null}
             {!workday ? (
-              <PixelButton color={COLOR.green} onClick={onShop} sub="剪頭髮、買衣服、拍形象照">
+              <PixelButton
+                color={COLOR.green}
+                disabled={usedOtherThan("shop")}
+                onClick={onShop}
+                sub={usedOtherThan("shop") ? usedSub : "剪頭髮、買衣服、拍形象照"}
+              >
                 出門打理自己
               </PixelButton>
             ) : null}
@@ -107,6 +124,15 @@ export function DayScreen({ run, eventNote, onMenu, onOpenChats, onEndDay, onGoD
         <DialogBox>
           {holiday ? <p className="mb-1 text-xs text-[#ff9fb4]">今天是{holiday.name}</p> : null}
           <Typewriter key={line} text={line} />
+          {!event ? (
+            <p className="mt-2 text-sm text-[#ffe08a]">
+              {chosen
+                ? `今天白天拿來${DAY_ACTION_LABEL[chosen]}了。`
+                : workday
+                  ? "白天能做一件事：回訊息（最多 3 則）。"
+                  : "白天能做一件事：回訊息、約會或出門打理自己，三選一。"}
+            </p>
+          ) : null}
           {event ? <p className="mt-2 border-t-2 border-dashed border-[#55587a] pt-2">{event.text}</p> : null}
           {!event && eventNote ? <p className="mt-2 text-sm text-[#c8cae0]">{eventNote}</p> : null}
           {!event && run.today.tired ? (

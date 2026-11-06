@@ -232,3 +232,125 @@ test("同一段對話接著回不算白天則數：上限用完，wait 0 的下�
   // 隔天才回就不算接著回
   assert.ok(!isContinuation({ ...run, dayIndex: day + 1 }, chat));
 });
+
+// ---------- 白天一件事、晚上兩件事、週日跳過 ----------
+
+test("白天只能做一件事：回了訊息就不能約會或打理自己；約會或打理自己之後就不能回", async () => {
+  const { canDoDayAction } = await import("./game.ts");
+  const { STORY_BY_ID: BY_ID, HEROINE_STORY_ID } = await import("./stories/index.ts");
+  const { HEROINE_SEED } = await import("./constants.ts");
+  // 第 11 天是週六
+  const sat = 11;
+  assert.equal(calendarOf(sat).weekday, 6);
+  const dateIdx = BY_ID[HEROINE_STORY_ID].steps.findIndex((s) => "date" in s && s.date?.index === 0);
+  const heroine: Chat = {
+    id: 1,
+    girlSeed: HEROINE_SEED,
+    storyId: HEROINE_STORY_ID,
+    opener: "hi",
+    stepIndex: dateIdx,
+    lastAdvancedDay: 0,
+    replies: Array<number>(dateIdx).fill(0),
+  };
+  const other = chatAt(0, { id: 2, lastAdvancedDay: sat - 2 });
+  const base: RunState = {
+    ...createRun(1),
+    phase: "daytime",
+    dayIndex: sat,
+    money: 50_000,
+    heroineMet: true,
+    chats: [heroine, other],
+    nextChatId: 3,
+  };
+  const legal = legalActions(base);
+  assert.ok(legal.includes("reply") && legal.includes("goOnDate") && legal.includes("buy"));
+
+  // 選了回訊息：約會和打理自己都不行了
+  const replied = advance(base, {}, { type: "reply", chatId: 2, choice: 0 }).run;
+  assert.equal(replied.today.dayAction, "reply");
+  assert.ok(!legalActions(replied).includes("goOnDate"));
+  assert.equal(advance(replied, {}, { type: "buy", item: "haircut" }).run, replied);
+  // 手機裡買 Gold 不算白天那件事
+  assert.notEqual(advance(replied, {}, { type: "buy", item: "gold" }).run, replied);
+
+  // 選了打理自己：還能再買別的，但不能回訊息、不能約會
+  const shopped = advance(base, {}, { type: "buy", item: "haircut" }).run;
+  assert.equal(shopped.today.dayAction, "shop");
+  assert.ok(canDoDayAction(shopped, "shop"));
+  assert.notEqual(advance(shopped, {}, { type: "buy", item: "outfit" }).run, shopped);
+  assert.equal(advance(shopped, {}, { type: "reply", chatId: 2, choice: 0 }).run, shopped);
+  assert.ok(!legalActions(shopped).includes("goOnDate"));
+
+  // 選了約會：回到家是晚上，晚上回訊息不受白天影響
+  const dated = advance(base, {}, { type: "goOnDate", choice: 0 }).run;
+  assert.equal(dated.today.dayAction, "date");
+  assert.equal(dated.phase, "night");
+  assert.notEqual(advance(dated, {}, { type: "reply", chatId: 2, choice: 0 }).run, dated);
+});
+
+test("白天選回訊息最多回 3 則；晚上回訊息不算動作、不限則數", () => {
+  const day = nextPhoneDay(20);
+  const chats = [0, 1, 2, 3].map((i) => chatAt(0, { id: i + 1, girlSeed: 50 + i, lastAdvancedDay: day - 1 }));
+  let run: RunState = { ...createRun(1), phase: "daytime", dayIndex: day, chats, nextChatId: 5 };
+  for (let i = 1; i <= 3; i++) run = advance(run, {}, { type: "reply", chatId: i, choice: 0 }).run;
+  assert.equal(run.dayReplies, 3);
+  assert.ok(!legalActions(run).includes("reply"));
+  const night: RunState = { ...run, phase: "night" };
+  assert.ok(legalActions(night).includes("reply"));
+  const after = advance(night, {}, { type: "reply", chatId: 4, choice: 0 }).run;
+  assert.notEqual(after, night);
+  assert.equal(after.nightActions, 0, "晚上回訊息不算一件事");
+});
+
+test("晚上只能做兩件事：滑 Swipy、打手槍、打電動任選", async () => {
+  const { NIGHT_ACTION_LIMIT } = await import("./constants.ts");
+  assert.equal(NIGHT_ACTION_LIMIT, 2);
+  let run: RunState = { ...createRun(1), phase: "night", dayIndex: 1 };
+  run = advance(run, {}, { type: "jerkOff" }).run;
+  assert.equal(run.nightActions, 1);
+  run = advance(run, {}, { type: "openApp" }).run;
+  assert.equal(run.nightActions, 2);
+  assert.equal(run.phase, "swiping");
+  run = advance(run, {}, { type: "quitApp" }).run;
+  assert.ok(!legalActions(run).includes("playGames"));
+  assert.equal(advance(run, {}, { type: "playGames" }).run, run);
+  // 先打兩件消遣，就不能再滑
+  let other: RunState = { ...createRun(1), phase: "night", dayIndex: 1 };
+  other = advance(other, {}, { type: "jerkOff" }).run;
+  other = advance(other, {}, { type: "playGames" }).run;
+  assert.ok(!legalActions(other).includes("openApp"));
+  assert.equal(advance(other, {}, { type: "openApp" }).run, other);
+  // 滑完之後還有一件可以做
+  let swiped: RunState = { ...createRun(1), phase: "night", dayIndex: 1 };
+  swiped = advance(swiped, {}, { type: "openApp" }).run;
+  swiped = advance(swiped, {}, { type: "quitApp" }).run;
+  assert.equal(swiped.phase, "nightDone");
+  assert.ok(legalActions(swiped).includes("playGames"));
+  // 睡覺歸零
+  const slept = advance(run, {}, { type: "sleep" }).run;
+  assert.equal(slept.nightActions, 0);
+  assert.equal(slept.today.dayAction, null);
+});
+
+test("存檔：白天那件事和晚上做了幾件會留著；舊存檔停在週日會挪到週一", async () => {
+  const { parseRun, serializeRun } = await import("./save.ts");
+  const run: RunState = {
+    ...createRun(1),
+    dayIndex: 4,
+    phase: "night",
+    nightActions: 2,
+    nightHobby: { solo: true, games: true, calm: true },
+    today: { eventDone: false, overtime: false, tired: false, dayAction: "shop" },
+  };
+  const back = parseRun(serializeRun(run))!;
+  assert.equal(back.nightActions, 2);
+  assert.equal(back.today.dayAction, "shop");
+  const raw = JSON.parse(serializeRun({ ...createRun(1), dayIndex: 4 }));
+  raw.dayIndex = 5; // 週日
+  delete raw.nightActions;
+  raw.nightHobby = { solo: true, games: false };
+  const moved = parseRun(JSON.stringify(raw))!;
+  assert.equal(moved.dayIndex, 6);
+  assert.equal(calendarOf(moved.dayIndex).weekday, 1);
+  assert.equal(moved.nightActions, 1, "舊存檔用打過的消遣補");
+});

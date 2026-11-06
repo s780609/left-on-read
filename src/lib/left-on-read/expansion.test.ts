@@ -397,15 +397,16 @@ test("F：節日落在真實日期；情侶節日配對率比較低，光棍節�
       const c = calendarOf(i);
       return c.year === y && c.month === m && c.day === d;
     });
-  assert.equal(holidayOf(dayOf(2026, 8, 19))?.id, "qixi");
+  assert.equal(holidayOf(dayOf(2026, 9, 25))?.id, "mid-autumn");
   assert.equal(holidayOf(dayOf(2026, 12, 24))?.id, "christmas-eve");
   assert.equal(holidayOf(dayOf(2026, 11, 11))?.id, "singles-day");
-  assert.equal(holidayOf(dayOf(2026, 5, 10))?.id, "mothers-day");
-  assert.equal(calendarOf(dayOf(2026, 5, 10)).weekday, 0);
-  assert.equal(holidayOf(dayOf(2026, 5, 11)), null);
-  assert.ok(holidayMatchMult(dayOf(2026, 8, 19)) < 1);
+  // 母親節是週日，遊戲跳過週日，改在前一天週六
+  assert.equal(holidayOf(dayOf(2027, 5, 8))?.id, "mothers-day");
+  assert.equal(calendarOf(dayOf(2027, 5, 8)).weekday, 6);
+  assert.equal(holidayOf(dayOf(2027, 5, 10)), null);
+  assert.ok(holidayMatchMult(dayOf(2026, 12, 24)) < 1);
   assert.ok(holidayMatchMult(dayOf(2026, 11, 11)) > 1);
-  assert.equal(holidayMatchMult(dayOf(2026, 4, 1)), 1);
+  assert.equal(holidayMatchMult(dayOf(2027, 4, 1)), 1);
 });
 
 test("F：白天事件由 runSeed、dayIndex 決定，大約四分之一的日子有；發票日一定有", () => {
@@ -614,8 +615,8 @@ test("成就：局面上的條件", () => {
   assert.ok(ids(at({ deckIndex: DECK_SIZE, nightLog: { rights: DECK_SIZE, matches: 0 } })).includes("ten-zero"));
   assert.ok(ids(at({ money: 120_000 })).includes("rich-alone"));
   assert.ok(ids(at({ ngPlus: true })).includes("ng-plus"));
-  const qixi = findDay((d) => holidayOf(d)?.id === "qixi");
-  assert.ok(ids(at({}), {}, [{ type: "slept", fromDay: qixi }]).includes("holiday-alone"));
+  const eve = findDay((d) => holidayOf(d)?.id === "christmas-eve");
+  assert.ok(ids(at({}), {}, [{ type: "slept", fromDay: eve }]).includes("holiday-alone"));
   const all: Dex = Object.fromEntries(
     [LADYBUG_ENDING_ID, TRUE_ENDING_ID, IRIS_ENDING_ID].map((id) => [id, { count: 1, firstDayIndex: 0 }])
   );
@@ -632,11 +633,12 @@ test("存檔：新欄位往返相等；舊存檔沒有新欄位也讀得進來",
     phase: "night",
     profile: { photo: "pro", bio: "stats" },
     grooming: { goldUntil: 30, haircutUntil: 25, outfit: true, proPhoto: true },
-    today: { eventDone: true, overtime: false, tired: true },
+    today: { eventDone: true, overtime: false, tired: true, dayAction: "reply" },
     nightHobby: { solo: true, games: false, calm: true },
     irisMet: true,
     lastMatchDay: 12,
     nightLog: { rights: 3, matches: 1 },
+    nightActions: 1,
   };
   assert.deepEqual(parseRun(serializeRun(run)), run);
   const old = JSON.parse(serializeRun(createRun(5)));

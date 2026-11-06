@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { audioManager } from "@/lib/audio/AudioManager";
 import { NIGHT_DONE_LINES, NIGHT_LINES, NIGHT_UNREAD_LINES, QUIET_PHONE_LINES, dailyLine } from "@/lib/left-on-read/flavor";
-import type { RunState } from "@/lib/left-on-read/game";
+import { nightActionsLeft, type RunState } from "@/lib/left-on-read/game";
 import { holidayOf } from "@/lib/left-on-read/holidays";
 import { readyChats, visibleChats } from "@/lib/left-on-read/story";
 import {
@@ -57,6 +57,8 @@ export function NightScreen({
     ? "加班到十點才回到家。今晚沒有力氣滑卡了。"
     : dailyLine(lines, run.dayIndex);
   const quiet = dailyLine(QUIET_PHONE_LINES, run.dayIndex);
+  /** 晚上能做兩件事：滑 Swipy、打手槍、打電動任選；回訊息不算 */
+  const left = nightActionsLeft(run);
 
   useEffect(() => preloadPhotos(["night", "nightSolo", "nightGames"]), []);
 
@@ -107,22 +109,22 @@ export function NightScreen({
                 {ready > 0 ? `（${ready}）` : ""}
               </PixelButton>
             ) : null}
-            {!done ? (
-              <PixelButton color={COLOR.pink} disabled={sleeping} onClick={onOpenApp} sub="滑幾張再說">
+            {!done && left > 0 ? (
+              <PixelButton color={COLOR.pink} disabled={sleeping} onClick={onOpenApp} sub="滑一輪 10 張｜算一件事">
                 打開 Swipy
               </PixelButton>
             ) : null}
-            {!done && !run.nightHobby.solo ? (
-              <PixelButton color={COLOR.blue} disabled={sleeping} onClick={onJerkOff} sub="消磨一下｜今晚回訊息多一個冷靜選項">
+            {!run.nightHobby.solo && left > 0 ? (
+              <PixelButton color={COLOR.blue} disabled={sleeping} onClick={onJerkOff} sub="今晚回訊息多一個冷靜選項｜算一件事">
                 打手槍
               </PixelButton>
             ) : null}
-            {!done && !run.nightHobby.games ? (
+            {!run.nightHobby.games && left > 0 ? (
               <PixelButton
                 color={COLOR.blue}
                 disabled={sleeping}
                 onClick={onPlayGames}
-                sub="今晚沒回的不算已讀壓力｜明天少回一則"
+                sub="今晚沒回的不算已讀壓力，明天少回一則｜算一件事"
               >
                 打電動
               </PixelButton>
@@ -140,6 +142,13 @@ export function NightScreen({
           {holiday ? <p className="mb-1 text-xs text-[#ff9fb4]">今天是{holiday.name}</p> : null}
           <Typewriter key={line} text={line} />
           {hobbyNote ? <p className="mt-2 text-sm text-[#c8cae0]">{hobbyNote}</p> : null}
+          {!sleeping ? (
+            <p className="mt-2 text-sm text-[#ffe08a]">
+              {left > 0
+                ? `今晚還能做 ${left} 件事：滑 Swipy、打手槍、打電動任選。回訊息不算。`
+                : "今晚能做的事都做完了。還可以回訊息，然後睡覺。"}
+            </p>
+          ) : null}
           {run.nightHobby.calm && !sleeping ? (
             <p className="mt-2 text-sm text-[#9fd3ff]">賢者模式：今晚回訊息時，會多一個冷靜的選項。</p>
           ) : null}

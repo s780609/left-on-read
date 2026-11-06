@@ -1,7 +1,7 @@
 /** 《已讀不回》的固定數值 */
 
-/** 起始日 2026-03-02（週一），dayIndex 0 */
-export const START_DATE_UTC = Date.UTC(2026, 2, 2);
+/** 起始日 9 月 15 日（週二），dayIndex 0；年份不顯示，內部用 2026 年算星期和節日 */
+export const START_DATE_UTC = Date.UTC(2026, 8, 15);
 
 export const DECK_SIZE = 10;
 
@@ -40,8 +40,10 @@ export const HEROINE_SEED = 0x51a0c1e9;
 export const HEROINE_PHOTOS = ["/left-on-read/heroine/08.jpg", "/left-on-read/heroine/09.jpg"] as const;
 export const TRUE_ENDING_ID = "true-love";
 
-/** 白天認真回訊息的上限；逼玩家選要養哪幾條線 */
+/** 白天選「回訊息」時最多回幾則（同一段對話當場接著回不算）；回訊息、約會、打理自己三選一 */
 export const DAYTIME_REPLY_LIMIT = 3;
+/** 晚上能做幾件事：滑 Swipy、打手槍、打電動任選；回訊息不算 */
+export const NIGHT_ACTION_LIMIT = 2;
 /** 聊天隱性數值：尷尬到這個值會提早結束 */
 export const AWKWARD_END = 3;
 /** 好感不夠又壓力太高時，也會提早冷掉 */

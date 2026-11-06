@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { newGameplayAction } from "./testing.ts";
-import { calendarOf, isPhoneChatDay } from "./calendar.ts";
+import { calendarOf, isPayday, isPhoneChatDay } from "./calendar.ts";
 import {
   DECK_SIZE,
   MONTHLY_RENT,
@@ -101,8 +101,9 @@ const chatOf = (story: Story, patch: Partial<Chat> = {}): Chat => ({
   ...patch,
 });
 
+/** 等滿之後第一個玩得到的日子（週日跳過） */
 const readyDayOf = (chat: Chat) =>
-  firstReadyDay(chat.lastAdvancedDay, STORY_BY_ID[chat.storyId].steps[chat.stepIndex].wait);
+  nextPhoneDay(firstReadyDay(chat.lastAdvancedDay, STORY_BY_ID[chat.storyId].steps[chat.stepIndex].wait));
 
 /** 已經走到最後一步、而且 ready 的聊天 */
 function finalChat(story: Story, id = 1): Chat {
@@ -196,7 +197,8 @@ const PHASE_CASES: Record<Phase, { state: RunState; legal: GameAction["type"][] 
   night: { state: at({ phase: "night" }), legal: ["jerkOff", "playGames", "openApp", "editProfile", "buy", "sleep"] },
   swiping: { state: at({ phase: "swiping" }), legal: ["swipe", "quitApp"] },
   matched: { state: at({ phase: "matched", pendingMatchSeed: 123, deckIndex: 1 }), legal: ["chooseOpener"] },
-  nightDone: { state: at({ phase: "nightDone" }), legal: ["editProfile", "buy", "sleep"] },
+  // 滑完之後還能用剩下的晚上動作打手槍、打電動
+  nightDone: { state: at({ phase: "nightDone" }), legal: ["jerkOff", "playGames", "editProfile", "buy", "sleep"] },
 };
 
 const ONE_OF_EACH: GameAction[] = [
@@ -262,9 +264,9 @@ test("參數無效的動作也回傳同一個 run", () => {
 
 test("平日和週末都能回訊息", () => {
   const story = longStories()[0];
-  assert.equal(calendarOf(36).weekday, 2); // 週二
-  assert.equal(calendarOf(40).weekday, 6); // 週六
-  for (const dayIndex of [36, 40]) {
+  assert.equal(calendarOf(35).weekday, 2); // 週二
+  assert.equal(calendarOf(39).weekday, 6); // 週六
+  for (const dayIndex of [35, 39]) {
     const run = at({ phase: "daytime", dayIndex, chats: [chatOf(story)], nextChatId: 2 });
     assert.ok(legalActions(run).includes("reply"), `第 ${dayIndex} 天`);
     const s = session(run);
@@ -534,23 +536,28 @@ test("dexCompleted：只在未滿變已滿時發一次", () => {
 
 // ---------- 領薪 ----------
 
-test("睡到 5 號進 payday，其他日子進 daytime", () => {
-  const before = session(at({ phase: "night", dayIndex: 2 }));
+test("睡到 5 號進 payday，其他日子進 daytime；週六睡醒直接是週一", () => {
+  // 第 18 天是週六 10/3，週日跳過，醒來是 10/5 週一領薪日
+  const before = session(at({ phase: "night", dayIndex: 18 }));
   before.act({ type: "sleep" });
-  assert.equal(before.run.dayIndex, 3);
+  assert.equal(before.run.dayIndex, 20);
   assert.equal(before.run.phase, "payday");
 
-  const normal = session(at({ phase: "night", dayIndex: 3 }));
+  const normal = session(at({ phase: "night", dayIndex: 20 }));
   normal.act({ type: "sleep" });
-  assert.equal(normal.run.dayIndex, 4);
+  assert.equal(normal.run.dayIndex, 21);
   assert.equal(normal.run.phase, "daytime");
 });
 
-test("5 號落在週末也會進 payday", () => {
-  for (const dayIndex of [34, 125, 187, 278]) {
-    const s = session(at({ phase: "nightDone", dayIndex: dayIndex - 1 }));
+test("5 號落在週六照常進 payday；落在週日就改成 6 號週一", () => {
+  for (const [from, to] of [
+    [80, 81],
+    [354, 356],
+  ]) {
+    const s = session(at({ phase: "nightDone", dayIndex: from }));
     s.act({ type: "sleep" });
-    assert.equal(s.run.phase, "payday", `第 ${dayIndex} 天`);
+    assert.equal(s.run.dayIndex, to);
+    assert.equal(s.run.phase, "payday", `第 ${to} 天`);
   }
 });
 
@@ -574,18 +581,23 @@ test("身上沒錢也領得到薪水", () => {
   assert.equal(s.run.money, NET_PAY);
 });
 
-test("跨月跨年：一年領 12 次薪水，日期連續，金額正確", () => {
+test("跨月跨年：一年領 12 次薪水，週日跳過，金額正確", () => {
   const s = session(createRun(1), NO_MATCH);
   const paydays: number[] = [];
-  for (let day = 0; day < 365; day++) {
-    assert.equal(s.run.dayIndex, day);
+  let played = 0;
+  while (s.run.dayIndex < 365) {
+    const day = s.run.dayIndex;
+    assert.notEqual(calendarOf(day).weekday, 0, `第 ${day} 天是週日`);
     if (s.run.phase === "payday") paydays.push(day);
-    assert.equal(s.run.phase === "payday", calendarOf(day).day === 5, `第 ${day} 天`);
+    assert.equal(s.run.phase === "payday", isPayday(calendarOf(day)), `第 ${day} 天`);
     finishDay(s);
+    played++;
+    const next = s.run.dayIndex;
+    assert.ok(next === day + 1 || (next === day + 2 && calendarOf(day + 1).weekday === 0), `第 ${day} 天之後跳到 ${next}`);
   }
   assert.equal(paydays.length, 12);
-  assert.ok(paydays.includes(309)); // 2027-01-05
-  assert.equal(s.run.money, START_MONEY + 12 * NET_PAY - 365 * NOODLE_PRICE);
+  assert.ok(paydays.includes(112)); // 2027-01-05 週二
+  assert.equal(s.run.money, START_MONEY + 12 * NET_PAY - played * NOODLE_PRICE);
 });
 
 // ---------- 吃飯 ----------
@@ -681,8 +693,8 @@ test("提早放棄：到 nightDone，只剩 sleep，也不能再打開 App", () 
   const s = session(at({ phase: "swiping", deckIndex: 3 }));
   s.act({ type: "quitApp" });
   assert.equal(s.run.phase, "nightDone");
-  // 還能改 Swipy 檔案、買 Gold，但不能再滑
-  assert.deepEqual(legalActions(s.run), ["editProfile", "buy", "sleep"]);
+  // 還能改 Swipy 檔案、買 Gold、用掉剩下那件事，但不能再滑
+  assert.deepEqual(legalActions(s.run), ["jerkOff", "playGames", "editProfile", "buy", "sleep"]);
   assert.equal(advance(s.run, s.dex, { type: "openApp" }).run, s.run);
 });
 

@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { calendarOf, isPhoneChatDay } from "./calendar.ts";
 import type { Dex } from "./dex.ts";
-import { advance, createRun } from "./game.ts";
+import { FRESH_TODAY, advance, createRun } from "./game.ts";
 import type { GameEvent, RunState } from "./game.ts";
 import { generateGirl } from "./girl.ts";
 import type { Girl } from "./girl.ts";
@@ -113,7 +113,7 @@ function walkStory(story: Story, choose: (step: ReplyStep, index: number) => num
   const replies: number[] = [];
   for (let day = startDay; run.chats.some((c) => !c.closed); day++) {
     assert.ok(day <= startDay + 90, `${story.id} 走了 90 天還沒結束`);
-    run = { ...run, dayIndex: day, dayReplies: 0 };
+    run = { ...run, dayIndex: day, dayReplies: 0, today: { ...FRESH_TODAY } };
     const chat = run.chats[0];
     if (!isChatReady(chat, day)) continue;
     const step = story.steps[chat.stepIndex];
@@ -363,10 +363,11 @@ test("firstReadyDay：預設等一天，days 照天數", () => {
 });
 
 test("firstReadyDay：等星期時，當天不算，一定是之後的那一天", () => {
-  assert.equal(firstReadyDay(0, { weekday: 1 }), 7); // 週一等週一，是下週一
-  assert.equal(firstReadyDay(0, { weekday: 6 }), 5); // 週一等週六
-  assert.equal(firstReadyDay(5, { weekday: 6 }), 12); // 週六等週六，是下週六
-  assert.equal(firstReadyDay(5, { weekday: 0 }), 6); // 週六等週日
+  // 第 0 天是 9/15 週二
+  assert.equal(firstReadyDay(0, { weekday: 2 }), 7); // 週二等週二，是下週二
+  assert.equal(firstReadyDay(0, { weekday: 6 }), 4); // 週二等週六
+  assert.equal(firstReadyDay(4, { weekday: 6 }), 11); // 週六等週六，是下週六
+  assert.equal(firstReadyDay(4, { weekday: 1 }), 6); // 週六等週一（中間的週日跳過）
 });
 
 test("isChatReady：配對當天不算，到了等待日才算，之後都算", () => {
@@ -384,13 +385,14 @@ test("isChatReady：配對當天不算，到了等待日才算，之後都算", 
 test("isChatReady：看的是目前這一步的等待", () => {
   const story = STORY_BY_ID["fading-replies"];
   story.steps.forEach((step, stepIndex) => {
-    const chat = makeChat(story, { stepIndex, lastAdvancedDay: 40, replies: new Array<number>(stepIndex).fill(0) });
+    // 第 41 天是週一（第 40 天是週日，遊戲裡不會停在那天）
+    const chat = makeChat(story, { stepIndex, lastAdvancedDay: 41, replies: new Array<number>(stepIndex).fill(0) });
     if (isFinal(step)) {
       // 結局步不等待，當天就能關
-      assert.equal(isChatReady(chat, 40), true, `第 ${stepIndex} 步結局`);
+      assert.equal(isChatReady(chat, 41), true, `第 ${stepIndex} 步結局`);
       return;
     }
-    const ready = firstReadyDay(40, step.wait);
+    const ready = firstReadyDay(41, step.wait);
     assert.equal(isChatReady(chat, ready - 1), false, `第 ${stepIndex} 步`);
     assert.equal(isChatReady(chat, nextPhoneDay(ready)), true, `第 ${stepIndex} 步`);
   });

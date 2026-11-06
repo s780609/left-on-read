@@ -310,7 +310,9 @@ export function ChatRoom({ run, chat, onReply, onFinish, onDelete, onBack }: Cha
           <>
             {/* 白天認真回訊息有上限：選項按了也送不出去，乾脆不要擺出來 */}
             <p className="text-center text-sm text-[#a9abc9]">
-              今天白天已經認真回夠了。這則晚上回到家再回。
+              {run.today.dayAction === "reply" || !run.today.dayAction
+                ? "今天白天已經認真回夠了。這則晚上回到家再回。"
+                : "今天白天拿去做別的事了。這則晚上回到家再回。"}
             </p>
             <PixelButton onClick={onBack}>回列表</PixelButton>
           </>

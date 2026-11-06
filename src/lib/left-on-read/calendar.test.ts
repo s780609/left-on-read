@@ -1,6 +1,15 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { calendarOf, firstDayIndexOnOrAfter, isPayday, isPhoneChatDay, isWorkday } from "./calendar.ts";
+import {
+  calendarOf,
+  firstDayIndexOnOrAfter,
+  formatDate,
+  isPayday,
+  isPhoneChatDay,
+  isPlayDay,
+  isWorkday,
+  nextPlayDay,
+} from "./calendar.ts";
 import type { CalendarDay } from "./calendar.ts";
 import { START_DATE_UTC } from "./constants.ts";
 
@@ -8,60 +17,53 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 // CalendarDay.month 是真實月份（1～12），weekday 是 0=週日
 
-test("起始日是 2026-03-02", () => {
-  assert.equal(START_DATE_UTC, Date.UTC(2026, 2, 2));
+test("起始日是 9 月 15 日（內部用 2026 年，週二）", () => {
+  assert.equal(START_DATE_UTC, Date.UTC(2026, 8, 15));
 });
 
-test("dayIndex 0 是 2026-03-02 週一，而且要上班", () => {
+test("dayIndex 0 是 9/15 週二，要上班", () => {
   const c = calendarOf(0);
-  assert.deepEqual(c, { year: 2026, month: 3, day: 2, weekday: 1 });
+  assert.deepEqual(c, { year: 2026, month: 9, day: 15, weekday: 2 });
   assert.equal(isWorkday(c), true);
   assert.equal(isPayday(c), false);
 });
 
-test("dayIndex 3 是 3/5 週四，是領薪日", () => {
-  const c = calendarOf(3);
-  assert.deepEqual(c, { year: 2026, month: 3, day: 5, weekday: 4 });
+test("畫面上的日期不顯示年份", () => {
+  assert.equal(formatDate(calendarOf(0)), "9月15日 週二");
+});
+
+test("dayIndex 4 是週六；週日（dayIndex 5）要跳過，週六睡醒是週一", () => {
+  assert.deepEqual(calendarOf(4), { year: 2026, month: 9, day: 19, weekday: 6 });
+  assert.equal(isPlayDay(calendarOf(4)), true);
+  assert.equal(isPlayDay(calendarOf(5)), false);
+  assert.equal(nextPlayDay(4), 6);
+  assert.equal(calendarOf(6).weekday, 1);
+  for (let i = 0; i < 400; i++) assert.ok(isPlayDay(calendarOf(nextPlayDay(i))), `dayIndex ${i}`);
+});
+
+test("dayIndex 20 是 10/5，是領薪日", () => {
+  const c = calendarOf(20);
+  assert.deepEqual(c, { year: 2026, month: 10, day: 5, weekday: 1 });
   assert.equal(isPayday(c), true);
 });
 
-test("dayIndex 5、6 是週末，不用上班", () => {
-  assert.deepEqual(calendarOf(5), { year: 2026, month: 3, day: 7, weekday: 6 });
-  assert.deepEqual(calendarOf(6), { year: 2026, month: 3, day: 8, weekday: 0 });
-  assert.equal(isWorkday(calendarOf(5)), false);
-  assert.equal(isWorkday(calendarOf(6)), false);
+test("5 號落在週六照常入帳；落在週日（被跳過）就改到 6 號週一", () => {
+  assert.deepEqual(calendarOf(81), { year: 2026, month: 12, day: 5, weekday: 6 });
+  assert.equal(isPayday(calendarOf(81)), true);
+  assert.equal(calendarOf(355).weekday, 0);
+  assert.equal(calendarOf(355).day, 5);
+  assert.equal(nextPlayDay(354), 356);
+  assert.equal(isPayday(calendarOf(356)), true);
 });
 
-test("落在週末的 5 號仍然是領薪日", () => {
-  const cases: [number, number, number, number, number][] = [
-    [34, 2026, 4, 5, 0],
-    [125, 2026, 7, 5, 0],
-    [187, 2026, 9, 5, 6],
-    [278, 2026, 12, 5, 6],
-  ];
-  for (const [dayIndex, year, month, day, weekday] of cases) {
-    const c = calendarOf(dayIndex);
-    assert.deepEqual(c, { year, month, day, weekday });
-    assert.equal(isPayday(c), true);
-    assert.equal(isWorkday(c), false);
-  }
-});
-
-test("dayIndex 309 是 2027-01-05", () => {
-  const c = calendarOf(309);
-  assert.deepEqual(c, { year: 2027, month: 1, day: 5, weekday: 2 });
-  assert.equal(isPayday(c), true);
-  assert.equal(isWorkday(c), true);
-});
-
-test("365 天內領薪日恰好 12 次，每個都是 5 號", () => {
-  const paydays: CalendarDay[] = [];
-  for (let i = 0; i < 365; i++) {
+test("一路照遊戲的日子走 365 天，每個月剛好領一次薪水", () => {
+  const months = new Map<string, number>();
+  for (let i = 0; i < 365; i = nextPlayDay(i)) {
     const c = calendarOf(i);
-    if (isPayday(c)) paydays.push(c);
+    if (isPayday(c)) months.set(`${c.year}-${c.month}`, (months.get(`${c.year}-${c.month}`) ?? 0) + 1);
   }
-  assert.equal(paydays.length, 12);
-  assert.ok(paydays.every((c) => c.day === 5));
+  assert.equal(months.size, 12);
+  assert.ok([...months.values()].every((n) => n === 1));
 });
 
 test("週一到週五是工作日，週六週日不是", () => {
@@ -104,11 +106,11 @@ test("不同時區的結果相同", () => {
 });
 
 test("firstDayIndexOnOrAfter：當天符合就回傳當天，否則找下一個", () => {
-  assert.equal(firstDayIndexOnOrAfter(0, 1), 0); // 週一找週一
-  assert.equal(firstDayIndexOnOrAfter(1, 1), 7); // 週二找週一
-  assert.equal(firstDayIndexOnOrAfter(0, 6), 5); // 週一找週六
-  assert.equal(firstDayIndexOnOrAfter(5, 6), 5); // 週六找週六
-  assert.equal(firstDayIndexOnOrAfter(6, 6), 12); // 週日找週六
+  assert.equal(firstDayIndexOnOrAfter(0, 2), 0); // 週二找週二
+  assert.equal(firstDayIndexOnOrAfter(1, 2), 7); // 週三找週二
+  assert.equal(firstDayIndexOnOrAfter(0, 6), 4); // 週二找週六
+  assert.equal(firstDayIndexOnOrAfter(4, 6), 4); // 週六找週六
+  assert.equal(firstDayIndexOnOrAfter(5, 6), 11); // 週日找週六
 });
 
 test("firstDayIndexOnOrAfter：一週內一定找到正確的星期", () => {
@@ -121,9 +123,9 @@ test("firstDayIndexOnOrAfter：一週內一定找到正確的星期", () => {
   }
 });
 
-test("每天都能回訊息", () => {
-  // dayIndex 0 = 2026-03-02 週一；含平日與週末
+test("週一到週六都能回訊息，週日跳過", () => {
+  // dayIndex 0 = 9/15 週二；週一到週六都能回，週日（dayIndex 5）跳過
   for (let i = 0; i < 7; i++) {
-    assert.equal(isPhoneChatDay(calendarOf(i)), true, `dayIndex ${i}`);
+    assert.equal(isPhoneChatDay(calendarOf(i)), i !== 5, `dayIndex ${i}`);
   }
 });

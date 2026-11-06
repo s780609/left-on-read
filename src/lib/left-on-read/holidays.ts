@@ -92,11 +92,11 @@ const SOLAR: readonly (Holiday & { month: number; day: number })[] = [
   },
 ];
 
-/** 母親節：五月第二個星期日 */
+/** 母親節是五月第二個星期日，但遊戲跳過週日，改在前一天週六 */
 const MOTHERS_DAY: Holiday = {
   id: "mothers-day",
-  name: "母親節",
-  line: "母親節。打電話回家，媽問我有沒有女朋友。我說有在努力。她說努力不能吃。",
+  name: "母親節前一天",
+  line: "明天母親節。先打電話回家，媽問我有沒有女朋友。我說有在努力。她說努力不能吃。",
   matchMult: 1,
 };
 
@@ -166,8 +166,8 @@ export function holidayOf(dayIndex: number): Holiday | null {
   if (lunar) return lunar;
   const solar = SOLAR.find((h) => h.month === c.month && h.day === c.day);
   if (solar) return solar;
-  // 母親節：五月第二個星期日，日期落在 8～14 號
-  if (c.month === 5 && c.weekday === 0 && c.day >= 8 && c.day <= 14) return MOTHERS_DAY;
+  // 母親節前一天：五月第二個星期六，日期落在 7～13 號
+  if (c.month === 5 && c.weekday === 6 && c.day >= 7 && c.day <= 13) return MOTHERS_DAY;
   return null;
 }
 

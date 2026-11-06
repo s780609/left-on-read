@@ -30,21 +30,32 @@ export function isWorkday(c: CalendarDay): boolean {
   return c.weekday >= 1 && c.weekday <= 5;
 }
 
-/** 每天都能回訊息（含平日）；約會仍只在週末 */
-export function isPhoneChatDay(_c: CalendarDay): boolean {
-  return true;
+/** 週一到週六都能回訊息（週日整天跳過）；約會只在週六 */
+export function isPhoneChatDay(c: CalendarDay): boolean {
+  return isPlayDay(c);
 }
 
-/** 每月 5 號，週末也照常入帳 */
+/** 週日直接跳過，遊戲裡不會停在週日 */
+export function isPlayDay(c: CalendarDay): boolean {
+  return c.weekday !== 0;
+}
+
+/** 睡一覺之後的下一天：週六睡醒就是週一 */
+export function nextPlayDay(dayIndex: number): number {
+  const next = dayIndex + 1;
+  return isPlayDay(calendarOf(next)) ? next : next + 1;
+}
+
+/** 每月 5 號入帳；5 號剛好是週日（被跳過）就改到 6 號週一 */
 export function isPayday(c: CalendarDay): boolean {
-  return c.day === 5;
+  return c.day === 5 || (c.day === 6 && c.weekday === 1);
 }
 
 export function firstDayIndexOnOrAfter(from: number, weekday: number): number {
   return from + ((weekday - calendarOf(from).weekday + 7) % 7);
 }
 
-/** 顯示文字，例如「3月5日 週四」 */
+/** 顯示文字，例如「9月15日 週二」，不顯示年份 */
 export function formatDate(c: CalendarDay): string {
   return `${c.month}月${c.day}日 ${WEEKDAY_NAMES[c.weekday]}`;
 }

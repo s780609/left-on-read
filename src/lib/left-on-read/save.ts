@@ -5,7 +5,8 @@
 
 import { ACHIEVEMENT_BY_ID, COUNTER_IDS } from "./achievements.ts";
 import type { Achievements, MetaCounters } from "./achievements.ts";
-import { DECK_SIZE, HEROINE_SEED, IRIS_SEED, MAX_MONEY, START_MONEY } from "./constants.ts";
+import { DECK_SIZE, HEROINE_SEED, IRIS_SEED, MAX_MONEY, NIGHT_ACTION_LIMIT, START_MONEY } from "./constants.ts";
+import { calendarOf, isPlayDay } from "./calendar.ts";
 import { ENDING_IDS } from "./dex.ts";
 import type { Dex } from "./dex.ts";
 import { OPENER_KINDS, PHASES, drawMeal, seededRngs } from "./game.ts";
@@ -119,9 +120,11 @@ export function parseRun(raw: string | null): RunState | null {
   try {
     const data = parseJson(raw);
     if (!isObject(data) || data.v !== 1) return null;
-    const { runSeed, dayIndex, phase: rawPhase } = data;
+    const { runSeed, dayIndex: rawDay, phase: rawPhase } = data;
     if (typeof runSeed !== "number" || !Number.isFinite(runSeed)) return null;
-    if (!isCount(dayIndex)) return null;
+    if (!isCount(rawDay)) return null;
+    // 週日要跳過：舊存檔（起始日改過）可能剛好停在週日，往後挪到週一
+    const dayIndex = isPlayDay(calendarOf(rawDay)) ? rawDay : rawDay + 1;
     if (!PHASES.includes(rawPhase as Phase)) return null;
 
     let phase = rawPhase as Phase;
@@ -180,6 +183,7 @@ export function parseRun(raw: string | null): RunState | null {
         eventDone: today.eventDone === true,
         overtime: today.overtime === true,
         tired: today.tired === true,
+        dayAction: today.dayAction === "reply" || today.dayAction === "date" || today.dayAction === "shop" ? today.dayAction : null,
         ...(today.outing === true ? { outing: true } : {}),
       },
       ngPlus,
@@ -188,6 +192,10 @@ export function parseRun(raw: string | null): RunState | null {
       // 舊存檔沒有：從今天開始算
       lastMatchDay: isCount(data.lastMatchDay) ? Math.min(data.lastMatchDay, dayIndex) : dayIndex,
       nightLog: { rights, matches: isCount(nightLog.matches) ? Math.min(nightLog.matches, rights) : 0 },
+      // 舊存檔沒有：用今晚已經做過的消遣補
+      nightActions: isCount(data.nightActions)
+        ? Math.min(data.nightActions, NIGHT_ACTION_LIMIT)
+        : Math.min(NIGHT_ACTION_LIMIT, Number(nightHobby.solo) + Number(nightHobby.games)),
     };
   } catch {
     return null;

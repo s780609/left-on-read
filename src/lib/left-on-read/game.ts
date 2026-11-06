@@ -3,7 +3,7 @@
  * 不合法的動作回傳同一個 run 參考，events 為空。
  */
 
-import { calendarOf, isPayday, isWorkday } from "./calendar.ts";
+import { calendarOf, isPayday, isPlayDay, isWorkday, nextPlayDay } from "./calendar.ts";
 import {
   DECK_SIZE,
   GAMES_TIRED_PENALTY,
@@ -17,6 +17,7 @@ import {
   MAX_MONEY,
   MIXUP_MIN_CHATS,
   MIXUP_P,
+  NIGHT_ACTION_LIMIT,
   MONTHLY_RENT,
   MONTHLY_SALARY,
   NG_PLUS_REPLY_BONUS,
@@ -100,11 +101,17 @@ export interface TodayState {
   overtime: boolean;
   /** 昨晚打電動，今天睡太晚 */
   tired: boolean;
+  /** 白天唯一的那件事：回訊息、約會、打理自己三選一；還沒選是 null */
+  dayAction?: DayAction | null;
   /** 下班跟同事出去，晚餐吃過了 */
   outing?: boolean;
 }
 
-export const FRESH_TODAY: TodayState = { eventDone: false, overtime: false, tired: false };
+export type DayAction = "reply" | "date" | "shop";
+
+export const DAY_ACTIONS: readonly DayAction[] = ["reply", "date", "shop"];
+
+export const FRESH_TODAY: TodayState = { eventDone: false, overtime: false, tired: false, dayAction: null };
 
 export interface RunState {
   v: 1;
@@ -137,6 +144,8 @@ export interface RunState {
   lastMatchDay: number;
   /** 今晚右滑了幾張、配對幾個；睡覺歸零 */
   nightLog: { rights: number; matches: number };
+  /** 今晚已經做了幾件事（滑 Swipy、打手槍、打電動）；回訊息不算，上限 NIGHT_ACTION_LIMIT */
+  nightActions: number;
 }
 
 export type GameAction =
@@ -235,6 +244,7 @@ export function createRun(runSeed: number, options: { ngPlus?: boolean } = {}): 
     irisMet: false,
     lastMatchDay: 0,
     nightLog: { rights: 0, matches: 0 },
+    nightActions: 0,
   };
 }
 
@@ -254,9 +264,22 @@ export function dayReplyLimit(run: RunState): number {
   return Math.max(1, DAYTIME_REPLY_LIMIT + bonus - (run.today.tired ? GAMES_TIRED_PENALTY : 0));
 }
 
-/** 現在還能認真回幾則：白天有上限，晚上不限（Infinity） */
+/** 白天這件事還能不能選：還沒選，或今天選的就是它 */
+export function canDoDayAction(run: RunState, action: DayAction): boolean {
+  const chosen = run.today.dayAction ?? null;
+  return run.phase === "daytime" && (chosen === null || chosen === action);
+}
+
+/** 今晚還能做幾件事 */
+export function nightActionsLeft(run: RunState): number {
+  return Math.max(0, NIGHT_ACTION_LIMIT - run.nightActions);
+}
+
+/** 現在還能認真回幾則：白天選了回訊息才有額度（約會、打理自己就沒有），晚上不限（Infinity） */
 export function repliesLeft(run: RunState): number {
-  return run.phase === "daytime" ? Math.max(0, dayReplyLimit(run) - run.dayReplies) : Infinity;
+  if (run.phase !== "daytime") return Infinity;
+  if (!canDoDayAction(run, "reply")) return 0;
+  return Math.max(0, dayReplyLimit(run) - run.dayReplies);
 }
 
 /** 冠宇現在的檔案讓配對率乘上多少（含節日） */
@@ -268,7 +291,7 @@ export function runMatchMult(run: RunState): number {
 export function canShopNow(run: RunState, item: ShopItemId): boolean {
   const where = SHOP_ITEM_BY_ID[item].where;
   if (where === "app") return canUsePhone(run.phase);
-  return run.phase === "daytime" && !isWorkday(calendarOf(run.dayIndex));
+  return canDoDayAction(run, "shop") && !isWorkday(calendarOf(run.dayIndex));
 }
 
 function affordableShopItems(run: RunState): ShopItemId[] {
@@ -359,6 +382,7 @@ export function deckCardSeed(run: RunState, dex: Dex, cardIndex: number): number
 
 /** 今天付得起、可以出門赴約的那一場 */
 function affordableDate(run: RunState) {
+  if (!canDoDayAction(run, "date")) return null;
   const chat = dueDateChat(run.chats, run.dayIndex);
   const step = chat && pendingDateStep(chat);
   return chat && step?.date && run.money >= step.date.cost ? { chat, step, date: step.date } : null;
@@ -445,19 +469,20 @@ export function legalActions(run: RunState): GameAction["type"][] {
       const meal = offeredMeal(run);
       return meal && run.money >= meal.price ? ["eatOut", "goHome"] : ["goHome"];
     }
-    case "night": {
-      const actions: GameAction["type"][] = [...chatActions(run), "openApp", "sleep"];
-      if (!run.nightHobby.solo) actions.splice(actions.length - 1, 0, "jerkOff");
-      if (!run.nightHobby.games) actions.splice(actions.length - 1, 0, "playGames");
-      actions.splice(actions.length - 1, 0, "editProfile", ...shop);
+    case "night":
+    case "nightDone": {
+      const free = nightActionsLeft(run) > 0;
+      const actions: GameAction["type"][] = [...chatActions(run)];
+      if (run.phase === "night" && free) actions.push("openApp");
+      if (free && !run.nightHobby.solo) actions.push("jerkOff");
+      if (free && !run.nightHobby.games) actions.push("playGames");
+      actions.push("editProfile", ...shop, "sleep");
       return actions;
     }
     case "swiping":
       return ["swipe", "quitApp"];
     case "matched":
       return ["chooseOpener"];
-    case "nightDone":
-      return [...chatActions(run), "editProfile", ...shop, "sleep"];
   }
 }
 
@@ -482,6 +507,9 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
       if (!chat || !isChatReady(chat, run.dayIndex, run.phase)) return same;
       if (!hasReplyQuota(run, chat)) return same;
       const continuation = isContinuation(run, chat);
+      // 白天第一則認真回的訊息：今天白天就拿來回訊息了
+      const today: TodayState =
+        run.phase === "daytime" && !continuation ? { ...run.today, dayAction: "reply" } : run.today;
       const step = storyStep(chat);
       if (!step || isFinal(step)) return same;
       if (!Number.isInteger(action.choice) || action.choice < 0 || action.choice >= step.replies.length) return same;
@@ -558,6 +586,7 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
         run: {
           ...run,
           dayReplies: run.phase === "daytime" && !continuation ? run.dayReplies + 1 : run.dayReplies,
+          today,
           nightHobby: calm ? { ...run.nightHobby, calm: false } : run.nightHobby,
           chats,
         },
@@ -592,7 +621,14 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
       };
       // 約會佔掉一整天，回到家已經是深夜，晚餐也吃過了
       return {
-        run: { ...run, money, phase: "night", offeredMealId: null, chats: run.chats.map((c) => (c === chat ? next : c)) },
+        run: {
+          ...run,
+          money,
+          phase: "night",
+          offeredMealId: null,
+          today: { ...run.today, dayAction: "date" },
+          chats: run.chats.map((c) => (c === chat ? next : c)),
+        },
         dex,
         events: [finished],
       };
@@ -672,8 +708,12 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
       };
 
     case "openApp":
-      if (run.phase !== "night") return same;
-      return { run: { ...run, phase: "swiping", deckIndex: 0 }, dex, events: [] };
+      if (run.phase !== "night" || nightActionsLeft(run) <= 0) return same;
+      return {
+        run: { ...run, phase: "swiping", deckIndex: 0, nightActions: run.nightActions + 1 },
+        dex,
+        events: [],
+      };
 
     case "swipe": {
       if (run.phase !== "swiping" || run.deckIndex >= DECK_SIZE) return same;
@@ -781,7 +821,8 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
 
     case "sleep": {
       if (run.phase !== "night" && run.phase !== "nightDone") return same;
-      const dayIndex = run.dayIndex + 1;
+      // 週六睡醒就是週一
+      const dayIndex = nextPlayDay(run.dayIndex);
       // 已讀壓力：今天能回卻沒回的聊天，隔天壓力 +1；打電動的晚上不算（在打排位，沒看到）
       let chats = run.chats.map((chat) => {
         if (run.nightHobby.games) return chat;
@@ -821,6 +862,7 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
           nightHobby: { ...FRESH_NIGHT_HOBBY },
           today: { ...FRESH_TODAY, tired: run.nightHobby.games },
           nightLog: { rights: 0, matches: 0 },
+          nightActions: 0,
           phase: isPayday(calendarOf(dayIndex)) ? "payday" : "daytime",
           chats,
         },
@@ -838,6 +880,8 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
           ...run,
           money: run.money - item.price,
           grooming: applyPurchase(run.grooming, action.item, run.dayIndex),
+          // 出門打理自己：今天白天就拿來做這件事了（Swipy Gold 在手機裡買，不算）
+          ...(item.where === "weekend" ? { today: { ...run.today, dayAction: "shop" as const } } : {}),
         },
         dex,
         events: [{ type: "bought", item: action.item, price: item.price, line: item.line }],
@@ -885,9 +929,14 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
     }
 
     case "jerkOff": {
-      if (run.phase !== "night" || run.nightHobby.solo) return same;
+      if ((run.phase !== "night" && run.phase !== "nightDone") || run.nightHobby.solo) return same;
+      if (nightActionsLeft(run) <= 0) return same;
       return {
-        run: { ...run, nightHobby: { ...run.nightHobby, solo: true, calm: true } },
+        run: {
+          ...run,
+          nightHobby: { ...run.nightHobby, solo: true, calm: true },
+          nightActions: run.nightActions + 1,
+        },
         dex,
         events: [
           {
@@ -900,9 +949,10 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
     }
 
     case "playGames": {
-      if (run.phase !== "night" || run.nightHobby.games) return same;
+      if ((run.phase !== "night" && run.phase !== "nightDone") || run.nightHobby.games) return same;
+      if (nightActionsLeft(run) <= 0) return same;
       return {
-        run: { ...run, nightHobby: { ...run.nightHobby, games: true } },
+        run: { ...run, nightHobby: { ...run.nightHobby, games: true }, nightActions: run.nightActions + 1 },
         dex,
         events: [
           {
@@ -952,6 +1002,12 @@ export function checkInvariants(run: RunState): string[] {
   }
   if (run.chats.some((c) => c.opener === "memory") && !run.ngPlus) errors.push("不是新遊戲＋卻用了上一輪的開場白");
   if (run.nightLog.matches > run.nightLog.rights || run.nightLog.rights > DECK_SIZE) errors.push("今晚滑卡紀錄不合法");
+  if (!Number.isInteger(run.nightActions) || run.nightActions < 0 || run.nightActions > NIGHT_ACTION_LIMIT) {
+    errors.push(`今晚做的事不合法：${run.nightActions}`);
+  }
+  if (!isPlayDay(calendarOf(run.dayIndex))) errors.push("停在週日：週日要跳過");
+  const dayAction = run.today?.dayAction ?? null;
+  if (dayAction !== null && !DAY_ACTIONS.includes(dayAction)) errors.push(`白天的事不合法：${dayAction}`);
 
   const ids = new Set<number>();
   for (const chat of run.chats) {

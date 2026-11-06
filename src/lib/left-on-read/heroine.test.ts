@@ -15,7 +15,7 @@ import {
 } from "./constants.ts";
 import { dexProgress, endingProgress } from "./dex.ts";
 import type { Dex } from "./dex.ts";
-import { advance, checkInvariants, createRun, deckCardSeed, heroineCardIndex, legalActions, settleRun } from "./game.ts";
+import { FRESH_TODAY, advance, checkInvariants, createRun, deckCardSeed, heroineCardIndex, legalActions, settleRun } from "./game.ts";
 import type { GameAction, GameEvent, RunState } from "./game.ts";
 import { deckSeed, generateGirl } from "./girl.ts";
 import { INTERESTS } from "./girlData.ts";
@@ -49,8 +49,8 @@ const COMEBACK_STEP = STORY.steps.findIndex((s) => "comeback" in s);
 /** 假失敗的第一句：「……就這樣了」往前三步 */
 const GHOST_STEP = FAKE_STEP - 3;
 
-/** 第一個週六（第 0 天是週一） */
-const SATURDAY = 5;
+/** 第二個週六（第 0 天是 9/15 週二，第 4 天是第一個週六）：要等 5 天的約會也趕得上 */
+const SATURDAY = 11;
 
 /** 收集了 n 種一般失敗的圖鑑 */
 const dexOf = (n: number): Dex =>
@@ -106,7 +106,7 @@ function answerChat(opener: OpenerKind, scores: readonly number[]) {
   run = advance(run, dex, { type: "chooseOpener", opener }).run;
   let events: GameEvent[] = [];
   for (let i = 0; i < scores.length; i++) {
-    run = { ...run, phase: "daytime", dayIndex: nextPhoneDay(run.dayIndex + 1), dayReplies: 0 };
+    run = { ...run, phase: "daytime", dayIndex: nextPhoneDay(run.dayIndex + 1), dayReplies: 0, today: { ...FRESH_TODAY } };
     const r = act(run, dex, { type: "reply", chatId: 1, choice: choiceFor(i, scores[i]) });
     run = r.run;
     events = r.events;
@@ -213,7 +213,7 @@ test("同一局已經在走她的路線、或走回失敗，就不再出現", ()
   for (let day = 0; day < 500; day++) assert.equal(heroineCardIndex({ ...met, dayIndex: day }, UNLOCKED), null);
   // 走回失敗之後聊天沒了，但這一局還是不會再出現
   const { run } = answerChat("hi", [-1, -1, -1, -1]);
-  const closed = advance({ ...run, dayIndex: nextPhoneDay(run.dayIndex + 1), dayReplies: 0 }, UNLOCKED, { type: "closeChat", chatId: 1 });
+  const closed = advance({ ...run, dayIndex: nextPhoneDay(run.dayIndex + 1), dayReplies: 0, today: { ...FRESH_TODAY } }, UNLOCKED, { type: "closeChat", chatId: 1 });
   assert.equal(closed.run.chats.length, 1);
   assert.equal(closed.run.chats[0].closed, true);
   assert.equal(closed.run.heroineMet, true);
@@ -264,7 +264,7 @@ test("分數邊界：1 分走回失敗，記一筆隱藏失敗，不影響 27 �
   assert.equal(chatScore(chat), 1);
   assert.equal(chat.storyId, HEROINE_ALMOST_STORY_ID);
 
-  const next: RunState = { ...run, dayIndex: nextPhoneDay(run.dayIndex + 1), dayReplies: 0 };
+  const next: RunState = { ...run, dayIndex: nextPhoneDay(run.dayIndex + 1), dayReplies: 0, today: { ...FRESH_TODAY } };
   assert.ok(legalActions(next).includes("closeChat"));
   const before = dexProgress(UNLOCKED).collected;
   const r = act(next, UNLOCKED, { type: "closeChat", chatId: 1 });
@@ -369,14 +369,14 @@ test("約會佔掉一整天：回到家就是深夜，不能在聊天室裡用�
 });
 
 test("第一次和第二次約會一定不在同一個週末", () => {
-  for (const day of [SATURDAY, SATURDAY + 1]) {
+  for (const day of [SATURDAY, SATURDAY + 7]) {
     let run = advance(runWith(chatAt(dateStepIndex(0)), { dayIndex: day }), {}, { type: "goOnDate", choice: 0 }).run;
     assert.ok(isChatReady(run.chats[0], day), "當晚收尾同一天可回");
     run = act(run, {}, { type: "reply", chatId: 1, choice: 0 }).run;
     assert.equal(isChatReady(run.chats[0], day), false, "收尾後當天沒有下一則");
     // 每天都回，用最快的速度走到第二次約會
     for (let today = day + 1; run.chats[0].stepIndex < dateStepIndex(1); today++) {
-      run = { ...run, phase: "daytime", dayIndex: today, dayReplies: 0 };
+      run = { ...run, phase: "daytime", dayIndex: today, dayReplies: 0, today: { ...FRESH_TODAY } };
       if (isChatReady(run.chats[0], today)) run = act(run, {}, { type: "reply", chatId: 1, choice: 0 }).run;
     }
     assert.equal(run.chats[0].stepIndex, dateStepIndex(1), "應該停在第二次約會步驟");
@@ -428,10 +428,10 @@ test("威秀之後：當晚先收尾，隔天再聊，回完才收到大稻埕�
   run = act(run, {}, { type: "reply", chatId: 1, choice: 0 }).run;
   assert.ok(!legalActions(run).includes("reply"), "收尾後要等隔天");
 
-  run = { ...run, phase: "daytime", dayIndex: nextPhoneDay(dayOfDate + 1), dayReplies: 0 };
+  run = { ...run, phase: "daytime", dayIndex: nextPhoneDay(dayOfDate + 1), dayReplies: 0, today: { ...FRESH_TODAY } };
   run = act(run, {}, { type: "reply", chatId: 1, choice: 1 }).run;
   assert.ok(!legalActions(run).includes("reply"), "一天一步");
-  run = { ...run, phase: "daytime", dayIndex: nextPhoneDay(run.dayIndex + 1), dayReplies: 0 };
+  run = { ...run, phase: "daytime", dayIndex: nextPhoneDay(run.dayIndex + 1), dayReplies: 0, today: { ...FRESH_TODAY } };
   run = act(run, {}, { type: "reply", chatId: 1, choice: 0 }).run;
 
   // before 已含當晚收尾的 lead／incoming（wait:0 當下就顯示）
@@ -458,8 +458,9 @@ test("她回來之後：聊完才約得到板橋耶誕城，假失敗那段她�
   run = act(run, {}, { type: "reply", chatId: 1, choice: 0 }).run;
   for (let i = COMEBACK_STEP + 1; i < dateStepIndex(2); i++) {
     assert.equal(run.chats[0].stepIndex, i);
-    // 第 5、6 天是週末：聊天沒回完之前，週末也沒有約會可以赴
-    run = { ...run, phase: "daytime", dayIndex: SATURDAY + (i - COMEBACK_STEP - 1), dayReplies: 0 };
+    // 先是週六，再來是週一：聊天沒回完之前，週六也沒有約會可以赴
+    const day = i === COMEBACK_STEP + 1 ? SATURDAY : nextPhoneDay(run.dayIndex + 1);
+    run = { ...run, phase: "daytime", dayIndex: day, dayReplies: 0, today: { ...FRESH_TODAY } };
     assert.equal(dueDateChat(run.chats, run.dayIndex), null);
     assert.ok(!legalActions(run).includes("goOnDate"));
     run = act(run, {}, { type: "reply", chatId: 1, choice: 0 }).run;
@@ -489,10 +490,10 @@ function throughGhosting() {
   // 當晚收尾 → 隔天聊煙火 → 再開始假失敗
   assert.ok(legalActions(run).includes("reply"), "大稻埕當晚收尾");
   run = act(run, dex, { type: "reply", chatId: 1, choice: 0 }).run;
-  run = { ...run, phase: "daytime", dayIndex: nextPhoneDay(run.dayIndex + 1), dayReplies: 0 };
+  run = { ...run, phase: "daytime", dayIndex: nextPhoneDay(run.dayIndex + 1), dayReplies: 0, today: { ...FRESH_TODAY } };
   run = act(run, dex, { type: "reply", chatId: 1, choice: 0 }).run;
   // 假失敗那段同一天聊完：三句都在同一個白天回
-  run = { ...run, phase: "daytime", dayIndex: nextPhoneDay(run.dayIndex + 1), dayReplies: 0 };
+  run = { ...run, phase: "daytime", dayIndex: nextPhoneDay(run.dayIndex + 1), dayReplies: 0, today: { ...FRESH_TODAY } };
   const day = run.dayIndex;
   for (let i = 0; i < 3; i++) {
     assert.ok(legalActions(run).includes("reply"), `假失敗第 ${i + 1} 句`);
@@ -564,7 +565,7 @@ test(`消失 ${COMEBACK_DAYS} 天後一定會收到她的訊息；這幾天她�
     assert.equal(comebackChat(after.chats, after.dayIndex + d), null, `第 ${d} 天還沒回來`);
     assert.deepEqual(visibleChats(after.chats, after.dayIndex + d), []);
   }
-  const tomorrow: RunState = { ...after, phase: "daytime", dayIndex: after.dayIndex + COMEBACK_DAYS, dayReplies: 0 };
+  const tomorrow: RunState = { ...after, phase: "daytime", dayIndex: after.dayIndex + COMEBACK_DAYS, dayReplies: 0, today: { ...FRESH_TODAY } };
   assert.equal(comebackChat(tomorrow.chats, tomorrow.dayIndex), tomorrow.chats[0]);
   assert.deepEqual(visibleChats(tomorrow.chats, tomorrow.dayIndex), tomorrow.chats);
   const lines = chatTranscript(tomorrow.chats[0], generateGirl(HEROINE_SEED), tomorrow.dayIndex);
@@ -804,7 +805,7 @@ test("舊存檔的每一步都走得到真結局", () => {
     let dex = UNLOCKED;
     let ended = false;
     for (let guard = 0; guard < 200 && !ended; guard++) {
-      run = { ...run, phase: "daytime", dayIndex: nextPhoneDay(run.dayIndex + 1), money: START_MONEY, dayReplies: 0 };
+      run = { ...run, phase: "daytime", dayIndex: nextPhoneDay(run.dayIndex + 1), money: START_MONEY, dayReplies: 0, today: { ...FRESH_TODAY } };
       const best = run.chats[0] && stepAt(run.chats[0].stepIndex).scores?.indexOf(1);
       const action: GameAction = legalActions(run).includes("goOnDate")
         ? { type: "goOnDate", choice: 0 }
