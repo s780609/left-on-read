@@ -331,7 +331,7 @@ export function ChatRoom({ run, chat, onReply, onFinish, onBack }: ChatRoomProps
                   sub="賢者模式：冷靜下來，看得出哪句最好｜今晚一次"
                   onClick={() => onReply(calmIndex, panelRef.current?.offsetHeight, true)}
                 >
-                  {renderLine(step.replies[calmIndex], girl)}
+                  冷靜地回：{renderLine(step.replies[calmIndex], girl)}
                 </PixelButton>
               ) : null}
             </div>

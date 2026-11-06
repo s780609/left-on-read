@@ -264,5 +264,6 @@ export function profileCategoryMult(profile: Profile): CategoryMult {
 
 /** 給畫面看的曝光指數：1～5 顆星 */
 export function exposureStars(mult: number): number {
-  return Math.max(1, Math.min(5, Math.round((mult - 0.85) / 0.3) + 1));
+  // 預設檔案（倍率 1）是 2 顆星；換一張好一點的照片就看得出差別
+  return Math.max(1, Math.min(5, Math.round((mult - 0.75) / 0.15)));
 }
