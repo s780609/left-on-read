@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { audioManager } from "@/lib/audio/AudioManager";
-import type { RunState } from "@/lib/left-on-read/game";
+import { repliesLeft, type RunState } from "@/lib/left-on-read/game";
 import { generateGirl, type Girl } from "@/lib/left-on-read/girl";
 import { STORIES, STORY_BY_ID } from "@/lib/left-on-read/stories/index";
 import {
@@ -284,6 +284,14 @@ export function ChatRoom({ run, chat, onReply, onFinish, onBack }: ChatRoomProps
               {dateIsNext
                 ? "約好了。週末白天才能出門赴約。"
                 : `已送出。${run.phase === "daytime" ? "今天" : "今晚"}她不會再回了。`}
+            </p>
+            <PixelButton onClick={onBack}>回列表</PixelButton>
+          </>
+        ) : !isFinal(step) && repliesLeft(run) <= 0 ? (
+          <>
+            {/* 白天認真回訊息有上限：選項按了也送不出去，乾脆不要擺出來 */}
+            <p className="text-center text-sm text-[#a9abc9]">
+              今天白天已經認真回夠了。這則晚上回到家再回。
             </p>
             <PixelButton onClick={onBack}>回列表</PixelButton>
           </>

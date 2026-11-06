@@ -7,7 +7,7 @@ import {
   PRESSURE_SOFT_END,
 } from "./constants.ts";
 import { applyDelta, replyDelta, shouldSoftEnd, statsOf, ZERO_STATS } from "./chatStats.ts";
-import { advance, createRun, legalActions } from "./game.ts";
+import { advance, createRun, dayReplyLimit, legalActions, repliesLeft } from "./game.ts";
 import type { RunState } from "./game.ts";
 import { STORIES, STORY_BY_ID } from "./stories/index.ts";
 import { isChatReady } from "./story.ts";
@@ -183,4 +183,18 @@ test("拒 1h2s 後結局步立刻可關，且當晚仍可開 Swipy", () => {
   assert.ok(isChatReady(chat, day, "night"), "結局步當晚就能關");
   assert.ok(legalActions(run).includes("closeChat"));
   assert.ok(legalActions(run).includes("openApp"), "Swipy 不因結局步被鎖");
+});
+
+test("白天回滿上限：還沒回的聊天選項送不出去，聊天室要知道（repliesLeft 為 0），晚上就能回", () => {
+  const day = nextPhoneDay(1);
+  const chat = chatAt(0, { lastAdvancedDay: day - 1 });
+  const base = { ...createRun(1), dayIndex: day, chats: [chat], nextChatId: 2 };
+  const full: RunState = { ...base, phase: "daytime", dayReplies: dayReplyLimit({ ...base, phase: "daytime" }) };
+  assert.ok(isChatReady(chat, day, "daytime"));
+  assert.equal(repliesLeft(full), 0);
+  assert.ok(!legalActions(full).includes("reply"));
+  assert.equal(advance(full, {}, { type: "reply", chatId: chat.id, choice: 0 }).run, full);
+  const night: RunState = { ...full, phase: "night" };
+  assert.equal(repliesLeft(night), Infinity);
+  assert.notEqual(advance(night, {}, { type: "reply", chatId: chat.id, choice: 0 }).run, night);
 });

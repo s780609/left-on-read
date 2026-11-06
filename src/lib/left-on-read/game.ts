@@ -250,6 +250,11 @@ export function dayReplyLimit(run: RunState): number {
   return Math.max(1, DAYTIME_REPLY_LIMIT + bonus - (run.today.tired ? GAMES_TIRED_PENALTY : 0));
 }
 
+/** 現在還能認真回幾則：白天有上限，晚上不限（Infinity） */
+export function repliesLeft(run: RunState): number {
+  return run.phase === "daytime" ? Math.max(0, dayReplyLimit(run) - run.dayReplies) : Infinity;
+}
+
 /** 冠宇現在的檔案讓配對率乘上多少（含節日） */
 export function runMatchMult(run: RunState): number {
   return profileMatchMult(run.profile, run.grooming, run.dayIndex) * holidayMatchMult(run.dayIndex);
@@ -365,7 +370,7 @@ function chatActions(run: RunState): GameAction["type"][] {
   const actions: GameAction["type"][] = [];
   const canReply =
     steps.some((s) => s && !isFinal(s)) &&
-    (run.phase !== "daytime" || run.dayReplies < dayReplyLimit(run));
+    repliesLeft(run) > 0;
   if (canReply) actions.push("reply");
   if (steps.some((s) => s && isFinal(s))) actions.push("closeChat");
   return actions;
@@ -445,7 +450,7 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
 
     case "reply": {
       if (!canUsePhone(run.phase)) return same;
-      if (run.phase === "daytime" && run.dayReplies >= dayReplyLimit(run)) return same;
+      if (repliesLeft(run) <= 0) return same;
       const chat = run.chats.find((c) => c.id === action.chatId);
       if (!chat || !isChatReady(chat, run.dayIndex, run.phase)) return same;
       const step = storyStep(chat);

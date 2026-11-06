@@ -3,7 +3,7 @@
 import { calendarOf, isWorkday } from "@/lib/left-on-read/calendar";
 import { MONTHLY_RENT, MONTHLY_SALARY } from "@/lib/left-on-read/constants";
 import { PAYDAY_LINES, QUIET_PHONE_LINES, WEEKEND_LINES, WORK_LINES, dailyLine } from "@/lib/left-on-read/flavor";
-import { dayReplyLimit, pendingDayEvent, type RunState } from "@/lib/left-on-read/game";
+import { pendingDayEvent, repliesLeft, type RunState } from "@/lib/left-on-read/game";
 import { holidayOf } from "@/lib/left-on-read/holidays";
 import { datesForStory } from "@/lib/left-on-read/stories/index";
 import { dueDateChat, pendingDateStep, readyChats, visibleChats } from "@/lib/left-on-read/story";
@@ -27,7 +27,6 @@ export function DayScreen({ run, eventNote, onMenu, onOpenChats, onEndDay, onGoD
   const workday = isWorkday(calendarOf(run.dayIndex));
   const holiday = holidayOf(run.dayIndex);
   const event = pendingDayEvent(run);
-  const limit = dayReplyLimit(run);
   const chats = visibleChats(run.chats, run.dayIndex);
   const ready = readyChats(chats, run.dayIndex, run.phase).length;
   const waiting = chats.length - ready;
@@ -76,7 +75,7 @@ export function DayScreen({ run, eventNote, onMenu, onOpenChats, onEndDay, onGoD
                 onClick={onOpenChats}
                 sub={
                   ready > 0
-                    ? `今天還能認真回 ${Math.max(0, limit - run.dayReplies)} 則` +
+                    ? `今天還能認真回 ${repliesLeft(run)} 則` +
                       (waiting > 0 ? `｜另外 ${waiting} 個還沒回` : "")
                     : "沒有新訊息"
                 }
