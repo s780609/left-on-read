@@ -228,7 +228,7 @@ export function legalActions(run: RunState): GameAction["type"][] {
       return meal && run.money >= meal.price ? ["eatOut", "goHome"] : ["goHome"];
     }
     case "night": {
-      const actions = [...chatActions(run), "openApp", "sleep"];
+      const actions: GameAction["type"][] = [...chatActions(run), "openApp", "sleep"];
       if (!run.nightHobby.solo) actions.splice(actions.length - 1, 0, "jerkOff");
       if (!run.nightHobby.games) actions.splice(actions.length - 1, 0, "playGames");
       return actions;
@@ -334,10 +334,8 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
         stepIndex: chat.stepIndex + 1,
         lastAdvancedDay: run.dayIndex,
         replies: [...chat.replies, action.choice],
-        // 小晴：白天回完清掉標記；晚上回過（含加成）就設 true，避免同一晚連推
-        ...(chat.girlSeed === HEROINE_SEED
-          ? { heroineNightUsed: run.phase === "night" || run.phase === "nightDone" }
-          : {}),
+        // 約會走白天：回完清掉小晴夜間標記（晚上才會再設）
+        ...(chat.girlSeed === HEROINE_SEED ? { heroineNightUsed: false } : {}),
       };
       // 約會佔掉一整天，回到家已經是深夜，晚餐也吃過了
       return {
