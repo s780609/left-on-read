@@ -218,10 +218,11 @@ export function canUsePhoto(photo: ProfilePhotoId, grooming: Grooming): boolean 
   return !photoOf(photo).needsProPhoto || grooming.proPhoto;
 }
 
-/** 這個東西現在還能不能買（不看錢） */
-export function canBuy(item: ShopItemId, grooming: Grooming): boolean {
+/** 這個東西現在還能不能買（不看錢）；頭髮還在有效期就不能再剪，不然只是多付錢 */
+export function canBuy(item: ShopItemId, grooming: Grooming, dayIndex: number): boolean {
   if (item === "outfit") return !grooming.outfit;
   if (item === "photoshoot") return !grooming.proPhoto;
+  if (item === "haircut") return !isHaircutActive(grooming, dayIndex);
   return true;
 }
 

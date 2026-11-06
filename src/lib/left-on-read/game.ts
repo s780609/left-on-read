@@ -272,7 +272,7 @@ export function canShopNow(run: RunState, item: ShopItemId): boolean {
 
 function affordableShopItems(run: RunState): ShopItemId[] {
   return (Object.keys(SHOP_ITEM_BY_ID) as ShopItemId[]).filter(
-    (id) => canShopNow(run, id) && canBuy(id, run.grooming) && run.money >= SHOP_ITEM_BY_ID[id].price
+    (id) => canShopNow(run, id) && canBuy(id, run.grooming, run.dayIndex) && run.money >= SHOP_ITEM_BY_ID[id].price
   );
 }
 
@@ -804,7 +804,7 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
 
     case "buy": {
       const item = SHOP_ITEM_BY_ID[action.item];
-      if (!item || !canShopNow(run, action.item) || !canBuy(action.item, run.grooming)) return same;
+      if (!item || !canShopNow(run, action.item) || !canBuy(action.item, run.grooming, run.dayIndex)) return same;
       if (run.money < item.price) return same;
       return {
         run: {

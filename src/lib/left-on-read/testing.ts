@@ -18,7 +18,7 @@ export function newGameplayAction(type: GameAction["type"], run: RunState, rng: 
   switch (type) {
     case "buy": {
       const items = SHOP_ITEMS.filter(
-        (i) => canShopNow(run, i.id) && canBuy(i.id, run.grooming) && run.money >= i.price
+        (i) => canShopNow(run, i.id) && canBuy(i.id, run.grooming, run.dayIndex) && run.money >= i.price
       );
       return { type, item: pick(rng, items).id };
     }

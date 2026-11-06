@@ -10,7 +10,6 @@ import {
   canUsePhoto,
   exposureStars,
   isGoldActive,
-  isHaircutActive,
   profileMatchMult,
   type Profile,
   type ShopItemId,
@@ -167,7 +166,6 @@ interface ShopScreenProps {
 /** 週末白天出門打理自己 */
 export function ShopScreen({ run, note, onBuy, onMenu, onBack }: ShopScreenProps) {
   const items = SHOP_ITEMS.filter((i) => i.where === "weekend");
-  const haircut = isHaircutActive(run.grooming, run.dayIndex);
   return (
     <>
       <StatusBar run={run} onMenu={onMenu} />
@@ -176,8 +174,9 @@ export function ShopScreen({ run, note, onBuy, onMenu, onBack }: ShopScreenProps
         actions={
           <>
             {items.map((item) => {
-              const owned = !canBuy(item.id, run.grooming);
+              const owned = !canBuy(item.id, run.grooming, run.dayIndex);
               const broke = run.money < item.price;
+              const hairDaysLeft = run.grooming.haircutUntil - run.dayIndex;
               return (
                 <PixelButton
                   key={item.id}
@@ -186,10 +185,12 @@ export function ShopScreen({ run, note, onBuy, onMenu, onBack }: ShopScreenProps
                   onClick={() => onBuy(item.id)}
                   sub={
                     owned
-                      ? "已經有了"
+                      ? item.id === "haircut"
+                        ? `髮型還很新，${hairDaysLeft} 天後再來剪`
+                        : "已經有了"
                       : broke
                         ? "等發薪"
-                        : `${money(item.price)}｜${item.id === "haircut" && haircut ? "現在的髮型還在有效期，再剪會重新算" : item.desc}`
+                        : `${money(item.price)}｜${item.desc}`
                   }
                 >
                   {item.name}

@@ -166,6 +166,10 @@ test("A：剪頭髮、衣服、形象照只有週末白天買得到；衣服和�
   assert.equal(advance(run, {}, { type: "buy", item: "outfit" }).run, run);
   run = act(run, {}, { type: "buy", item: "haircut" }).run;
   assert.ok(run.grooming.haircutUntil > weekend);
+  // 髮型還在有效期：再剪只是多付錢，不能買；過期之後才可以
+  assert.equal(advance(run, {}, { type: "buy", item: "haircut" }).run, run);
+  const later = findDay((d) => isWeekend(d) && calendarOf(d).day !== 5, run.grooming.haircutUntil);
+  act({ ...run, dayIndex: later }, {}, { type: "buy", item: "haircut" });
 });
 
 test("A：改檔案只在晚上，形象照要先拍過才能用", () => {
