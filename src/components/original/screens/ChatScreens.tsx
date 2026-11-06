@@ -117,7 +117,7 @@ export function ChatList({ run, onOpen, onClose }: ChatListProps) {
                 </span>
               </span>
               {(() => {
-                if (chat.closed) return null;
+                if (chat.closed || !STORIES.some((s) => s.id === chat.storyId)) return null;
                 const { vibe } = chatVibe(statsOf(chat));
                 if (vibe === "neutral") return null;
                 const tag = VIBE_TAG[vibe];
@@ -234,7 +234,8 @@ export function ChatRoom({ run, chat, onReply, onFinish, onDelete, onBack }: Cha
   const allLines = chatTranscript(chat, girl, run.dayIndex, run.phase);
   const dateIsNext = pendingDateStep(chat) !== null;
   const panelRef = useRef<HTMLDivElement>(null);
-  const vibe = chatVibe(statsOf(chat));
+  // 氣氛提示只給一般失敗線：隱藏路線的對白是寫死的，提示會跟她講的話打架
+  const vibe = STORIES.includes(story) ? chatVibe(statsOf(chat)) : { vibe: "neutral" as const, line: null };
   const calmIndex = ready && !isFinal(step) && run.nightHobby.calm && canCalm(step) ? calmChoice(step) : null;
 
   // 有鋪陳的那一步：她一則一則傳完才出現選項，選項先佔好位子，版面不會跳；按聊天區可以跳過

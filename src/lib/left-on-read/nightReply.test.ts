@@ -434,3 +434,24 @@ test("小晴白天回過、晚上加成那一步：對話紀錄要帶 phase，�
   assert.ok(!isChatReady(chat, day, "daytime"));
   assert.ok(!chatTranscript(chat, girl, day, "daytime").some((l) => l.who === "her" && l.text === text));
 });
+
+test("小晴沒計分的步驟不動數值：選第二句不會被當成尷尬", () => {
+  const day = 30;
+  // 威秀之後聊電影結局那一步（截圖那段）
+  const step = STORY_BY_ID[HEROINE_STORY_ID].steps[8] as ReplyStep;
+  assert.ok(!step.scores && step.replies.length === 2);
+  const chat: Chat = {
+    id: 1,
+    girlSeed: HEROINE_SEED,
+    storyId: HEROINE_STORY_ID,
+    opener: "interest",
+    stepIndex: 8,
+    lastAdvancedDay: day - 1,
+    replies: [1, 2, 0, 1, 0, 0, 0, 1],
+    stats: { affection: 3, awkward: 0, pressure: 0 },
+  };
+  const run: RunState = { ...createRun(1), dayIndex: day, phase: "night", heroineMet: true, chats: [chat], nextChatId: 2 };
+  const r = advance(run, {}, { type: "reply", chatId: 1, choice: 1 });
+  assert.notEqual(r.run, run);
+  assert.deepEqual(r.run.chats[0].stats, { affection: 3, awkward: 0, pressure: 0 });
+});

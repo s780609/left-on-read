@@ -72,6 +72,7 @@ import {
 } from "./story.ts";
 import {
   CALM_DELTA,
+  ZERO_STATS,
   applyDelta,
   calmChoice,
   canCalm,
@@ -473,7 +474,9 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
         };
       }
       const { heroineNightUsed: _ignored, ...chatRest } = chat;
-      const delta = calm ? CALM_DELTA : replyDelta(step, action.choice);
+      // 隱藏路線（小晴、Iris、個工）的對白是寫好的，沒計分的步驟不動數值，不然選第二句也會被當成尷尬
+      const scripted = !STORIES.some((s) => s.id === chat.storyId) && !step.scores && !step.deltas;
+      const delta = calm ? CALM_DELTA : scripted ? ZERO_STATS : replyDelta(step, action.choice);
       let stats = applyDelta(statsOf(chat), delta);
       // 最討厭已讀不回的她：回了就不再累積
       if (STORY_BY_ID[chat.storyId]?.patience) stats = { ...stats, pressure: 0 };
