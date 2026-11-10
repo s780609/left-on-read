@@ -156,7 +156,8 @@ export function isWaitReady(chat: Chat, dayIndex: number, phase?: ChatPhase): bo
   const step = STORY_BY_ID[chat.storyId]?.steps[chat.stepIndex];
   if (step === undefined || ("date" in step && step.date)) return false;
   // 結局步立刻可關：拒 1h2s／軟收之後不要卡在「今晚她不會再回了」
-  if (isFinal(step)) return true;
+  // 結局步沒寫等待就立刻出現；劇本寫了要等（「三天後」「週六」）就照等
+  if (isFinal(step) && step.wait === undefined) return true;
   const wait = step.wait ?? { days: 1 };
   const readyDay = firstReadyDay(chat.lastAdvancedDay, wait);
   if (dayIndex >= readyDay) return true;

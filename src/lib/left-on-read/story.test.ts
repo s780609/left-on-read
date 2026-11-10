@@ -395,15 +395,34 @@ test("isChatReady：看的是目前這一步的等待", () => {
   story.steps.forEach((step, stepIndex) => {
     // 第 42 天是週二（第 40、41 天是週日、週一，遊戲裡不會停在那兩天）
     const chat = makeChat(story, { stepIndex, lastAdvancedDay: 42, replies: new Array<number>(stepIndex).fill(0) });
-    if (isFinal(step)) {
-      // 結局步不等待，當天就能關
+    if (isFinal(step) && step.wait === undefined) {
+      // 沒寫等待的結局步當天就能關
       assert.equal(isChatReady(chat, 42), true, `第 ${stepIndex} 步結局`);
       return;
     }
+    // 寫了等待的結局步（這裡是「一週後」）跟一般步驟一樣要等
     const ready = firstReadyDay(42, step.wait);
     assert.equal(isChatReady(chat, ready - 1), false, `第 ${stepIndex} 步`);
     assert.equal(isChatReady(chat, nextPhoneDay(ready)), true, `第 ${stepIndex} 步`);
   });
+});
+
+test("結局步寫了等待就照等：沒等到不能關、對話紀錄看不到，等到了才出現", () => {
+  const waited = Object.values(STORY_BY_ID).filter((s) => {
+    const last = s.steps[s.steps.length - 1];
+    return isFinal(last) && last.wait !== undefined;
+  });
+  assert.ok(waited.some((s) => s.id === "wall-of-text"));
+  for (const story of waited) {
+    const stepIndex = story.steps.length - 1;
+    const last = story.steps[stepIndex] as FinalStep;
+    const chat = makeChat(story, { stepIndex, lastAdvancedDay: 42, replies: new Array<number>(stepIndex).fill(0) });
+    const girl = generateGirl(chat.girlSeed);
+    const ready = nextPhoneDay(firstReadyDay(42, last.wait));
+    assert.equal(isChatReady(chat, 42), false, `${story.id} 當天`);
+    assert.equal(isChatReady(chat, ready), true, `${story.id} 等到了`);
+    assert.equal(chatTranscript(chat, girl, 42).length + 1, chatTranscript(chat, girl, ready).length, story.id);
+  }
 });
 
 test("readyChats：只回傳 ready 的聊天，保持原順序，不改變傳入陣列", () => {
@@ -607,8 +626,8 @@ test("chatTranscript：順序是開場白、她的訊息、冠宇選的回覆，
       const chat = makeChat(story, { girlSeed, opener, stepIndex, lastAdvancedDay: 100, replies });
       const readyDay = firstReadyDay(100, step.wait);
       const where = `${story.id} 第 ${stepIndex} 步`;
-      // 結局步、一輪對話裡她接著傳的那一步，當天就揭示
-      const finalNow = isFinal(step) || isFollowUp(chat, 100);
+      // 沒寫等待的結局步、一輪對話裡她接著傳的那一步，當天就揭示
+      const finalNow = (isFinal(step) && step.wait === undefined) || isFollowUp(chat, 100);
       // 還沒到等待日：這一步還沒揭示（上面兩種除外）
       assert.deepEqual(
         chatTranscript(chat, girl, 100),
