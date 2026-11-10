@@ -12,6 +12,7 @@ import type { Rng } from "./rng.ts";
 import { STORIES, STORY_BY_ID } from "./stories/index.ts";
 import type {
   Chat,
+  EndingContent,
   FinalStep,
   Incoming,
   OpenerKind,
@@ -204,6 +205,23 @@ export function replyTiming(chat: Chat, dayIndex: number, phase?: ChatPhase): Re
   return { kind: "wait", day: playDayOnOrAfter(Math.max(dayIndex + 1, firstReadyDay(chat.lastAdvancedDay, wait))) };
 }
 
+/** 這個劇情有幾個結局（原本的 + variants） */
+export function endingCount(story: Story): number {
+  const last = story.steps[story.steps.length - 1];
+  return last && isFinal(last) ? 1 + (last.variants?.length ?? 0) : 1;
+}
+
+/** 結局步實際走到哪一個結局：照前面選的回覆找第一個符合的 variant，都不符合就是原本的（index 0） */
+export function resolveEnding(
+  step: FinalStep,
+  replies: readonly number[]
+): { index: number; incoming: Incoming; ending: EndingContent } {
+  const i = step.variants?.findIndex((v) => replies[v.when.step] === v.when.choice) ?? -1;
+  if (i < 0 || !step.variants) return { index: 0, incoming: step.incoming, ending: step.ending };
+  const variant = step.variants[i];
+  return { index: i + 1, incoming: variant.incoming ?? step.incoming, ending: variant.ending };
+}
+
 /** 「她什麼時候會回」的短標籤：明天、週二、9/29 週二、約會 9/26 週六、今晚可能再傳；可以回或已結束時回傳 null */
 export function replyTimingLabel(timing: ReplyTiming, dayIndex: number): string | null {
   const short = (day: number) => {
@@ -336,10 +354,18 @@ export function chatTranscript(chat: Chat, girl: Girl, dayIndex: number, phase?:
   if (isWaitReady(chat, dayIndex, phase)) {
     const current = story.steps[chat.stepIndex];
     pushLead(current);
-    pushIncoming(current.incoming);
+    // 結局步：走到另一個結局時，她最後傳的也跟著換
+    pushIncoming(isFinal(current) ? resolveEnding(current, chat.replies).incoming : current.incoming);
     if ("os" in current) for (const text of current.os ?? []) lines.push({ who: "narration", text: renderLine(text, girl) });
   }
   return lines;
+}
+
+function endingErrors(ending: EndingContent, where: string): string[] {
+  const errors = placeholderErrors(ending.narration, where);
+  const { cost } = ending;
+  if (cost !== undefined && (!Number.isInteger(cost) || cost < 0)) errors.push(`${where} 的花費不合法`);
+  return errors;
 }
 
 function placeholderErrors(text: unknown, where: string): string[] {
@@ -403,9 +429,25 @@ export function validateStory(story: Story): string[] {
     if (isFinal(step)) {
       if (!last) errors.push(`${where} 不是最後一步卻有結局`);
       if (hasReplies) errors.push(`${where} 同時有結局和回覆`);
-      errors.push(...placeholderErrors(step.ending.narration, `${where} 的結局`));
-      const { cost } = step.ending;
-      if (cost !== undefined && (!Number.isInteger(cost) || cost < 0)) errors.push(`${where} 的花費不合法`);
+      errors.push(...endingErrors(step.ending, `${where} 的結局`));
+      const seen = new Set<string>();
+      (step.variants ?? []).forEach((variant, v) => {
+        const at = `${where} 另一個結局 ${v + 1}`;
+        const { step: s, choice } = variant.when;
+        const target = story.steps[s];
+        if (!Number.isInteger(s) || s < 0 || s >= i || !target || isFinal(target) || !target.replies[choice]) {
+          errors.push(`${at} 的條件指到不存在的回覆`);
+        } else if (target.date || target.fakeEnding) {
+          errors.push(`${at} 的條件不能是約會或假結局`);
+        }
+        const key = `${s}:${choice}`;
+        if (seen.has(key)) errors.push(`${at} 的條件重複`);
+        seen.add(key);
+        if (variant.incoming && "text" in variant.incoming) {
+          errors.push(...placeholderErrors(variant.incoming.text, `${at} 的內容`));
+        }
+        errors.push(...endingErrors(variant.ending, at));
+      });
     } else {
       if (last && !step.date?.endingId) errors.push(`${where} 是最後一步卻沒有結局`);
       const minReplies = step.answer !== undefined || step.fakeEnding ? 1 : 2;

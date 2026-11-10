@@ -1,7 +1,8 @@
 "use client";
 
 import { calendarOf, formatDate } from "@/lib/left-on-read/calendar";
-import { dexProgress, endingProgress, type Dex } from "@/lib/left-on-read/dex";
+import { dexProgress, endingProgress, endingsSeen, type Dex } from "@/lib/left-on-read/dex";
+import { endingCount } from "@/lib/left-on-read/story";
 import { IRIS_ENDING_ID, LADYBUG_ENDING_ID, TRUE_ENDING_ID } from "@/lib/left-on-read/constants";
 import { SPECIAL_STORIES, STORIES } from "@/lib/left-on-read/stories/index";
 import type { StoryCategory } from "@/lib/left-on-read/storyTypes";
@@ -58,7 +59,9 @@ export function DexScreen({ dex, onBack, onLadybug, onTrueEnding, onIrisEnding }
                       <>
                         <div className="flex items-baseline justify-between gap-2">
                           <span>{story.dexName}</span>
-                          <span className="shrink-0 text-xs">×{entry.count}</span>
+                          <span className="shrink-0 text-xs">
+                            {endingCount(story) > 1 ? `結局 ${endingsSeen(entry).length}/${endingCount(story)}　` : ""}×{entry.count}
+                          </span>
                         </div>
                         <p className="mt-0.5 text-sm font-normal leading-snug">{story.dexQuip}</p>
                         <p className="mt-1 text-xs text-[#6a6a84]">首次：{formatDate(calendarOf(entry.firstDayIndex))}</p>

@@ -30,6 +30,14 @@ export const GHOST_STORIES: readonly Story[] = [
       {
         incoming: { kind: "read" },
         ending: { narration: "已讀的時間是 12:04。她那天中午吃什麼，我可能永遠不會知道。" },
+        // 另一個結局
+        variants: [
+          {
+            when: { step: 1, choice: 2 },
+            incoming: { kind: "message", text: "……你在監控我嗎" },
+            ending: { narration: "她終於回我了，第一句也是最後一句。我把記已讀時間的那張表刪了，刪之前又看了一眼：12:04。" },
+          },
+        ],
       },
     ],
   },
@@ -95,6 +103,14 @@ export const GHOST_STORIES: readonly Story[] = [
       {
         incoming: { kind: "message", text: "？" },
         ending: { narration: "那個問號我看了很久。彎彎的，很像有人歪著頭，不知道該拿我怎麼辦。" },
+        // 另一個結局
+        variants: [
+          {
+            when: { step: 2, choice: 2 },
+            incoming: { kind: "message", text: "（圖片：一朵會發光的蓮花，寫著「早安 吉祥如意 天天好心情」）" },
+            ending: { narration: "她回了一張長輩圖，比我的還閃。我們好像在某個頻率上相遇了，又好像只是我被打敗了。那之後她沒再傳過字。" },
+          },
+        ],
       },
     ],
   },
@@ -162,6 +178,14 @@ export const GHOST_STORIES: readonly Story[] = [
         incoming: { kind: "narration", text: "（三天後）她說的晚點，還在路上。" },
         wait: { days: 3 },
         ending: { narration: "她的晚點到現在還沒到。我後來自己重看了一次，第二段確實可以刪。" },
+        // 另一個結局
+        variants: [
+          {
+            when: { step: 1, choice: 2 },
+            incoming: { kind: "message", text: "重點？" },
+            ending: { narration: "三天後她回了兩個字。我想了一整晚要怎麼濃縮，最後打了「我人不錯」。送出之後，就沒有之後了。" },
+          },
+        ],
       },
     ],
   },

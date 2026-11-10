@@ -15,6 +15,7 @@ import { MEALS } from "./meals.ts";
 import { DEFAULT_GROOMING, DEFAULT_PROFILE, canUsePhoto, isProfileBioId, isProfilePhotoId } from "./profile.ts";
 import type { Grooming, Profile } from "./profile.ts";
 import { HEROINE_STORY_ID, HEROINE_V2_STORY_ID, LEGACY_HEROINE_STORY_ID, STORY_BY_ID, upgradeHeroineV2Chat, upgradeLegacyHeroineChat } from "./stories/index.ts";
+import { endingCount } from "./story.ts";
 import type { Chat, OpenerKind, Story } from "./storyTypes.ts";
 
 export interface MetaState {
@@ -255,6 +256,13 @@ export function parseMeta(raw: string | null): MetaState {
         if ((!STORY_BY_ID[id] && !ENDING_IDS.includes(id)) || !isObject(entry)) continue;
         if (!isCount(entry.count) || entry.count < 1) continue;
         dex[id] = { count: entry.count, firstDayIndex: isCount(entry.firstDayIndex) ? entry.firstDayIndex : 0 };
+        // 看過的結局：只收這個劇情真的有的編號，去重、排序；沒有就不帶（當作只看過原本的）
+        const story = STORY_BY_ID[id];
+        if (story && Array.isArray(entry.endings)) {
+          const total = endingCount(story);
+          const endings = [...new Set(entry.endings.filter((n): n is number => isCount(n) && n < total))].sort((a, b) => a - b);
+          if (endings.length > 0) dex[id].endings = endings;
+        }
       }
     }
     return {

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { audioManager } from "@/lib/audio/AudioManager";
 import { progressAchievements } from "@/lib/left-on-read/achievements";
 import { IRIS_ENDING_ID } from "@/lib/left-on-read/constants";
-import { dexProgress } from "@/lib/left-on-read/dex";
+import { dexProgress, endingsSeen } from "@/lib/left-on-read/dex";
 import type { EdEnding } from "@/lib/left-on-read/ed";
 import { advance, createRun, settleRun, type GameAction, type GameEvent, type RunState } from "@/lib/left-on-read/game";
 import type { Profile, ShopItemId } from "@/lib/left-on-read/profile";
@@ -59,6 +59,9 @@ const DODGE_TOASTS = [
 /** 一般聊天走到結局的畫面資料 */
 function endingInfo(ended: Extract<GameEvent, { type: "chatEnded" }>, dex: Parameters<typeof dexProgress>[0]): EndingInfo {
   const { collected, total } = dexProgress(dex);
+  // 有分歧結局的劇情：看過幾個結局、這次是不是新的
+  const entry = Object.hasOwn(dex, ended.storyId) ? dex[ended.storyId] : null;
+  const endings = ended.ending && entry ? { seen: endingsSeen(entry).length, ...ended.ending } : undefined;
   return {
     storyId: ended.storyId,
     narration: ended.narration,
@@ -68,6 +71,7 @@ function endingInfo(ended: Extract<GameEvent, { type: "chatEnded" }>, dex: Param
     girl: generateGirl(ended.girlSeed),
     collected,
     total,
+    endings,
   };
 }
 

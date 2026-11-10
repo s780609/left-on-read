@@ -91,6 +91,14 @@ export const FADE_STORIES: readonly Story[] = [
       {
         incoming: { kind: "message", text: "嗯" },
         ending: { narration: "她回了嗯。我起身去倒了一杯熱水，站在窗邊喝完。確實有好一點。" },
+        // 另一個結局
+        variants: [
+          {
+            when: { step: 2, choice: 2 },
+            incoming: { kind: "message", text: "你是要我地址嗎" },
+            ending: { narration: "我說不是，是要訂水。她說不用了，然後就沒再上線。那箱水我後來自己訂了，二十四瓶，一路喝到下個月。", cost: 189 },
+          },
+        ],
       },
     ],
   },
@@ -161,6 +169,14 @@ export const FADE_STORIES: readonly Story[] = [
       {
         incoming: { kind: "message", text: "好 再約喔" },
         ending: { narration: "她的行事曆沒有這一格，我的有。它寫著「吃飯？」，每週五自動重複。" },
+        // 另一個結局
+        variants: [
+          {
+            when: { step: 2, choice: 2 },
+            incoming: { kind: "message", text: "好 再約喔 工作的事真的不用啦" },
+            ending: { narration: "她特別強調工作的事真的不用，好像那是整段對話裡她最確定的事。行事曆上的「吃飯？」還在，每週五自動重複。" },
+          },
+        ],
       },
     ],
   },
@@ -200,6 +216,14 @@ export const FADE_STORIES: readonly Story[] = [
           narration: "店名叫「慢慢來」，她真的慢慢來，來到現在還沒到。拿鐵一百五，看門兩小時。她沒傳訊息，我也沒問。回程的捷運上才想起來，我那天有洗頭。",
           cost: 150,
         },
+        // 另一個結局
+        variants: [
+          {
+            when: { step: 1, choice: 1 },
+            incoming: { kind: "message", text: "你地圖上的 2 號出口是 7 號吧？我在這邊繞了二十分鐘 先回去了" },
+            ending: { narration: "我把地圖翻出來看，2 寫得太像 7。她繞了二十分鐘，我看門兩小時，拿鐵一百五。那天我們其實離得很近，只隔了一個數字。", cost: 150 },
+          },
+        ],
       },
     ],
   },
@@ -292,6 +316,14 @@ export const FADE_STORIES: readonly Story[] = [
       {
         incoming: { kind: "message", text: "嗯嗯" },
         ending: { narration: "我講了三十分鐘，她回了三次嗯嗯。到最後，我都沒有問她喜歡看什麼。" },
+        // 另一個結局
+        variants: [
+          {
+            when: { step: 2, choice: 2 },
+            incoming: { kind: "message", text: "肩甲是什麼" },
+            ending: { narration: "她終於問了我一個問題。我花四十分鐘回答，附三張圖。她沒再回，可能是覺得這個問題太大了。" },
+          },
+        ],
       },
     ],
   },

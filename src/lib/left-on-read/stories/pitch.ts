@@ -35,6 +35,14 @@ export const PITCH_STORIES: readonly Story[] = [
             "我沒有加 LINE，也沒有匯款，把對話截圖打了 165 反詐騙專線。對方謝謝我。這個月第一次有人謝謝我。",
           antiFraud: true,
         },
+        // 另一個結局
+        variants: [
+          {
+            when: { step: 2, choice: 2 },
+            incoming: { kind: "message", text: "我們是在聊天啊 聊你的未來 你的未來在群裡" },
+            ending: { narration: "原來聊天也有業績。我沒有加群，把截圖給了 165 反詐騙專線。對方說我很警覺，我把這句記下來，當作今天的稱讚。", antiFraud: true },
+          },
+        ],
       },
     ],
   },

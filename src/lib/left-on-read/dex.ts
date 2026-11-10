@@ -8,16 +8,27 @@ import { STORIES } from "./stories/index.ts";
 export interface DexEntry {
   count: number;
   firstDayIndex: number;
+  /** 看過哪幾個結局（0 是原本的）；只有分歧劇情走過另一個結局才會有，沒有就當作只看過 [0] */
+  endings?: number[];
 }
 
 export type Dex = Record<string, DexEntry>;
 
-export function recordFailure(dex: Dex, storyId: string, dayIndex: number): Dex {
+/** 這一筆看過的結局編號，由小到大 */
+export function endingsSeen(entry: DexEntry): number[] {
+  return entry.endings ?? [0];
+}
+
+/** 記一筆失敗；endingIndex 是走到第幾個結局（0 是原本的） */
+export function recordFailure(dex: Dex, storyId: string, dayIndex: number, endingIndex = 0): Dex {
   const entry = Object.hasOwn(dex, storyId) ? dex[storyId] : null;
-  return {
-    ...dex,
-    [storyId]: entry ? { ...entry, count: entry.count + 1 } : { count: 1, firstDayIndex: dayIndex },
-  };
+  const base: DexEntry = entry ? { ...entry, count: entry.count + 1 } : { count: 1, firstDayIndex: dayIndex };
+  const seen = entry ? endingsSeen(entry) : [];
+  // 只看過原本結局的不另外記，存檔和舊資料都維持原樣
+  if (!seen.includes(endingIndex) && (endingIndex !== 0 || base.endings)) {
+    base.endings = [...seen, endingIndex].sort((a, b) => a - b);
+  }
+  return { ...dex, [storyId]: base };
 }
 
 export function dexProgress(dex: Dex): { collected: number; total: number } {

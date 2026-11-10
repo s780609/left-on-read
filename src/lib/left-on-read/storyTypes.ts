@@ -52,10 +52,30 @@ export interface ReplyStep {
   comeback?: { stamp: string; aside: string };
 }
 
+/** 結局的內容：旁白、花掉的錢、要不要顯示反詐騙提醒 */
+export interface EndingContent {
+  narration: string;
+  cost?: number;
+  antiFraud?: boolean;
+}
+
+/**
+ * 另一個結局：前面某一步選了某一句，最後她傳的和旁白就換成這個。
+ * 只換最後一步的內容，不新增步驟，舊存檔的 stepIndex／replies 照樣對得上。
+ */
+export interface EndingVariant {
+  when: { step: number; choice: number };
+  /** 不給就沿用原本最後一步她傳的 */
+  incoming?: Incoming;
+  ending: EndingContent;
+}
+
 export interface FinalStep {
   incoming: Incoming;
   wait?: StepWait;
-  ending: { narration: string; cost?: number; antiFraud?: boolean };
+  ending: EndingContent;
+  /** 照順序找第一個符合的；都不符合就是原本的結局（第 1 個） */
+  variants?: readonly EndingVariant[];
 }
 
 export interface Story {

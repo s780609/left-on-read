@@ -63,6 +63,14 @@ export const QUICK_STORIES: readonly Story[] = [
       {
         incoming: { kind: "read" },
         ending: { narration: "我照實填完了，她沒再回。我很想知道自己幾分，可是這份考卷不發回。" },
+        // 另一個結局
+        variants: [
+          {
+            when: { step: 3, choice: 2 },
+            incoming: { kind: "message", text: "可以啊 區間是多少" },
+            ending: { narration: "我回了「三萬到四萬」。她已讀，然後就沒有然後了。區間救不了我，只是讓我輸得比較模糊。" },
+          },
+        ],
       },
     ],
   },
@@ -87,6 +95,14 @@ export const QUICK_STORIES: readonly Story[] = [
       {
         incoming: { kind: "message", text: "我覺得還是先不要好了" },
         ending: { narration: "飯還沒吃，帳我已經算好了。那張試算表現在還在，裡面一筆資料都沒有。" },
+        // 另一個結局
+        variants: [
+          {
+            when: { step: 2, choice: 2 },
+            incoming: { kind: "message", text: "小數點你吸收……謝謝喔" },
+            ending: { narration: "她謝謝我吸收小數點，語氣跟謝謝店員找零一樣。後來就沒約了。我算過，那頓飯的小數點是五毛。" },
+          },
+        ],
       },
     ],
   },
@@ -103,6 +119,14 @@ export const QUICK_STORIES: readonly Story[] = [
       {
         incoming: { kind: "message", text: "不合 掰" },
         ending: { narration: "被拒絕的理由是星星的位置。這是我今天遇過最不針對我的事，我決定當作好消息。" },
+        // 另一個結局
+        variants: [
+          {
+            when: { step: 0, choice: 2 },
+            incoming: { kind: "message", text: "獅子座也不合 掰" },
+            ending: { narration: "我換了一個星座，還是不合。看來問題不在星星，可能在我。這個結論我不太喜歡，決定還是怪歲差。" },
+          },
+        ],
       },
     ],
   },
@@ -151,6 +175,14 @@ export const QUICK_STORIES: readonly Story[] = [
           text: "17×23 等於 391。很抱歉，我無法取得即時天氣資訊。建議您查詢當地氣象單位。祝您有美好的一天！",
         },
         ending: { narration: "她是我這個月聊最久的對象。關掉視窗之前，我打了一句謝謝。不知道為什麼。" },
+        // 另一個結局
+        variants: [
+          {
+            when: { step: 2, choice: 0 },
+            incoming: { kind: "message", text: "抱歉讓你誤會了！我是這位用戶設定的自動回覆助理，她目前不在線上。有什麼需要我幫你轉達的嗎？" },
+            ending: { narration: "我請助理幫我轉達「妳好」。隔天還是助理回的：「已為您轉達！」她本人到最後都沒出現，我跟她的助理倒是處得不錯。" },
+          },
+        ],
       },
     ],
   },

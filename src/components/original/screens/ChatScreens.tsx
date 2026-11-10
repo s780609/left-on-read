@@ -400,6 +400,8 @@ export interface EndingInfo {
   girl: Girl;
   collected: number;
   total: number;
+  /** 有分歧結局的劇情才有：看過幾個、總共幾個、這次是不是沒看過的結局 */
+  endings?: { seen: number; total: number; isNew: boolean; index: number };
 }
 
 export function EndingScreen({ ending, onClose }: { ending: EndingInfo; onClose: () => void }) {
@@ -441,6 +443,13 @@ export function EndingScreen({ ending, onClose }: { ending: EndingInfo; onClose:
               ? `${ending.firstTime ? "失敗圖鑑新增一筆" : "這一筆圖鑑上已經有了"}　${ending.collected} / ${ending.total}`
               : "隱藏路線"}
           </p>
+          {ending.endings ? (
+            <p className={`mt-1 text-xs ${ending.endings.isNew && !ending.firstTime ? "text-[#ff9fb4]" : "text-[#a9abc9]"}`}>
+              {ending.endings.isNew && !ending.firstTime ? "解鎖另一個結局　" : ""}
+              結局 {ending.endings.seen} / {ending.endings.total}
+              {ending.endings.seen < ending.endings.total ? "　換個回法，好像會不一樣" : ""}
+            </p>
+          ) : null}
           <p className="mt-2 text-sm leading-relaxed text-[#d8d9ea]">{story.dexQuip}</p>
         </div>
       </div>

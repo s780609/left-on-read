@@ -12,6 +12,7 @@ import { STORIES, STORY_BY_ID } from "./stories/index.ts";
 import {
   UNCOLLECTED_MULT,
   chatTranscript,
+  endingCount,
   firstReadyDay,
   isChatReady,
   isFollowUp,
@@ -19,6 +20,7 @@ import {
   pickStory,
   readyChats,
   renderLine,
+  resolveEnding,
   storyWeights,
   validateStory,
 } from "./story.ts";
@@ -275,8 +277,13 @@ test("第一句和最後一句的結局相同", () => {
   for (const story of STORIES) {
     const a = walkStory(story, STRATEGIES.第一句);
     const b = walkStory(story, STRATEGIES.最後一句);
-    assert.deepEqual(a.ended, b.ended, story.id);
-    assert.equal(a.money, b.money, story.id);
+    // 有另一個結局的劇情，選不同句可能走到不同結局（旁白、花費不同），但都是同一筆圖鑑
+    if (endingCount(story) === 1) {
+      assert.deepEqual(a.ended, b.ended, story.id);
+      assert.equal(a.money, b.money, story.id);
+    } else {
+      assert.equal(a.ended.storyId, b.ended.storyId, story.id);
+    }
     // 尷尬提早收線只影響哪天進圖鑑，不影響收了哪一種、收了幾次
     const counts = (dex: typeof a.dex) =>
       Object.fromEntries(Object.entries(dex).map(([id, e]) => [id, e.count]));
@@ -287,7 +294,7 @@ test("第一句和最後一句的結局相同", () => {
 test("結局事件帶著該劇情的旁白、實扣金額和防詐標記", () => {
   for (const story of STORIES) {
     const r = walkStory(story, STRATEGIES.第一句);
-    const { ending } = lastStep(story) as FinalStep;
+    const { ending } = resolveEnding(lastStep(story) as FinalStep, r.replies);
     assert.equal(r.ended.storyId, story.id);
     assert.equal(r.ended.narration, renderLine(ending.narration, generateGirl(7)), story.id);
     assert.equal(r.ended.paid, ending.cost ?? 0, story.id);
@@ -584,7 +591,7 @@ function expectedTranscript(story: Story, chat: Chat, girl: Girl, revealed: bool
   if (revealed) {
     const current = story.steps[chat.stepIndex];
     pushLead(current);
-    lines.push(incomingLine(current.incoming, girl));
+    lines.push(incomingLine(isFinal(current) ? resolveEnding(current, chat.replies).incoming : current.incoming, girl));
   }
   return lines;
 }

@@ -32,7 +32,7 @@ import {
 } from "./constants.ts";
 import { dayEventOf } from "./dayEvents.ts";
 import type { DayEvent } from "./dayEvents.ts";
-import { dexProgress, endingProgress, isDexComplete, recordFailure } from "./dex.ts";
+import { dexProgress, endingProgress, isDexComplete, recordFailure, endingsSeen } from "./dex.ts";
 import type { Dex } from "./dex.ts";
 import { avoidFixedSeeds, deckSeed, generateGirl } from "./girl.ts";
 import { EDUCATIONS } from "./girlData.ts";
@@ -67,8 +67,10 @@ import {
   chatScore,
   dueDateChat,
   isChatReady,
+  endingCount,
   isFinal,
   isFollowUp,
+  resolveEnding,
   isWarmOpener,
   missedDate,
   pendingDateStep,
@@ -199,6 +201,8 @@ export type GameEvent =
       paid: number;
       firstTime: boolean;
       antiFraud: boolean;
+      /** 有分歧結局的劇情才有：走到第幾個（0 起算）、總共幾個、這個結局是不是第一次看到 */
+      ending?: { index: number; total: number; isNew: boolean };
     }
   | { type: "dexCompleted" }
   /** 演得像失敗結局，但沒有記圖鑑，聊天也還在 */
@@ -658,9 +662,12 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
       if (!chat || chat.closed || !isChatReady(chat, run.dayIndex, run.phase)) return same;
       const step = storyStep(chat);
       if (!step || !isFinal(step)) return same;
-      const { narration, cost = 0, antiFraud } = step.ending;
+      const resolved = resolveEnding(step, chat.replies);
+      const { narration, cost = 0, antiFraud } = resolved.ending;
       const money = applyCost(run.money, cost);
-      const nextDex = recordFailure(dex, chat.storyId, run.dayIndex);
+      const nextDex = recordFailure(dex, chat.storyId, run.dayIndex, resolved.index);
+      const total = endingCount(STORY_BY_ID[chat.storyId]);
+      const prevEntry = Object.hasOwn(dex, chat.storyId) ? dex[chat.storyId] : null;
       const events: GameEvent[] = [
         {
           type: "chatEnded",
@@ -670,6 +677,15 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
           paid: run.money - money,
           firstTime: !Object.hasOwn(dex, chat.storyId),
           antiFraud: Boolean(antiFraud),
+          ...(total > 1
+            ? {
+                ending: {
+                  index: resolved.index,
+                  total,
+                  isNew: !prevEntry || !endingsSeen(prevEntry).includes(resolved.index),
+                },
+              }
+            : {}),
         },
       ];
       if (!isDexComplete(dex) && isDexComplete(nextDex)) events.push({ type: "dexCompleted" });
