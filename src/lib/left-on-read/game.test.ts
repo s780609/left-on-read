@@ -26,8 +26,11 @@ import type { Chat, FinalStep, OpenerKind, ReplyStep, Story } from "./storyTypes
 
 // ---------- 共用工具 ----------
 
-/** 圖鑑可集滿的上限：業績學程改成主要靠業績卡之後變慢，8 個 seed 實測 40～135 天 */
-const DEX_COMPLETE_MAX_GAME_DAYS = 160;
+/**
+ * 圖鑑可集滿的上限：業績學程改成主要靠業績卡之後變慢，8 個 seed 實測 40～135 天；
+ * 一輪對話改了節奏、亂數走法跟著變，seed 1～5 實測 65～162 天（最慢的卡在權重被壓低的 pitch 劇情），留一點餘裕
+ */
+const DEX_COMPLETE_MAX_GAME_DAYS = 200;
 
 const MATCH: RngFactory = () => () => 0;
 const NO_MATCH: RngFactory = () => () => 0.999;

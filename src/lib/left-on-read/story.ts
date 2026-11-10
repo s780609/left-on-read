@@ -2,7 +2,7 @@
  * 聊天的規則：開場白、抽劇情的權重、等待與 ready、對話紀錄、劇情資料驗證。
  */
 
-import { calendarOf, firstDayIndexOnOrAfter, isPhoneChatDay } from "./calendar.ts";
+import { WEEKDAY_NAMES, calendarOf, firstDayIndexOnOrAfter, isPhoneChatDay, playDayOnOrAfter } from "./calendar.ts";
 import { HEROINE_SEED, HEROINE_INTEREST_OPENER_SCORE, NON_LURE_PITCH_MULT } from "./constants.ts";
 import type { Dex } from "./dex.ts";
 import type { Girl } from "./girl.ts";
@@ -137,7 +137,20 @@ export function firstReadyDay(lastAdvancedDay: number, wait: StepWait = DEFAULT_
 /** 夜晚階段：小晴可以在白天回過之後，當晚再推一步 */
 export type ChatPhase = "daytime" | "night" | "nightDone" | string;
 
-/** 只看等待時間（和小晴夜間加成）；對話紀錄用這個，平日不能回時仍看得到訊息 */
+/**
+ * 一輪對話：一般失敗劇情回完之後，如果下一步是她直接傳的訊息（沒有指定等待），她當場接著傳，
+ * 同一天可以再回一次；一輪最多兩步（roundUsed）。已讀、未讀、消失、旁白和指定等待照舊要等，那些是笑點本身。
+ * 小晴、Iris、個工不套用：她們有寫好的同輪接續和晚上加成。
+ */
+export function isFollowUp(chat: Chat, dayIndex: number): boolean {
+  if (chat.closed || chat.roundUsed || chat.stepIndex === 0 || chat.lastAdvancedDay !== dayIndex) return false;
+  if (!STORIES.some((s) => s.id === chat.storyId)) return false;
+  const step = STORY_BY_ID[chat.storyId]?.steps[chat.stepIndex];
+  if (!step || isFinal(step) || step.wait !== undefined) return false;
+  return step.incoming.kind === "message";
+}
+
+/** 只看等待時間（和小晴夜間加成、一輪對話）；對話紀錄用這個，平日不能回時仍看得到訊息 */
 export function isWaitReady(chat: Chat, dayIndex: number, phase?: ChatPhase): boolean {
   const step = STORY_BY_ID[chat.storyId]?.steps[chat.stepIndex];
   if (step === undefined || ("date" in step && step.date)) return false;
@@ -146,6 +159,7 @@ export function isWaitReady(chat: Chat, dayIndex: number, phase?: ChatPhase): bo
   const wait = step.wait ?? { days: 1 };
   const readyDay = firstReadyDay(chat.lastAdvancedDay, wait);
   if (dayIndex >= readyDay) return true;
+  if (isFollowUp(chat, dayIndex)) return true;
   // 小晴專用：白天已回（等一天），晚上同一天再給一步
   if (
     chat.girlSeed === HEROINE_SEED &&
@@ -158,6 +172,56 @@ export function isWaitReady(chat: Chat, dayIndex: number, phase?: ChatPhase): bo
     return true;
   }
   return false;
+}
+
+/** 聊天現在的狀態，給列表和聊天室顯示「她什麼時候會回」 */
+export type ReplyTiming =
+  | { kind: "closed" }
+  | { kind: "ready" }
+  | { kind: "date"; day: number }
+  | { kind: "tonight" }
+  | { kind: "wait"; day: number };
+
+export function replyTiming(chat: Chat, dayIndex: number, phase?: ChatPhase): ReplyTiming {
+  if (chat.closed) return { kind: "closed" };
+  if (isChatReady(chat, dayIndex, phase)) return { kind: "ready" };
+  const dateDay = scheduledDateDay(chat);
+  if (dateDay !== null) return { kind: "date", day: dateDay };
+  const step = STORY_BY_ID[chat.storyId]?.steps[chat.stepIndex];
+  if (!step) return { kind: "closed" };
+  const wait = step.wait ?? { days: 1 };
+  // 小晴白天回過，晚上還可能再傳一則
+  if (
+    chat.girlSeed === HEROINE_SEED &&
+    !chat.heroineNightUsed &&
+    phase === "daytime" &&
+    dayIndex === chat.lastAdvancedDay &&
+    "days" in wait &&
+    wait.days >= 1
+  ) {
+    return { kind: "tonight" };
+  }
+  return { kind: "wait", day: playDayOnOrAfter(Math.max(dayIndex + 1, firstReadyDay(chat.lastAdvancedDay, wait))) };
+}
+
+/** 「她什麼時候會回」的短標籤：明天、週二、9/29 週二、約會 9/26 週六、今晚可能再傳；可以回或已結束時回傳 null */
+export function replyTimingLabel(timing: ReplyTiming, dayIndex: number): string | null {
+  const short = (day: number) => {
+    const c = calendarOf(day);
+    return `${c.month}/${c.day} ${WEEKDAY_NAMES[c.weekday]}`;
+  };
+  switch (timing.kind) {
+    case "date":
+      return `約會 ${short(timing.day)}`;
+    case "tonight":
+      return "今晚可能再傳";
+    case "wait":
+      if (timing.day === dayIndex + 1) return "明天";
+      if (timing.day - dayIndex < 7) return WEEKDAY_NAMES[calendarOf(timing.day).weekday];
+      return short(timing.day);
+    default:
+      return null;
+  }
 }
 
 /** 現在能不能回：等滿 + 今天是可回訊息日；已結束的對話不能再回／關 */

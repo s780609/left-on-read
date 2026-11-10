@@ -68,6 +68,7 @@ import {
   dueDateChat,
   isChatReady,
   isFinal,
+  isFollowUp,
   isWarmOpener,
   missedDate,
   pendingDateStep,
@@ -405,6 +406,8 @@ export function canUsePhone(phase: Phase): boolean {
  * 白天的則數上限算的是今天認真經營了幾段聊天，同一段對話接著回不另外算，不然聊到一半會被切斷。
  */
 export function isContinuation(run: RunState, chat: Chat): boolean {
+  // 一輪對話裡她接著傳的那一步也算同一段
+  if (isFollowUp(chat, run.dayIndex)) return true;
   const step = storyStep(chat);
   return (
     step !== undefined &&
@@ -533,6 +536,7 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
           events: [{ type: "gameEnding", endingId }],
         };
       }
+      const followUp = isFollowUp(chat, run.dayIndex);
       const { heroineNightUsed: _ignored, ...chatRest } = chat;
       // 隱藏路線（小晴、Iris、個工）的對白是寫好的，沒計分的步驟不動數值，不然選第二句也會被當成尷尬
       const scripted = !STORIES.some((s) => s.id === chat.storyId) && !step.scores && !step.deltas;
@@ -550,7 +554,10 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
         ...(chat.girlSeed === HEROINE_SEED
           ? { heroineNightUsed: run.phase === "night" || run.phase === "nightDone" }
           : {}),
+        // 一輪對話的第二步回完，今天這一輪就用掉了；新的一輪清掉舊標記
+        ...(followUp ? { roundUsed: true } : {}),
       };
+      if (!followUp) delete next.roundUsed;
       // 總分不夠就換到失敗路線；兩條路線前面的對話相同，對話紀錄接得起來
       if (step.gate && chatScore(next) < step.gate.minScore) next.storyId = step.gate.failStoryId;
       const story = STORY_BY_ID[next.storyId];
@@ -838,6 +845,8 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
       let chats = run.chats.map((chat) => {
         if (run.nightHobby.games) return chat;
         if (!isChatReady(chat, run.dayIndex, run.phase)) return chat;
+        // 一輪對話裡她接著傳的那一步，不回不算已讀壓力
+        if (isFollowUp(chat, run.dayIndex)) return chat;
         const step = storyStep(chat);
         if (!step || isFinal(step)) return chat;
         const stats = applyDelta(statsOf(chat), { affection: 0, awkward: 0, pressure: 1 });

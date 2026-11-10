@@ -93,6 +93,7 @@ function parseChat(raw: unknown, dayIndex: number): Chat | null {
     }),
   };
   if (raw.heroineNightUsed === true) chat.heroineNightUsed = true;
+  if (raw.roundUsed === true) chat.roundUsed = true;
   if (raw.closed === true) chat.closed = true;
   if (isObject(raw.stats)) {
     const a = raw.stats.affection, k = raw.stats.awkward, p = raw.stats.pressure;

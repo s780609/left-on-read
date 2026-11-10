@@ -74,13 +74,18 @@ test("尷尬爆表會提早跳到結局步", () => {
 test("白天認真回訊息有上限", () => {
   const chats = [1, 2, 3, 4].map((id) => chatAt(0, { id, storyId: STORIES[id % STORIES.length].id }));
   let run = atDay(chats, { nextChatId: 5 });
+  // 一輪對話裡她接著傳的那一步不算，所以每次挑「不是接續」的聊天
+  const fresh = (r: RunState) => r.chats.find((c) => isChatReady(c, r.dayIndex, r.phase) && !isContinuation(r, c));
   for (let i = 0; i < DAYTIME_REPLY_LIMIT; i++) {
     assert.ok(legalActions(run).includes("reply"), `第 ${i} 則`);
-    const id = run.chats.find((c) => isChatReady(c, run.dayIndex, run.phase))!.id;
-    run = advance(run, {}, { type: "reply", chatId: id, choice: 0 }).run;
+    run = advance(run, {}, { type: "reply", chatId: fresh(run)!.id, choice: 0 }).run;
   }
   assert.equal(run.dayReplies, DAYTIME_REPLY_LIMIT);
-  assert.ok(!legalActions(run).includes("reply"), "達上限不能再回");
+  const blocked = fresh(run)!;
+  assert.equal(advance(run, {}, { type: "reply", chatId: blocked.id, choice: 0 }).run, run, "達上限不能再回新的聊天");
+  // 還能回的只剩一輪對話的接續
+  const followUps = run.chats.filter((c) => isChatReady(c, run.dayIndex, run.phase) && isContinuation(run, c));
+  assert.equal(legalActions(run).includes("reply"), followUps.length > 0);
   assert.ok(legalActions(run).includes("endDaytime"));
 });
 

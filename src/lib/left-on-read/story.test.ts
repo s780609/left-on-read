@@ -14,6 +14,7 @@ import {
   chatTranscript,
   firstReadyDay,
   isChatReady,
+  isFollowUp,
   openerOptions,
   pickStory,
   readyChats,
@@ -599,8 +600,9 @@ test("chatTranscript：順序是開場白、她的訊息、冠宇選的回覆，
       const chat = makeChat(story, { girlSeed, opener, stepIndex, lastAdvancedDay: 100, replies });
       const readyDay = firstReadyDay(100, step.wait);
       const where = `${story.id} 第 ${stepIndex} 步`;
-      const finalNow = isFinal(step);
-      // 還沒到等待日：這一步還沒揭示（結局步除外，立刻揭示）
+      // 結局步、一輪對話裡她接著傳的那一步，當天就揭示
+      const finalNow = isFinal(step) || isFollowUp(chat, 100);
+      // 還沒到等待日：這一步還沒揭示（上面兩種除外）
       assert.deepEqual(
         chatTranscript(chat, girl, 100),
         expectedTranscript(story, chat, girl, finalNow),

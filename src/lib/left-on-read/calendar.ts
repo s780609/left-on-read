@@ -5,7 +5,7 @@
 import { START_DATE_UTC } from "./constants.ts";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const WEEKDAY_NAMES = ["週日", "週一", "週二", "週三", "週四", "週五", "週六"] as const;
+export const WEEKDAY_NAMES = ["週日", "週一", "週二", "週三", "週四", "週五", "週六"] as const;
 
 export interface CalendarDay {
   year: number;

@@ -83,6 +83,8 @@ export interface Chat {
   replies: number[];
   /** 小晴：今晚是否已用過「白天回完晚上再回一次」；舊存檔沒有就當 false */
   heroineNightUsed?: boolean;
+  /** 一般失敗劇情：今天這一輪她已經接著傳過一次（一輪最多兩步）；舊存檔沒有就當 false */
+  roundUsed?: boolean;
   /** 隱性數值；舊存檔沒有就從 0 起算 */
   stats?: ChatStats;
   /** 失敗結局已確認（圖鑑已記）；舊存檔沒有就當 false。玩家可自行刪除 */

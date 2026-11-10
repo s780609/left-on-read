@@ -14,6 +14,8 @@ import {
   isFinal,
   pendingDateStep,
   renderLine,
+  replyTiming,
+  replyTimingLabel,
   visibleChats,
   type TranscriptLine,
 } from "@/lib/left-on-read/story";
@@ -89,6 +91,16 @@ interface ChatListProps {
   onClose: () => void;
 }
 
+/** 還不能回時的說明：她剛回完（不是卡住）或剛送出，加上她下一則大概什麼時候來 */
+function waitingText(chat: Chat, run: RunState, herLast: boolean): string {
+  const timing = replyTiming(chat, run.dayIndex, run.phase);
+  if (timing.kind === "tonight") {
+    return herLast ? "她回完了。晚上回到家，她可能還會再傳。" : "已送出。她白天在忙，晚上可能會回。";
+  }
+  const label = replyTimingLabel(timing, run.dayIndex) ?? "明天";
+  return herLast ? `她回完了。下一則大概${label}才會來。` : `已送出。她大概${label}會回。`;
+}
+
 export function ChatList({ run, onOpen, onClose }: ChatListProps) {
   return (
     <>
@@ -101,6 +113,7 @@ export function ChatList({ run, onOpen, onClose }: ChatListProps) {
           const girl = generateGirl(chat.girlSeed);
           const ready = !chat.closed && isChatReady(chat, run.dayIndex, run.phase);
           const lines = chatTranscript(chat, girl, run.dayIndex, run.phase);
+          const when = replyTimingLabel(replyTiming(chat, run.dayIndex, run.phase), run.dayIndex);
           return (
             <button
               key={chat.id}
@@ -129,6 +142,9 @@ export function ChatList({ run, onOpen, onClose }: ChatListProps) {
                 <span className="shrink-0 border-2 border-black bg-[#55587a] px-1.5 text-xs text-[#c8cae0]">已結束</span>
               ) : ready ? (
                 <span className="shrink-0 border-2 border-black bg-[#ff6f91] px-1.5 text-xs text-white">新</span>
+              ) : when ? (
+                // 她下一則大概什麼時候來
+                <span className="shrink-0 text-xs text-[#a9abc9]">{when}</span>
               ) : null}
             </button>
           );
@@ -301,10 +317,7 @@ export function ChatRoom({ run, chat, onReply, onFinish, onDelete, onBack }: Cha
             <p className="text-center text-sm text-[#a9abc9]">
               {dateIsNext
                 ? `約好了：${formatDate(calendarOf(scheduledDateDay(chat) ?? run.dayIndex))}白天出門赴約。錯過就是放她鳥。`
-                : allLines[allLines.length - 1]?.who === "her"
-                  ? // 她剛回完：不是卡住，是今天先聊到這裡（每個聊天一天推進一步）
-                    "她回完了。今天就聊到這裡，下一則明天才會來。"
-                  : `已送出。${run.phase === "daytime" ? "今天" : "今晚"}她不會再回了，明天再看看。`}
+                : waitingText(chat, run, allLines[allLines.length - 1]?.who === "her")}
             </p>
             <PixelButton onClick={onBack}>回列表</PixelButton>
           </>
