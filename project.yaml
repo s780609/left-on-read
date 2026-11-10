@@ -1,0 +1,50 @@
+# CCGS project configuration — single source of truth for project settings.
+# See .claude/docs/effects-map.md for full schema.
+#
+# 《已讀不回》：Next.js 16（App Router）+ React 19 + TypeScript 的網頁遊戲，
+# 2026-11-10 從 Claude Code Game Studios 1.3.0 範本導入（既有專案，不是從 /prototype 開始）。
+
+schema_version: 1
+
+framework:
+  version: 1.3.0
+  last_upgraded: 2026-11-10
+
+# 只放 /start 會寫的兩個：rigor 和 automation。rigor 底下的六個細項不要加在這裡（會蓋掉 rigor 的展開）。
+modes:
+  # minimal：不強制寫 GDD，一次做一個功能：說出來、做好、檢查、commit
+  rigor: minimal
+  # autonomous：自己決定、記錄後照做，只有 automation_always_ask 的類別才停下來問
+  automation: autonomous
+
+project:
+  # 遊戲已經可以從頭玩到真結局，正在加功能與打磨
+  stage: Production
+
+engine:
+  name: "Web"
+  version: "Next.js 16.2.3"
+  language: "TypeScript"
+  rendering: "Canvas 2D"
+  physics: "none"
+
+specialists:
+  code: "lead-programmer"
+  shader: "lead-programmer"
+  ui: "lead-programmer"
+  additional: []
+
+naming:
+  classes: PascalCase
+  variables: camelCase
+  constants: SCREAMING_SNAKE
+  signals: on_event_name
+  files: camelCase
+  scenes: snake_case
+
+# 這個專案的實際指令（不是範本的 Vite 預設）；npm test 用 node --test 跑 src/**/*.test.ts
+commands:
+  build: "npm run build"
+  test: "npm test"
+  run: "npm run dev"
+  smoke: "npm run lint"
