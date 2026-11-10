@@ -385,7 +385,6 @@ export default function LeftOnReadGame() {
           run={run}
           note={shopNote}
           onSave={saveProfile}
-          onBuyGold={() => buy("gold")}
           onBack={closeOverlay}
         />
       );

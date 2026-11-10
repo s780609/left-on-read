@@ -1,7 +1,7 @@
 "use client";
 
 import { calendarOf, formatDate, isWorkday } from "@/lib/left-on-read/calendar";
-import { MONTHLY_RENT, MONTHLY_SALARY } from "@/lib/left-on-read/constants";
+import { MONTHLY_BILLS, MONTHLY_BILLS_TOTAL, MONTHLY_SALARY } from "@/lib/left-on-read/constants";
 import { PAYDAY_LINES, QUIET_PHONE_LINES, WEEKEND_LINES, WORK_LINES, dailyLine } from "@/lib/left-on-read/flavor";
 import { dayReplyLimit, pendingDayEvent, repliesLeft, type DayAction, type RunState } from "@/lib/left-on-read/game";
 import { generateGirl } from "@/lib/left-on-read/girl";
@@ -134,15 +134,6 @@ export function DayScreen({ run, eventNote, onMenu, onOpenChats, onEndDay, onGoD
         <DialogBox>
           {holiday ? <p className="mb-1 text-xs text-[#ff9fb4]">今天是{holiday.name}</p> : null}
           <Typewriter key={line} text={line} />
-          {!event ? (
-            <p className="mt-2 text-sm text-[#ffe08a]">
-              {chosen
-                ? `今天白天拿來${DAY_ACTION_LABEL[chosen]}了。`
-                : workday
-                  ? "白天能做一件事：回訊息（最多 3 則）。"
-                  : "白天能做一件事：回訊息、約會或出門打理自己，三選一。"}
-            </p>
-          ) : null}
           {event ? <p className="mt-2 border-t-2 border-dashed border-[#55587a] pt-2">{event.text}</p> : null}
           {!event && eventNote ? <p className="mt-2 text-sm text-[#c8cae0]">{eventNote}</p> : null}
           {standingUp ? (
@@ -167,7 +158,7 @@ export function DayScreen({ run, eventNote, onMenu, onOpenChats, onEndDay, onGoD
 
 /** 每月 5 號：入帳和扣房租 */
 export function PaydayScreen({ run, onMenu, onAck }: { run: RunState; onMenu: () => void; onAck: () => void }) {
-  const after = run.money + MONTHLY_SALARY - MONTHLY_RENT;
+  const after = Math.max(0, run.money + MONTHLY_SALARY - MONTHLY_BILLS_TOTAL);
   const line = dailyLine(PAYDAY_LINES, run.dayIndex);
   const net = after.toLocaleString("en-US");
   return (
@@ -184,7 +175,9 @@ export function PaydayScreen({ run, onMenu, onAck }: { run: RunState; onMenu: ()
         <DialogBox>
           <p className="text-sm">
             <span className="text-[#8fe0b0]">薪水 +{MONTHLY_SALARY.toLocaleString("en-US")}</span>
-            <span className="mx-2 text-[#ff9a8f]">房租水電 -{MONTHLY_RENT.toLocaleString("en-US")}</span>
+          </p>
+          <p className="text-sm text-[#ff9a8f]">
+            {MONTHLY_BILLS.map((b) => `${b.label} -${b.amount.toLocaleString("en-US")}`).join("　")}
           </p>
           <p className="mb-2 text-sm">餘額 NT${net}</p>
           <Typewriter key={line} text={line} />

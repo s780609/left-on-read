@@ -271,8 +271,8 @@ test("白天只能做一件事：回了訊息就不能約會或打理自己；�
   assert.equal(replied.today.dayAction, "reply");
   assert.ok(!legalActions(replied).includes("goOnDate"));
   assert.equal(advance(replied, {}, { type: "buy", item: "haircut" }).run, replied);
-  // 手機裡買 Gold 不算白天那件事
-  assert.notEqual(advance(replied, {}, { type: "buy", item: "gold" }).run, replied);
+  // Swipy Gold 已下架，任何時候都買不到
+  assert.equal(advance(replied, {}, { type: "buy", item: "gold" }).run, replied);
 
   // 選了打理自己：還能再買別的，但不能回訊息、不能約會
   const shopped = advance(base, {}, { type: "buy", item: "haircut" }).run;

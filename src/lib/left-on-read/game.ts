@@ -20,7 +20,7 @@ import {
   BORROW_DELTA,
   NO_SHOW_STORY_ID,
   NIGHT_ACTION_LIMIT,
-  MONTHLY_RENT,
+  MONTHLY_BILLS_TOTAL,
   MONTHLY_SALARY,
   NG_PLUS_REPLY_BONUS,
   NOODLE_PRICE,
@@ -293,14 +293,16 @@ export function runMatchMult(run: RunState): number {
 
 /** 週末白天才能出門打理自己；Swipy Gold 拿得起手機就能買 */
 export function canShopNow(run: RunState, item: ShopItemId): boolean {
-  const where = SHOP_ITEM_BY_ID[item].where;
+  const shopItem = SHOP_ITEM_BY_ID[item];
+  if (!shopItem) return false;
+  const where = shopItem.where;
   if (where === "app") return canUsePhone(run.phase);
   return canDoDayAction(run, "shop") && !isWorkday(calendarOf(run.dayIndex));
 }
 
 function affordableShopItems(run: RunState): ShopItemId[] {
   return (Object.keys(SHOP_ITEM_BY_ID) as ShopItemId[]).filter(
-    (id) => canShopNow(run, id) && canBuy(id, run.grooming, run.dayIndex) && run.money >= SHOP_ITEM_BY_ID[id].price
+    (id) => canShopNow(run, id) && canBuy(id, run.grooming, run.dayIndex) && run.money >= (SHOP_ITEM_BY_ID[id]?.price ?? Infinity)
   );
 }
 
@@ -498,7 +500,8 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
   switch (action.type) {
     case "ackPayday": {
       if (run.phase !== "payday") return same;
-      const after = Math.min(MAX_MONEY, run.money + MONTHLY_SALARY - MONTHLY_RENT);
+      // 固定支出比房租多：孝親費、學貸、電信；錢扣到 0 為止
+      const after = Math.min(MAX_MONEY, Math.max(0, run.money + MONTHLY_SALARY - MONTHLY_BILLS_TOTAL));
       return {
         run: { ...run, money: after, phase: "daytime" },
         dex,

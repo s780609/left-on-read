@@ -6,7 +6,6 @@
 import {
   GOLD_DAYS,
   GOLD_MATCH_MULT,
-  GOLD_PRICE,
   HAIRCUT_DAYS,
   HAIRCUT_MATCH_MULT,
   HAIRCUT_PRICE,
@@ -146,15 +145,11 @@ export interface ShopItem {
   where: "app" | "weekend";
 }
 
+/**
+ * 能買的東西。Swipy Gold（"gold"）2026-11-10 下架：效果和剪頭髮、新衣服重疊。
+ * 型別和 applyPurchase 留著，舊存檔買過的 Gold 效果照算到期。
+ */
 export const SHOP_ITEMS: readonly ShopItem[] = [
-  {
-    id: "gold",
-    name: "Swipy Gold",
-    price: GOLD_PRICE,
-    desc: `${GOLD_DAYS} 天，曝光度提升`,
-    line: "付款成功。系統說我的曝光度提升了。它沒有說提升給誰看。",
-    where: "app",
-  },
   {
     id: "haircut",
     name: "髮廊剪頭髮",
@@ -181,9 +176,10 @@ export const SHOP_ITEMS: readonly ShopItem[] = [
   },
 ];
 
-export const SHOP_ITEM_BY_ID: Record<ShopItemId, ShopItem> = Object.fromEntries(
+/** gold 已下架，查不到；呼叫的地方要先檢查有沒有這個商品 */
+export const SHOP_ITEM_BY_ID: Partial<Record<ShopItemId, ShopItem>> = Object.fromEntries(
   SHOP_ITEMS.map((item) => [item.id, item])
-) as Record<ShopItemId, ShopItem>;
+);
 
 export function photoOf(id: ProfilePhotoId): ProfilePhoto {
   return PROFILE_PHOTOS.find((p) => p.id === id) ?? PROFILE_PHOTOS[0];

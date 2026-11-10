@@ -8,6 +8,14 @@ export const DECK_SIZE = 10;
 export const START_MONEY = 8_200;
 export const MONTHLY_SALARY = 36_000;
 export const MONTHLY_RENT = 12_500;
+/** 每月 5 號的固定支出：房租之外還有孝親費、學貸、電信，錢才會緊 */
+export const MONTHLY_BILLS: readonly { label: string; amount: number }[] = [
+  { label: "房租水電", amount: MONTHLY_RENT },
+  { label: "孝親費", amount: 6_000 },
+  { label: "學貸", amount: 4_000 },
+  { label: "電信與訂閱", amount: 1_500 },
+];
+export const MONTHLY_BILLS_TOTAL = MONTHLY_BILLS.reduce((sum, b) => sum + b.amount, 0);
 export const NOODLE_PRICE = 30;
 export const MEAL_PRICE_MIN = 100;
 export const MEAL_PRICE_MAX = 260;

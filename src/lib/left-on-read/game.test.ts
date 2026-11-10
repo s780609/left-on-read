@@ -4,6 +4,7 @@ import { newGameplayAction } from "./testing.ts";
 import { calendarOf, isPayday, isPhoneChatDay } from "./calendar.ts";
 import {
   DECK_SIZE,
+  MONTHLY_BILLS_TOTAL,
   MONTHLY_RENT,
   MONTHLY_SALARY,
   NOODLE_PRICE,
@@ -30,7 +31,7 @@ const DEX_COMPLETE_MAX_GAME_DAYS = 160;
 
 const MATCH: RngFactory = () => () => 0;
 const NO_MATCH: RngFactory = () => () => 0.999;
-const NET_PAY = 36_000 - 12_500;
+const NET_PAY = 36_000 - MONTHLY_BILLS_TOTAL;
 const OPENERS: OpenerKind[] = ["hi", "whatsup", "eaten", "interest"];
 
 const isFinal = (step: ReplyStep | FinalStep): step is FinalStep => "ending" in step;
@@ -160,6 +161,8 @@ test("金額常數符合規格", () => {
   assert.equal(START_MONEY, 8_200);
   assert.equal(MONTHLY_SALARY, 36_000);
   assert.equal(MONTHLY_RENT, 12_500);
+  // 固定支出：房租水電、孝親費、學貸、電信，淨入 12,000
+  assert.equal(MONTHLY_BILLS_TOTAL, 24_000);
   assert.equal(NOODLE_PRICE, 30);
   assert.equal(DECK_SIZE, 10);
 });
@@ -189,16 +192,16 @@ test("applyCost：扣到 0 為止，不會變負數", () => {
 
 const PHASE_CASES: Record<Phase, { state: RunState; legal: GameAction["type"][] }> = {
   payday: { state: at({ phase: "payday", dayIndex: 3 }), legal: ["ackPayday"] },
-  daytime: { state: at({ phase: "daytime" }), legal: ["buy", "endDaytime"] },
+  daytime: { state: at({ phase: "daytime" }), legal: ["endDaytime"] },
   evening: {
     state: at({ phase: "evening", offeredMealId: MEALS[0].id, money: 100_000 }),
     legal: ["eatOut", "goHome"],
   },
-  night: { state: at({ phase: "night" }), legal: ["jerkOff", "playGames", "openApp", "editProfile", "buy", "sleep"] },
+  night: { state: at({ phase: "night" }), legal: ["jerkOff", "playGames", "openApp", "editProfile", "sleep"] },
   swiping: { state: at({ phase: "swiping" }), legal: ["swipe", "quitApp"] },
   matched: { state: at({ phase: "matched", pendingMatchSeed: 123, deckIndex: 1 }), legal: ["chooseOpener"] },
   // 滑完之後還能用剩下的晚上動作打手槍、打電動
-  nightDone: { state: at({ phase: "nightDone" }), legal: ["jerkOff", "playGames", "editProfile", "buy", "sleep"] },
+  nightDone: { state: at({ phase: "nightDone" }), legal: ["jerkOff", "playGames", "editProfile", "sleep"] },
 };
 
 const ONE_OF_EACH: GameAction[] = [
@@ -561,7 +564,7 @@ test("5 號落在週六照常進 payday；落在週日、週一就改到之後�
   }
 });
 
-test("ackPayday：淨增 23,500，只入帳一次", () => {
+test("ackPayday：薪水扣掉固定支出淨增 12,000，只入帳一次", () => {
   const s = session(at({ phase: "payday", dayIndex: 3, money: 1_000 }));
   s.act({ type: "ackPayday" });
   assert.equal(s.run.money, 1_000 + NET_PAY);
@@ -693,8 +696,8 @@ test("提早放棄：到 nightDone，只剩 sleep，也不能再打開 App", () 
   const s = session(at({ phase: "swiping", deckIndex: 3 }));
   s.act({ type: "quitApp" });
   assert.equal(s.run.phase, "nightDone");
-  // 還能改 Swipy 檔案、買 Gold、用掉剩下那件事，但不能再滑
-  assert.deepEqual(legalActions(s.run), ["jerkOff", "playGames", "editProfile", "buy", "sleep"]);
+  // 還能改 Swipy 檔案、用掉剩下那件事，但不能再滑
+  assert.deepEqual(legalActions(s.run), ["jerkOff", "playGames", "editProfile", "sleep"]);
   assert.equal(advance(s.run, s.dex, { type: "openApp" }).run, s.run);
 });
 

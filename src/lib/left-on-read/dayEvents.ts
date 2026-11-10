@@ -90,6 +90,33 @@ export const DAY_EVENTS: readonly DayEvent[] = [
     ],
   },
   {
+    id: "phone-crack",
+    when: "any",
+    text: "手機從口袋滑出去，螢幕裂了一條。",
+    choices: [
+      { label: "拿去修（NT$2,500）", money: -2_500, line: "修好了。店員說現在的手機都很脆。我說我知道，我也是。" },
+      { label: "先用著", line: "裂痕剛好劃過 Swipy 的圖示。我覺得這是一種暗示，但我還是每天打開。" },
+    ],
+  },
+  {
+    id: "toothache",
+    when: "any",
+    text: "後面那顆牙從早上開始抽痛。",
+    choices: [
+      { label: "去看牙醫（NT$1,200）", money: -1_200, line: "醫生說再晚一點就要抽神經。我躺在椅子上，覺得這是今年被照顧最久的一次。" },
+      { label: "忍著", line: "我用另一邊咬東西。笑的時候也只笑一邊，看起來像在冷笑。" },
+    ],
+  },
+  {
+    id: "aircon",
+    when: "any",
+    text: "房東傳訊息：冷氣壞了，修理費大家分攤。",
+    choices: [
+      { label: "分攤（NT$1,000）", money: -1_000, line: "房東回了一個讚。這是這個月第一個回我讚的人。" },
+      { label: "「我用電風扇就好。」", line: "房東已讀。電風扇轉了一整晚，吹出來的都是熱風和自尊。" },
+    ],
+  },
+  {
     id: "lost-umbrella",
     when: "workday",
     text: "下午下大雨。我的傘不見了。隔壁座位的同事說她多帶一把。",

@@ -4,7 +4,7 @@
  */
 
 import { calmChoice, canCalm } from "./chatStats.ts";
-import { canShopNow, pendingDayEvent } from "./game.ts";
+import { canShopNow, hasReplyQuota, pendingDayEvent } from "./game.ts";
 import type { GameAction, RunState } from "./game.ts";
 import { PROFILE_BIOS, PROFILE_PHOTOS, SHOP_ITEMS, canBuy, canUsePhoto } from "./profile.ts";
 import { pick } from "./rng.ts";
@@ -42,7 +42,7 @@ export function newGameplayAction(type: GameAction["type"], run: RunState, rng: 
       const stepOf = (c: (typeof run.chats)[number]) => STORY_BY_ID[c.storyId]?.steps[c.stepIndex];
       const ready = run.chats.filter((c) => {
         const step = stepOf(c);
-        return !c.closed && step && !isFinal(step) && isChatReady(c, run.dayIndex, run.phase);
+        return !c.closed && step && !isFinal(step) && isChatReady(c, run.dayIndex, run.phase) && hasReplyQuota(run, c);
       });
       const calmChat = run.nightHobby.calm ? ready.find((c) => canCalm(stepOf(c) as ReplyStep)) : undefined;
       if (calmChat && rng() < 0.5) {

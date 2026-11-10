@@ -150,15 +150,11 @@ export function NightScreen({
             </p>
           ))}
           {hobbyNote ? <p className="mt-2 text-sm text-[#c8cae0]">{hobbyNote}</p> : null}
-          {!sleeping ? (
-            <p className="mt-2 text-sm text-[#ffe08a]">
-              {left > 0
-                ? `今晚還能做 ${left} 件事：滑 Swipy、打手槍、打電動任選。回訊息不算。`
-                : "今晚能做的事都做完了。還可以回訊息，然後睡覺。"}
-            </p>
+          {!sleeping && left === 0 ? (
+            <p className="mt-2 text-sm text-[#a9abc9]">今晚能做的事都做完了。還可以回訊息，然後睡覺。</p>
           ) : null}
           {run.nightHobby.calm && !sleeping ? (
-            <p className="mt-2 text-sm text-[#9fd3ff]">賢者模式：今晚回訊息時，會多一個冷靜的選項。</p>
+            <p className="mt-2 text-sm text-[#9fd3ff]">賢者模式：回訊息多一個冷靜的選項。</p>
           ) : null}
           {chats.length > 0 && ready === 0 && !sleeping && !hobbyNote ? (
             <p className="mt-2 text-sm text-[#a9abc9]">{quiet}</p>

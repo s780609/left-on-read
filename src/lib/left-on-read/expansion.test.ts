@@ -129,23 +129,13 @@ test("A：曝光指數 1～5 顆星，越高越多", () => {
   assert.ok(exposureStars(1.3) > exposureStars(1));
 });
 
-test("A：Swipy Gold 拿得起手機就能買，扣錢、30 天有效、可以續", () => {
+test("A：Swipy Gold 已下架：買不到，但舊存檔買過的效果照算到期", () => {
   const night = at({ phase: "night", dayIndex: 10 });
-  const r = act(night, {}, { type: "buy", item: "gold" });
-  assert.equal(r.run.money, night.money - GOLD_PRICE);
-  assert.equal(r.run.grooming.goldUntil, 10 + GOLD_DAYS);
-  assert.ok(runMatchMult(r.run) > runMatchMult(night) || holidayOf(10) !== null);
-  const again = act(r.run, {}, { type: "buy", item: "gold" });
-  assert.equal(again.run.grooming.goldUntil, 10 + GOLD_DAYS * 2);
-  assert.equal(eventOf(r.events, "bought")?.price, GOLD_PRICE);
-  // 吃飯、滑卡中不行；錢不夠不行
-  for (const phase of ["evening", "swiping"] as const) {
-    const s = at({ phase, offeredMealId: "braised-pork" });
-    assert.equal(advance(s, {}, { type: "buy", item: "gold" }).run, s, phase);
-  }
-  const broke = at({ phase: "night", money: GOLD_PRICE - 1 });
-  assert.equal(advance(broke, {}, { type: "buy", item: "gold" }).run, broke);
-  assert.ok(!legalActions(broke).includes("buy"));
+  assert.equal(advance(night, {}, { type: "buy", item: "gold" }).run, night);
+  assert.ok(!legalActions(night).includes("buy"));
+  const old = at({ phase: "night", dayIndex: 10, grooming: { ...DEFAULT_GROOMING, goldUntil: 10 + GOLD_DAYS } });
+  assert.ok(runMatchMult(old) > runMatchMult(night) || holidayOf(10) !== null);
+  assert.equal(runMatchMult({ ...old, dayIndex: 10 + GOLD_DAYS }), runMatchMult({ ...night, dayIndex: 10 + GOLD_DAYS }));
 });
 
 test("A：剪頭髮、衣服、形象照只有週末白天買得到；衣服和形象照只能買一次", () => {
@@ -594,11 +584,11 @@ test("成就：累計次數從事件來；條件達成才解鎖，解過不會�
     { type: "matched", girlSeed: 1 },
     { type: "dodged", girlSeed: 2 },
     { type: "calm", chatId: 1 },
-    { type: "bought", item: "gold", price: GOLD_PRICE, line: "" },
+    { type: "swiped", dir: "super" },
     { type: "dayEvent", eventId: "overtime", choice: 0, money: 1, line: "", overtime: true },
     { type: "mixup", chatId: 1, toGirlSeed: 3 },
   ]);
-  assert.deepEqual(counters, { matches: 1, dodged: 1, calm: 1, gold: 1, overtime: 1, mixups: 1 });
+  assert.deepEqual(counters, { matches: 1, dodged: 1, calm: 1, superLikes: 1, overtime: 1, mixups: 1 });
   const first = progressAchievements({}, {}, { run: createRun(1), dex: {}, events: [{ type: "matched", girlSeed: 1 }] }, 3);
   assert.deepEqual(first.unlocked.map((a) => a.id), ["first-match"]);
   assert.equal(first.achievements["first-match"], 3);
@@ -672,10 +662,10 @@ test("存檔：成就和累計次數留得住，亂寫的 id 不會", () => {
   assert.deepEqual(parsed.counters, { dodged: 3 });
   assert.deepEqual(parsed.achievements, { "first-match": 4 });
   const bad = parseMeta(
-    JSON.stringify({ v: 1, dex: { [IRIS_ENDING_ID]: { count: 1, firstDayIndex: 0 } }, counters: { nope: 1, calm: -1 }, achievements: { nope: 1, ["__proto__"]: 1, gold: "x" } })
+    JSON.stringify({ v: 1, dex: { [IRIS_ENDING_ID]: { count: 1, firstDayIndex: 0 } }, counters: { nope: 1, calm: -1 }, achievements: { nope: 1, ["__proto__"]: 1, "super-like": "x" } })
   );
   assert.deepEqual(bad.counters, {});
-  assert.deepEqual(Object.keys(bad.achievements), ["gold"]);
+  assert.deepEqual(Object.keys(bad.achievements), ["super-like"]);
   assert.ok(Object.hasOwn(bad.dex, IRIS_ENDING_ID));
   assert.deepEqual(parseMeta(null).achievements, {});
 });

@@ -62,16 +62,14 @@ interface ProfileScreenProps {
   /** 剛買完的那句 */
   note: string | null;
   onSave: (profile: Profile) => void;
-  onBuyGold: () => void;
   onBack: () => void;
 }
 
 /** 晚上：冠宇自己的 Swipy 檔案。照片和自介會改配對率，也會改她們比較容易怎麼對他 */
-export function ProfileScreen({ run, note, onSave, onBuyGold, onBack }: ProfileScreenProps) {
+export function ProfileScreen({ run, note, onSave, onBack }: ProfileScreenProps) {
   const [draft, setDraft] = useState<Profile>(run.profile);
   const stars = exposureStars(profileMatchMult(draft, run.grooming, run.dayIndex));
   const changed = draft.photo !== run.profile.photo || draft.bio !== run.profile.bio;
-  const gold = SHOP_ITEMS.find((i) => i.id === "gold")!;
   const goldActive = isGoldActive(run.grooming, run.dayIndex);
 
   return (
@@ -119,27 +117,10 @@ export function ProfileScreen({ run, note, onSave, onBuyGold, onBack }: ProfileS
             ))}
           </div>
         </section>
-        <section>
-          <h2 className="mb-2 border-b-2 border-[#55587a] pb-1 text-sm text-[#f2d675]">付費</h2>
-          <PixelButton
-            color={COLOR.yellow}
-            textColor="#20203c"
-            disabled={run.money < gold.price}
-            onClick={onBuyGold}
-            sub={
-              goldActive
-                ? `還剩 ${run.grooming.goldUntil - run.dayIndex} 天｜再買延長 ${gold.desc.split("，")[0]}`
-                : run.money < gold.price
-                  ? "等發薪"
-                  : `${money(gold.price)}｜${gold.desc}`
-            }
-          >
-            {goldActive ? "續訂 Swipy Gold" : "升級 Swipy Gold"}
-          </PixelButton>
-          <p className="mt-2 text-xs leading-relaxed text-[#a9abc9]">
-            滑卡時還可以按 ★ 送出超級喜歡，一次 NT$99。
-          </p>
-        </section>
+        <p className="text-xs leading-relaxed text-[#a9abc9]">
+          {goldActive ? `之前買的 Swipy Gold 還剩 ${run.grooming.goldUntil - run.dayIndex} 天。` : ""}
+          滑卡時可以按 ★ 送出超級喜歡，一次 NT$99。
+        </p>
       </div>
       <div className="flex shrink-0 flex-col gap-2.5 border-t-[3px] border-black bg-[#191933] px-4 py-3">
         {changed ? (

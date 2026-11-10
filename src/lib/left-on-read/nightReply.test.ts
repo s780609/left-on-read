@@ -74,7 +74,7 @@ test("晚上和滑完之後都可以回訊息，而且不會改變階段", () =>
 
 test("晚上回完還是可以打開 Swipy 或去睡覺", () => {
   const replied = act(at("night", [chatOf(replyStory())]), {}, { type: "reply", chatId: 1, choice: 0 }).run;
-  assert.deepEqual([...legalActions(replied)].sort(), ["buy", "editProfile", "jerkOff", "openApp", "playGames", "sleep"]);
+  assert.deepEqual([...legalActions(replied)].sort(), ["editProfile", "jerkOff", "openApp", "playGames", "sleep"]);
   assert.equal(act(replied, {}, { type: "openApp" }).run.phase, "swiping");
   // 第 32 天是週六，睡醒跳過週日週一，是第 35 天
   assert.equal(act(replied, {}, { type: "sleep" }).run.dayIndex, 35);
@@ -119,7 +119,7 @@ test("領薪通知、吃飯、滑卡和配對畫面中不能回", () => {
 test("沒有等滿的、不合法的回覆，晚上一樣不接受", () => {
   const story = replyStory();
   const waiting = at("night", [chatOf(story, { lastAdvancedDay: 32 })]);
-  assert.deepEqual([...legalActions(waiting)].sort(), ["buy", "editProfile", "jerkOff", "openApp", "playGames", "sleep"]);
+  assert.deepEqual([...legalActions(waiting)].sort(), ["editProfile", "jerkOff", "openApp", "playGames", "sleep"]);
   assert.equal(advance(waiting, {}, { type: "reply", chatId: 1, choice: 0 }).run, waiting);
   const ready = at("nightDone", [chatOf(story)]);
   for (const action of [
@@ -155,7 +155,7 @@ test("今晚才配對的人，要等到隔天才有回覆", () => {
   const run = act(swiping, {}, { type: "chooseOpener", opener: "hi" }).run;
   assert.equal(run.phase, "nightDone");
   assert.deepEqual(readyChats(run.chats, run.dayIndex), []);
-  assert.deepEqual(legalActions(run), ["jerkOff", "playGames", "editProfile", "buy", "sleep"]);
+  assert.deepEqual(legalActions(run), ["jerkOff", "playGames", "editProfile", "sleep"]);
 });
 
 test("白天回和晚上回，走出來的對話紀錄完全相同", () => {
@@ -268,7 +268,7 @@ test("約會還是只有週末白天能去，晚上只回得了訊息", () => {
   const dateStep = HEROINE.steps.findIndex((s) => "date" in s && s.date);
   // 第 5 天是週六，晚上不能赴約，也不能拿回訊息繞過約會
   const run = at("night", [heroineChat(dateStep)], { dayIndex: 5, heroineMet: true });
-  assert.deepEqual([...legalActions(run)].sort(), ["buy", "editProfile", "jerkOff", "openApp", "playGames", "sleep"]);
+  assert.deepEqual([...legalActions(run)].sort(), ["editProfile", "jerkOff", "openApp", "playGames", "sleep"]);
   assert.equal(advance(run, {}, { type: "goOnDate", choice: 0 }).run, run);
   assert.equal(advance(run, {}, { type: "reply", chatId: 1, choice: 0 }).run, run);
 });

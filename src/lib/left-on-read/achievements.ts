@@ -42,7 +42,7 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
   { id: "scam-dodger", name: "看得出來", hint: "左滑 5 張有業績的卡", quip: "我第一次在交友軟體上躲過一劫。五次。" },
   { id: "mixup", name: "手滑", hint: "同時聊太多人，傳錯一次", quip: "複製貼上是工程師的技能，不是談戀愛的。" },
   { id: "sage", name: "賢者", hint: "用賢者模式回 5 次訊息", quip: "冷靜的時候我很會聊天。可惜我不常冷靜。" },
-  { id: "gold", name: "付費會員", hint: "買一次 Swipy Gold", quip: "我付錢讓更多人可以不回我。" },
+  { id: "super-like", name: "很喜歡很喜歡", hint: "送出 10 次超級喜歡", quip: "我花了九百九十塊告訴陌生人我很喜歡她們。她們不知道。" },
   {
     id: "glow-up",
     name: "全身翻新",
@@ -65,7 +65,7 @@ export const ACHIEVEMENT_BY_ID: Record<string, AchievementDef> = Object.fromEntr
   ACHIEVEMENTS.map((a) => [a.id, a])
 );
 
-export const COUNTER_IDS = ["matches", "dodged", "calm", "gold", "overtime", "mixups"] as const;
+export const COUNTER_IDS = ["matches", "dodged", "calm", "superLikes", "overtime", "mixups"] as const;
 
 /** 這些事件讓哪些累計次數 +1 */
 export function tallyEvents(counters: MetaCounters, events: readonly GameEvent[]): MetaCounters {
@@ -77,7 +77,7 @@ export function tallyEvents(counters: MetaCounters, events: readonly GameEvent[]
     if (e.type === "matched") bump("matches");
     if (e.type === "dodged") bump("dodged");
     if (e.type === "calm") bump("calm");
-    if (e.type === "bought" && e.item === "gold") bump("gold");
+    if (e.type === "swiped" && e.dir === "super") bump("superLikes");
     if (e.type === "dayEvent" && e.overtime) bump("overtime");
     if (e.type === "mixup") bump("mixups");
   }
@@ -100,7 +100,7 @@ export function earnedAchievements({ run, dex, counters, events }: AchievementCo
   if (count("dodged") >= 5) earned.push("scam-dodger");
   if (count("mixups") >= 1) earned.push("mixup");
   if (count("calm") >= 5) earned.push("sage");
-  if (count("gold") >= 1) earned.push("gold");
+  if (count("superLikes") >= 10) earned.push("super-like");
   if (count("overtime") >= 5) earned.push("overtime");
   if (isDexComplete(dex)) earned.push("graduate");
   const endings = endingProgress(dex);
