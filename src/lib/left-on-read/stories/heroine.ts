@@ -272,7 +272,7 @@ export const HEROINE_STORY: Story = {
      * 假失敗：同一段對話一口氣聊完（冠宇的每一句都是在接她剛回的那句，隔天才接很怪），
      * 聊完當下就按「……就這樣了」，然後她消失 COMEBACK_DAYS 天才回來
      */
-    { incoming: { kind: "none" }, replies: ["最近有空嗎？想約妳"], answer: "這週專案爆了，天天加班" },
+    { incoming: { kind: "none" }, replies: ["下週末華山有老電影重映，要不要一起去看？"], answer: "下週可能不行……專案爆了，天天加班" },
     { wait: { days: 0 }, incoming: { kind: "none" }, replies: ["好，那妳先忙"], answer: "這陣子大概都會很忙" },
     { wait: { days: 0 }, incoming: { kind: "none" }, replies: ["好，那妳有空再說"], answer: "嗯，忙完第一個找你" },
     {

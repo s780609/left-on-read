@@ -551,7 +551,7 @@ test("第二次約會聊完之後自動觸發：同一段對話一口氣聊完",
   assert.equal(GHOST_STEP, dateStepIndex(1) + 3);
   const start = GHOST_STEP;
   assert.deepEqual([start, start + 1, start + 2].map((i) => [stepAt(i).replies[0], stepAt(i).answer]), [
-    ["最近有空嗎？想約妳", "這週專案爆了，天天加班"],
+    ["下週末華山有老電影重映，要不要一起去看？", "下週可能不行……專案爆了，天天加班"],
     ["好，那妳先忙", "這陣子大概都會很忙"],
     ["好，那妳有空再說", "嗯，忙完第一個找你"],
   ]);
@@ -786,7 +786,7 @@ const LEGACY_STEPS: readonly { newStep: number; resume?: number; reply: string }
   { newStep: 10, resume: 8, reply: "好啊，週六傍晚六點半那邊見" },
   { newStep: 11, reply: HEROINE_DATES[1].options[0].text },
   // 第二次約會回來、假失敗還沒開始：先聊煙火（略過當晚收尾）
-  { newStep: 14, resume: 13, reply: "最近有空嗎？想約妳" },
+  { newStep: 14, resume: 13, reply: "下週末華山有老電影重映，要不要一起去看？" },
   { newStep: 15, reply: "好，那妳先忙" },
   { newStep: 16, reply: "好，那妳有空再說" },
   { newStep: 17, reply: "……就這樣了" },
