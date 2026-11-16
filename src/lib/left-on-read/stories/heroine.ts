@@ -281,7 +281,7 @@ export const HEROINE_STORY: Story = {
       incoming: { kind: "none" },
       os: [
         "還是 GG 了嗎？",
-        "約了兩次都被打槍。",
+        "難得約她一次，就被打槍了。",
         "我看還是別約了，免得變成性騷擾。",
       ],
       replies: ["……就這樣了"],

@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { audioManager } from "@/lib/audio/AudioManager";
 import { hasReplyQuota, type RunState } from "@/lib/left-on-read/game";
 import { generateGirl, type Girl } from "@/lib/left-on-read/girl";
 import { STORIES, STORY_BY_ID } from "@/lib/left-on-read/stories/index";
@@ -19,7 +18,7 @@ import {
   visibleChats,
   type TranscriptLine,
 } from "@/lib/left-on-read/story";
-import type { Chat, ReplyStep } from "@/lib/left-on-read/storyTypes";
+import type { Chat } from "@/lib/left-on-read/storyTypes";
 import { calmChoice, canCalm, chatVibe, statsOf, type Vibe } from "@/lib/left-on-read/chatStats";
 import PixelCanvas from "../PixelCanvas";
 import { rect, type Ctx } from "../pixel/draw";
@@ -337,15 +336,7 @@ export function ChatRoom({ run, chat, onReply, onFinish, onDelete, onBack }: Cha
           </PixelButton>
         ) : (
           <>
-            {step.os && step.os.length > 0 && !revealing ? (
-              <div className="mb-1 space-y-1 px-1">
-                {step.os.map((line) => (
-                  <p key={line} className="text-center text-sm italic leading-relaxed text-[#a9abc9]">
-                    {renderLine(line, girl)}
-                  </p>
-                ))}
-              </div>
-            ) : null}
+            {/* 冠宇的內心話（step.os）已經在對話紀錄裡，這裡不再重複 */}
             <div
               className="flex flex-col gap-2"
               style={revealing ? { visibility: "hidden" } : leadTotal > 0 ? newLineStyle(0) : undefined}
@@ -457,81 +448,6 @@ export function EndingScreen({ ending, onClose }: { ending: EndingInfo; onClose:
         <PixelButton color={COLOR.blue} onClick={advance}>
           收起手機
         </PixelButton>
-      </div>
-    </div>
-  );
-}
-
-// ---------- 假失敗之後：她主動回來 ----------
-
-const CRACK_LEFT = "polygon(0 0, 54% 0, 44% 32%, 58% 52%, 42% 74%, 50% 100%, 0 100%)";
-const CRACK_RIGHT = "polygon(54% 0, 100% 0, 100% 100%, 50% 100%, 42% 74%, 58% 52%, 44% 32%)";
-
-/** 隔天早上：手機震動，昨天那個印章裂開，她傳訊息來了 */
-export function ComebackScreen({ chat, onReply }: { chat: Chat; onReply: (choice: number) => void }) {
-  const girl = useMemo(() => generateGirl(chat.girlSeed), [chat.girlSeed]);
-  const step = STORY_BY_ID[chat.storyId].steps[chat.stepIndex] as ReplyStep;
-  const stamp = step.comeback?.stamp ?? "";
-  const stampClass = "border-4 border-[#ff6f91] px-4 py-2 text-center text-xl text-[#ff6f91]";
-  const appear = (delayMs: number) => ({ animation: `lor-appear 320ms ease-out ${delayMs}ms both` });
-
-  useEffect(() => {
-    audioManager.chime();
-  }, []);
-
-  return (
-    <div className="flex h-full flex-col" style={{ animation: "lor-shake 120ms linear 4" }}>
-      <div className={TOP_BAR_CLASS}>
-        <GirlAvatar girl={girl} size={36} />
-        <div className="min-w-0 flex-1 truncate text-sm text-[#a9abc9]">{girl.nickname}</div>
-      </div>
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5">
-        <div className="mb-6 flex justify-center">
-          <div className="relative -rotate-[8deg]" aria-label={`${stamp}的印章裂開了`}>
-            <div className={`${stampClass} invisible`}>{stamp}</div>
-            <div
-              className={`${stampClass} absolute inset-0`}
-              style={{ clipPath: CRACK_LEFT, animation: "lor-crack-left 420ms steps(5) 700ms both" }}
-            >
-              {stamp}
-            </div>
-            <div
-              className={`${stampClass} absolute inset-0`}
-              style={{ clipPath: CRACK_RIGHT, animation: "lor-crack-right 420ms steps(5) 700ms both" }}
-            >
-              {stamp}
-            </div>
-          </div>
-        </div>
-        {"text" in step.incoming ? (
-          <p
-            className="mb-4 max-w-[85%] border-2 border-black bg-[#f4efe0] px-2.5 py-1.5 text-[15px] leading-snug text-[#20203c] shadow-[2px_2px_0_#000]"
-            style={appear(1100)}
-          >
-            {step.incoming.text}
-          </p>
-        ) : null}
-        <div style={appear(1700)}>
-          <DialogBox>{step.comeback?.aside}</DialogBox>
-        </div>
-      </div>
-      <div
-        className="flex shrink-0 flex-col gap-2 border-t-[3px] border-black bg-[#20203c] px-3 py-3"
-        style={appear(2200)}
-      >
-        {step.replies.map((reply, choice) => (
-          <PixelButton
-            key={reply}
-            color="#f4efe0"
-            textColor="#20203c"
-            align="left"
-            silent
-            className="text-sm"
-            onClick={() => onReply(choice)}
-          >
-            {reply}
-          </PixelButton>
-        ))}
       </div>
     </div>
   );

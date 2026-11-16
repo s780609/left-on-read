@@ -305,7 +305,7 @@ export function comebackChat(chats: readonly Chat[], dayIndex: number): Chat | n
   return due ?? null;
 }
 
-/** 假失敗到隔天早上之前，她要從手機上消失，玩家才會真的以為斷聯了；資料還留著 */
+/** 假失敗之後到她回來那天之前，她要從手機上消失，玩家才會真的以為斷聯了；資料還留著 */
 export function visibleChats(chats: readonly Chat[], dayIndex: number): Chat[] {
   return chats.filter((chat) => {
     const step = STORY_BY_ID[chat.storyId]?.steps[chat.stepIndex];

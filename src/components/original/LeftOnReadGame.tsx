@@ -10,11 +10,11 @@ import { advance, createRun, settleRun, type GameAction, type GameEvent, type Ru
 import type { Profile, ShopItemId } from "@/lib/left-on-read/profile";
 import { generateGirl } from "@/lib/left-on-read/girl";
 import { NOODLES } from "@/lib/left-on-read/meals";
-import { chatTranscript, comebackChat, dueDateChat, visibleChats } from "@/lib/left-on-read/story";
+import { chatTranscript, dueDateChat, visibleChats } from "@/lib/left-on-read/story";
 import { useSettings } from "@/lib/settings/SettingsContext";
 import PortraitFrame from "./PortraitFrame";
 import { commitSave, getSaveSnapshot, getServerSaveSnapshot, subscribeSave } from "./saveStore";
-import { ChatList, ChatRoom, ComebackScreen, EndingScreen, type EndingInfo } from "./screens/ChatScreens";
+import { ChatList, ChatRoom, EndingScreen, type EndingInfo } from "./screens/ChatScreens";
 import { DateScreen } from "./screens/DateScreen";
 import { DayScreen, PaydayScreen } from "./screens/DayScreen";
 import { AchievementScreen } from "./screens/AchievementScreen";
@@ -186,7 +186,6 @@ export default function LeftOnReadGame() {
   const reply = (chatId: number, choice: number, panelHeight?: number, calm?: boolean) => {
     audioManager.bubble();
     const sourceChat = save.run?.chats.find((c) => c.id === chatId);
-    const girlSeed = sourceChat?.girlSeed;
     // 走到結局後聊天會被收掉，紀錄要先留下來
     const girl = sourceChat ? generateGirl(sourceChat.girlSeed) : null;
     const history = sourceChat && girl && save.run ? chatTranscript(sourceChat, girl, save.run.dayIndex, save.run.phase) : [];
@@ -198,21 +197,10 @@ export default function LeftOnReadGame() {
       setEnding(endingInfo(mixedUp, getSaveSnapshot().meta.dex));
       return;
     }
-    // 假失敗：演得和一般失敗一樣，但圖鑑和聊天都沒有動
-    const fake = events.find((e) => e.type === "fakeEnding");
-    if (fake?.type === "fakeEnding" && girlSeed !== undefined) {
-      audioManager.wrong();
-      const { collected, total } = dexProgress(getSaveSnapshot().meta.dex);
-      setEnding({
-        storyId: fake.storyId,
-        narration: fake.narration,
-        paid: 0,
-        firstTime: false,
-        antiFraud: false,
-        girl: generateGirl(girlSeed),
-        collected,
-        total,
-      });
+    // 假失敗：不跳結局畫面，回到列表；她從列表上消失，過幾天像平常一樣傳新訊息來
+    if (events.some((e) => e.type === "fakeEnding")) {
+      const { run } = getSaveSnapshot();
+      setPhone(run && visibleChats(run.chats, run.dayIndex).length > 0 ? "list" : null);
       return;
     }
     if (!events.some((e) => e.type === "gameEnding")) return;
@@ -423,19 +411,6 @@ export default function LeftOnReadGame() {
           />
         );
       case "daytime": {
-        const returning = comebackChat(run.chats, run.dayIndex);
-        if (returning) {
-          return (
-            <ComebackScreen
-              chat={returning}
-              onReply={(choice) => {
-                reply(returning.id, choice);
-                // 回完留在聊天室，她那句和冠宇的回覆都還看得到
-                setPhone(returning.id);
-              }}
-            />
-          );
-        }
         const dateChat = onDate ? dueDateChat(run.chats, run.dayIndex) : null;
         if (dateChat) return <DateScreen chat={dateChat} money={run.money} onDone={finishDate} />;
         const phoneScreen = renderPhone(run);

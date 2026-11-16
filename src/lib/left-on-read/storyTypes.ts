@@ -46,9 +46,9 @@ export interface ReplyStep {
   date?: { index: number; cost: number; endingId?: string };
   /** 冠宇的內心 OS，出現在回覆選項上方（假失敗那步用） */
   os?: readonly string[];
-  /** 假失敗：畫面演得像 storyId 那種失敗，但不記圖鑑，也不結束聊天 */
+  /** 假失敗：按「……就這樣了」之後她從列表消失，不記圖鑑，也不結束聊天（不再跳結局畫面；storyId／narration 目前沒有顯示） */
   fakeEnding?: { storyId: string; narration: string };
-  /** 假失敗之後她主動回來：早上一開始就跳出來，stamp 是裂開的印章，aside 是冠宇的旁白 */
+  /** 假失敗之後她主動回來：等到那天才重新出現在列表，像平常一樣是一則新訊息（stamp／aside 目前沒有顯示） */
   comeback?: { stamp: string; aside: string };
 }
 
