@@ -4,7 +4,9 @@
  */
 
 import { calmChoice, canCalm } from "./chatStats.ts";
-import { canShopNow, hasReplyQuota, pendingDayEvent } from "./game.ts";
+import { HEROINE_SEED } from "./constants.ts";
+import type { Dex } from "./dex.ts";
+import { canShopNow, deckCardSeed, hasReplyQuota, pendingDayEvent } from "./game.ts";
 import type { GameAction, RunState } from "./game.ts";
 import { PROFILE_BIOS, PROFILE_PHOTOS, SHOP_ITEMS, canBuy, canUsePhoto } from "./profile.ts";
 import { pick } from "./rng.ts";
@@ -14,7 +16,7 @@ import { isChatReady, isFinal } from "./story.ts";
 import type { ReplyStep } from "./storyTypes.ts";
 
 /** buy、editProfile、dayEvent、超級喜歡、賢者模式；其他類型回傳 null，交給原本的測試處理 */
-export function newGameplayAction(type: GameAction["type"], run: RunState, rng: Rng): GameAction | null {
+export function newGameplayAction(type: GameAction["type"], run: RunState, rng: Rng, dex: Dex = {}): GameAction | null {
   switch (type) {
     case "buy": {
       const items = SHOP_ITEMS.filter(
@@ -36,8 +38,12 @@ export function newGameplayAction(type: GameAction["type"], run: RunState, rng: 
         .filter(({ c }) => run.money + (c.money ?? 0) >= 0);
       return { type, choice: pick(rng, choices).i };
     }
-    case "swipe":
-      return { type, dir: rng() < 0.45 ? "left" : rng() < 0.9 || run.money < 99 ? "right" : "super" };
+    case "swipe": {
+      // 小晴那張不能往左滑
+      const heroine = deckCardSeed(run, dex, run.deckIndex) === HEROINE_SEED;
+      const left = rng() < 0.45 && !heroine;
+      return { type, dir: left ? "left" : rng() < 0.9 || run.money < 99 ? "right" : "super" };
+    }
     case "reply": {
       const stepOf = (c: (typeof run.chats)[number]) => STORY_BY_ID[c.storyId]?.steps[c.stepIndex];
       const ready = run.chats.filter((c) => {

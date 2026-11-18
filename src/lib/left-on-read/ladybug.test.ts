@@ -46,7 +46,8 @@ function atDecision(money = START_MONEY): { run: RunState; chat: Chat; decisionS
     replies: Array(decisionStep).fill(0),
     lastAdvancedDay: day - 1,
   };
-  return { run: { ...run, dayIndex: day, phase: "daytime", money, chats: [chat] }, chat, decisionStep };
+  // 訊息都是回到家才回
+  return { run: { ...run, dayIndex: day, phase: "night", money, chats: [chat] }, chat, decisionStep };
 }
 
 function decisionChoice(): number {
@@ -127,7 +128,7 @@ test("選去：扣 3000、聊天結束、記到圖鑑、發出結局事件", () 
   );
 });
 
-for (const phase of ["daytime", "night", "nightDone"] as const) {
+for (const phase of ["night", "nightDone"] as const) {
   test(`選去會結束這一局（${phase}）：沒有可以存的 run，圖鑑留著`, () => {
     const { run, chat } = atDecision();
     const r = advance({ ...run, phase }, {}, { type: "reply", chatId: chat.id, choice: decisionChoice() });
@@ -145,7 +146,7 @@ test("從配對一路聊到 1h2s 再選去：這一局結束，身上還有別�
   let dex = {};
   // 還在聊的另一個人不能讓這一局活下來
   const other: Chat = { ...run.chats[0], id: 99, storyId: STORIES[0].id, lastAdvancedDay: 0 };
-  run = { ...run, phase: "daytime", chats: [...run.chats, other], dayReplies: 0 };
+  run = { ...run, phase: "night", chats: [...run.chats, other], dayReplies: 0 };
   const chatId = run.chats[0].id;
   for (let i = 0; i < decisionStep; i++) {
     run = { ...run, dayIndex: nextPhoneDay(run.dayIndex + 1), dayReplies: 0 };

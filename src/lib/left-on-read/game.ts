@@ -6,10 +6,8 @@
 import { calendarOf, isPayday, isPlayDay, isWorkday, nextPlayDay } from "./calendar.ts";
 import {
   DECK_SIZE,
-  GAMES_TIRED_PENALTY,
   HEROINE_NIGHT_RATE,
   HEROINE_SEED,
-  DAYTIME_REPLY_LIMIT,
   HEROINE_UNLOCK_FAILURES,
   IRIS_NIGHT_RATE,
   IRIS_SEED,
@@ -22,7 +20,6 @@ import {
   NIGHT_ACTION_LIMIT,
   MONTHLY_BILLS_TOTAL,
   MONTHLY_SALARY,
-  NG_PLUS_REPLY_BONUS,
   NOODLE_PRICE,
   START_MONEY,
   STUDIO_MATCH_P,
@@ -267,12 +264,6 @@ export function pendingDayEvent(run: RunState): DayEvent | null {
   return run.phase === "daytime" && !run.today.eventDone ? todayEvent(run) : null;
 }
 
-/** 今天白天能認真回幾則：新遊戲＋多一則、颱風假多兩則、昨晚打電動少一則，至少一則 */
-export function dayReplyLimit(run: RunState): number {
-  const bonus = (run.ngPlus ? NG_PLUS_REPLY_BONUS : 0) + (todayEvent(run)?.replyBonus ?? 0);
-  return Math.max(1, DAYTIME_REPLY_LIMIT + bonus - (run.today.tired ? GAMES_TIRED_PENALTY : 0));
-}
-
 /** 白天這件事還能不能選：還沒選，或今天選的就是它 */
 export function canDoDayAction(run: RunState, action: DayAction): boolean {
   const chosen = run.today.dayAction ?? null;
@@ -284,11 +275,9 @@ export function nightActionsLeft(run: RunState): number {
   return Math.max(0, NIGHT_ACTION_LIMIT - run.nightActions);
 }
 
-/** 現在還能認真回幾則：白天選了回訊息才有額度（約會、打理自己就沒有），晚上不限（Infinity） */
+/** 現在還能回幾則：白天在上班或出門，手機不拿出來（0）；回到家之後不限（Infinity） */
 export function repliesLeft(run: RunState): number {
-  if (run.phase !== "daytime") return Infinity;
-  if (!canDoDayAction(run, "reply")) return 0;
-  return Math.max(0, dayReplyLimit(run) - run.dayReplies);
+  return canUsePhone(run.phase) ? Infinity : 0;
 }
 
 /** 冠宇現在的檔案讓配對率乘上多少（含節日） */
@@ -393,16 +382,16 @@ export function deckCardSeed(run: RunState, dex: Dex, cardIndex: number): number
 
 /** 今天付得起、可以出門赴約的那一場 */
 /** 今天可以出門赴約的那一場；錢不夠也能去，差的跟她借 */
-function affordableDate(run: RunState) {
+export function affordableDate(run: RunState) {
   if (!canDoDayAction(run, "date")) return null;
   const chat = dueDateChat(run.chats, run.dayIndex);
   const step = chat && pendingDateStep(chat);
   return chat && step?.date ? { chat, step, date: step.date } : null;
 }
 
-/** 手機拿得起來的階段：白天，還有回到家之後；吃飯、滑卡、配對的畫面中不行 */
+/** 手機拿得起來的階段：回到家之後。白天上班、出門不回訊息；吃飯、滑卡、配對的畫面中也不行 */
 export function canUsePhone(phase: Phase): boolean {
-  return phase === "daytime" || phase === "night" || phase === "nightDone";
+  return phase === "night" || phase === "nightDone";
 }
 
 /**
@@ -429,6 +418,7 @@ export function hasReplyQuota(run: RunState, chat: Chat): boolean {
 }
 
 function chatActions(run: RunState): GameAction["type"][] {
+  if (!canUsePhone(run.phase)) return [];
   const ready = run.chats.filter((c) => isChatReady(c, run.dayIndex, run.phase));
   const steps = ready.map(storyStep);
   const actions: GameAction["type"][] = [];
@@ -521,10 +511,6 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
       const chat = run.chats.find((c) => c.id === action.chatId);
       if (!chat || !isChatReady(chat, run.dayIndex, run.phase)) return same;
       if (!hasReplyQuota(run, chat)) return same;
-      const continuation = isContinuation(run, chat);
-      // 白天第一則認真回的訊息：今天白天就拿來回訊息了
-      const today: TodayState =
-        run.phase === "daytime" && !continuation ? { ...run.today, dayAction: "reply" } : run.today;
       const step = storyStep(chat);
       if (!step || isFinal(step)) return same;
       if (!Number.isInteger(action.choice) || action.choice < 0 || action.choice >= step.replies.length) return same;
@@ -604,8 +590,6 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
       return {
         run: {
           ...run,
-          dayReplies: run.phase === "daytime" && !continuation ? run.dayReplies + 1 : run.dayReplies,
-          today,
           nightHobby: calm ? { ...run.nightHobby, calm: false } : run.nightHobby,
           chats,
         },
@@ -759,6 +743,8 @@ export function advance(run: RunState, dex: Dex, action: GameAction, rngs?: RngF
       const afterDeck: Phase = deckIndex >= DECK_SIZE ? "nightDone" : "swiping";
       const rightStreak = nextStreak(run.rightStreak, action.dir === "left" ? "left" : "right");
       const seed = deckCardSeed(run, dex, run.deckIndex);
+      // 小晴只能喜歡或超級喜歡，不能滑掉
+      if (action.dir === "left" && seed === HEROINE_SEED) return same;
       if (action.dir === "left") {
         // 看得出來是業績，左滑掉
         const events: GameEvent[] = generateGirl(seed).lure ? [swiped, { type: "dodged", girlSeed: seed }] : [swiped];

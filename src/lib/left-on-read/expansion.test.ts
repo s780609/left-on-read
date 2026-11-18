@@ -9,7 +9,6 @@ import { ACHIEVEMENTS, earnedAchievements, progressAchievements, tallyEvents } f
 import { calendarOf, isPlayDay } from "./calendar.ts";
 import { CALM_DELTA, calmChoice, canCalm, chatVibe } from "./chatStats.ts";
 import {
-  DAYTIME_REPLY_LIMIT,
   DECK_SIZE,
   GOLD_DAYS,
   IRIS_ENDING_ID,
@@ -22,7 +21,6 @@ import {
   PHOTOSHOOT_PRICE,
   SUPER_LIKE_PRICE,
   TRUE_ENDING_ID,
-  TYPHOON_REPLY_BONUS,
 } from "./constants.ts";
 import { DAY_EVENTS, dayEventOf, isInvoiceDay } from "./dayEvents.ts";
 import { endingProgress } from "./dex.ts";
@@ -31,7 +29,6 @@ import {
   advance,
   checkInvariants,
   createRun,
-  dayReplyLimit,
   deckCardSeed,
   heroineCardIndex,
   irisCardIndex,
@@ -363,7 +360,7 @@ test("E：計分題、抉擇、約會、假失敗不能用賢者模式；賢者�
   assert.equal(calmChoice(step), 1);
 });
 
-test("E：打電動的晚上不累積已讀壓力，但隔天白天少回一則", () => {
+test("E：打電動的晚上不累積已讀壓力，隔天會累", () => {
   const story = longStories()[0];
   const day = 3;
   const chat = { ...normalChat(1, story), lastAdvancedDay: day - 1 };
@@ -375,7 +372,6 @@ test("E：打電動的晚上不累積已讀壓力，但隔天白天少回一則"
   assert.equal(slept.today.tired, true);
   const normal = act(base, {}, { type: "sleep" }).run;
   assert.equal(normal.chats[0].stats?.pressure, 1);
-  assert.equal(dayReplyLimit({ ...slept, phase: "daytime" }), dayReplyLimit({ ...normal, phase: "daytime" }) - 1);
 });
 
 // ---------- F：節日與白天事件 ----------
@@ -440,10 +436,9 @@ test("F：跟同事去唱歌：晚餐吃過了，下班直接到深夜，還能�
   assert.equal(act(run, {}, { type: "sleep" }).run.today.outing, undefined);
 });
 
-test("F：颱風假白天多回兩則；錢不夠的選項不能選", () => {
+test("F：颱風假一早在家就發生；錢不夠的選項不能選", () => {
   const day = findDay((d) => dayEventOf(1, d)?.id === "typhoon");
-  const run = at({ phase: "daytime", dayIndex: day });
-  assert.equal(dayReplyLimit(run), DAYTIME_REPLY_LIMIT + TYPHOON_REPLY_BONUS);
+  assert.equal(dayEventOf(1, day)?.atHome, true);
   const kday = findDay((d) => dayEventOf(1, d)?.id === "karaoke" && calendarOf(d).day !== 5);
   const broke = at({ phase: "daytime", dayIndex: kday, money: 100 });
   assert.equal(advance(broke, {}, { type: "dayEvent", choice: 0 }).run, broke);
@@ -452,7 +447,7 @@ test("F：颱風假白天多回兩則；錢不夠的選項不能選", () => {
 
 // ---------- 新遊戲＋ ----------
 
-test("新遊戲＋：多一句開場白，有好感加成；一般局不能用；白天多回一則", () => {
+test("新遊戲＋：多一句開場白，有好感加成；一般局不能用", () => {
   const girl = generateGirl(42);
   assert.equal(openerOptions(girl).length, 4);
   assert.equal(openerOptions(girl, true).length, 5);
@@ -463,7 +458,6 @@ test("新遊戲＋：多一句開場白，有好感加成；一般局不能用�
   assert.equal(r.run.chats[0].stats?.affection, 1);
   assert.equal(chatScore(r.run.chats[0]), 1);
   assert.equal(chatTranscript(r.run.chats[0], girl, 0)[0].who, "me");
-  assert.equal(dayReplyLimit({ ...createRun(1, { ngPlus: true }) }), dayReplyLimit(createRun(1)) + 1);
 });
 
 // ---------- Iris ----------

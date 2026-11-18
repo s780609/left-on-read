@@ -4,7 +4,7 @@
  */
 
 import { calendarOf, isWorkday } from "./calendar.ts";
-import { DAY_EVENT_RATE, INVOICE_PRIZE, INVOICE_WIN_P, OVERTIME_PAY, TYPHOON_REPLY_BONUS } from "./constants.ts";
+import { DAY_EVENT_RATE, INVOICE_PRIZE, INVOICE_WIN_P, OVERTIME_PAY } from "./constants.ts";
 import { holidayOf } from "./holidays.ts";
 import { createRng, mixSeed, pick } from "./rng.ts";
 
@@ -24,8 +24,8 @@ export interface DayEvent {
   id: string;
   text: string;
   choices: readonly DayEventChoice[];
-  /** 今天白天多回幾則 */
-  replyBonus?: number;
+  /** 一早在家就發生（颱風假）；沒寫的平日事件在公司發生，週末的在家 */
+  atHome?: boolean;
   /** 只在平日或只在週末出現 */
   when: "workday" | "weekend" | "any";
 }
@@ -64,8 +64,8 @@ export const DAY_EVENTS: readonly DayEvent[] = [
     id: "typhoon",
     when: "workday",
     text: "颱風假。半夜宣布的，我醒來才看到。",
-    replyBonus: TYPHOON_REPLY_BONUS,
-    choices: [{ label: "好耶", line: "整天在家，手機一直拿在手上。今天可以多回幾則。" }],
+    atHome: true,
+    choices: [{ label: "好耶", line: "整天在家，窗外的雨橫著下。我把房間掃了一遍，又躺回去。" }],
   },
   {
     id: "guava",

@@ -3,11 +3,10 @@ import assert from "node:assert/strict";
 import {
   AFFECTION_SOFT_MIN,
   AWKWARD_END,
-  DAYTIME_REPLY_LIMIT,
   PRESSURE_SOFT_END,
 } from "./constants.ts";
 import { applyDelta, replyDelta, shouldSoftEnd, statsOf, ZERO_STATS } from "./chatStats.ts";
-import { advance, createRun, dayReplyLimit, isContinuation, legalActions, repliesLeft } from "./game.ts";
+import { advance, createRun, isContinuation, legalActions, repliesLeft } from "./game.ts";
 import type { RunState } from "./game.ts";
 import { STORIES, STORY_BY_ID } from "./stories/index.ts";
 import { isChatReady } from "./story.ts";
@@ -57,7 +56,7 @@ test("隱性數值：scores 會轉成好感／尷尬／壓力", () => {
 });
 
 test("尷尬爆表會提早跳到結局步", () => {
-  const run = atDay([chatAt(0, { stats: { affection: 0, awkward: AWKWARD_END - 1, pressure: 0 } })]);
+  const run = atDay([chatAt(0, { stats: { affection: 0, awkward: AWKWARD_END - 1, pressure: 0 } })], { phase: "night" });
   // pick last reply to add awkward if no scores — force via high awkward already almost at limit
   const step = story.steps[0] as ReplyStep;
   const bad = step.scores ? step.scores.indexOf(-1) : step.replies.length - 1;
@@ -71,22 +70,19 @@ test("尷尬爆表會提早跳到結局步", () => {
   }
 });
 
-test("白天認真回訊息有上限", () => {
+test("白天不回訊息：上班、出門時手機不拿出來，回到家才回", () => {
   const chats = [1, 2, 3, 4].map((id) => chatAt(0, { id, storyId: STORIES[id % STORIES.length].id }));
-  let run = atDay(chats, { nextChatId: 5 });
-  // 一輪對話裡她接著傳的那一步不算，所以每次挑「不是接續」的聊天
-  const fresh = (r: RunState) => r.chats.find((c) => isChatReady(c, r.dayIndex, r.phase) && !isContinuation(r, c));
-  for (let i = 0; i < DAYTIME_REPLY_LIMIT; i++) {
-    assert.ok(legalActions(run).includes("reply"), `第 ${i} 則`);
-    run = advance(run, {}, { type: "reply", chatId: fresh(run)!.id, choice: 0 }).run;
-  }
-  assert.equal(run.dayReplies, DAYTIME_REPLY_LIMIT);
-  const blocked = fresh(run)!;
-  assert.equal(advance(run, {}, { type: "reply", chatId: blocked.id, choice: 0 }).run, run, "達上限不能再回新的聊天");
-  // 還能回的只剩一輪對話的接續
-  const followUps = run.chats.filter((c) => isChatReady(c, run.dayIndex, run.phase) && isContinuation(run, c));
-  assert.equal(legalActions(run).includes("reply"), followUps.length > 0);
+  const run = atDay(chats, { nextChatId: 5 });
+  assert.ok(run.chats.every((c) => isChatReady(c, run.dayIndex, run.phase)), "訊息都等滿了");
+  assert.equal(repliesLeft(run), 0);
+  assert.ok(!legalActions(run).includes("reply"));
+  assert.equal(advance(run, {}, { type: "reply", chatId: 1, choice: 0 }).run, run);
   assert.ok(legalActions(run).includes("endDaytime"));
+  const night: RunState = { ...run, phase: "night" };
+  assert.equal(repliesLeft(night), Infinity);
+  let after = night;
+  for (const c of night.chats) after = advance(after, {}, { type: "reply", chatId: c.id, choice: 0 }).run;
+  assert.ok(after.chats.every((c) => c.stepIndex === 1), "晚上每個都回得到，不限則數");
 });
 
 test("晚上可以打手槍、打電動，各一次", () => {
@@ -136,7 +132,7 @@ test("shouldSoftEnd 門檻", () => {
   });
 });
 
-test("白天一則都不回，睡覺後隔天仍可回，且當晚可開 Swipy", () => {
+test("白天不回，回家才回；沒回就睡，隔天晚上仍可回，且當晚可開 Swipy", () => {
   const day = nextPhoneDay(1);
   const chat = chatAt(0, { lastAdvancedDay: day - 1 });
   let run: RunState = {
@@ -147,8 +143,8 @@ test("白天一則都不回，睡覺後隔天仍可回，且當晚可開 Swipy",
     chats: [chat],
     nextChatId: 2,
   };
-  assert.ok(legalActions(run).includes("reply"));
-  // 不回，直接下班回家
+  assert.ok(!legalActions(run).includes("reply"), "白天在上班");
+  // 下班回家
   run = advance(run, {}, { type: "endDaytime" }).run;
   run = advance(run, {}, { type: "goHome" }).run;
   assert.equal(run.phase, "night");
@@ -157,7 +153,9 @@ test("白天一則都不回，睡覺後隔天仍可回，且當晚可開 Swipy",
   run = advance(run, {}, { type: "sleep" }).run;
   assert.equal(run.dayReplies, 0);
   assert.ok(isChatReady(run.chats[0], run.dayIndex, run.phase));
-  assert.ok(legalActions(run).includes("reply"), "隔天仍可回昨天沒回的訊息");
+  run = advance(run, {}, { type: "endDaytime" }).run;
+  run = advance(run, {}, { type: "goHome" }).run;
+  assert.ok(legalActions(run).includes("reply"), "隔天晚上仍可回昨天沒回的訊息");
 });
 
 test("拒 1h2s 後結局步立刻可關，且當晚仍可開 Swipy", () => {
@@ -190,21 +188,7 @@ test("拒 1h2s 後結局步立刻可關，且當晚仍可開 Swipy", () => {
   assert.ok(legalActions(run).includes("openApp"), "Swipy 不因結局步被鎖");
 });
 
-test("白天回滿上限：還沒回的聊天選項送不出去，聊天室要知道（repliesLeft 為 0），晚上就能回", () => {
-  const day = nextPhoneDay(1);
-  const chat = chatAt(0, { lastAdvancedDay: day - 1 });
-  const base = { ...createRun(1), dayIndex: day, chats: [chat], nextChatId: 2 };
-  const full: RunState = { ...base, phase: "daytime", dayReplies: dayReplyLimit({ ...base, phase: "daytime" }) };
-  assert.ok(isChatReady(chat, day, "daytime"));
-  assert.equal(repliesLeft(full), 0);
-  assert.ok(!legalActions(full).includes("reply"));
-  assert.equal(advance(full, {}, { type: "reply", chatId: chat.id, choice: 0 }).run, full);
-  const night: RunState = { ...full, phase: "night" };
-  assert.equal(repliesLeft(night), Infinity);
-  assert.notEqual(advance(night, {}, { type: "reply", chatId: chat.id, choice: 0 }).run, night);
-});
-
-test("同一段對話接著回不算白天則數：上限用完，wait 0 的下一句照樣能回", () => {
+test("同一段對話接著回：今天聊過，wait 0 的下一句晚上當場接著回", () => {
   // 找一條有「同一天接著聊」步驟的劇情
   const story = [...STORIES, ...Object.values(STORY_BY_ID)].find((s) =>
     s.steps.some((st, i) => i > 0 && "replies" in st && st.wait && "days" in st.wait && st.wait.days === 0)
@@ -222,25 +206,23 @@ test("同一段對話接著回不算白天則數：上限用完，wait 0 的下�
   };
   const run: RunState = {
     ...createRun(1),
-    phase: "daytime",
+    phase: "night",
     dayIndex: day,
     chats: [chat],
     nextChatId: 2,
     heroineMet: true,
-    dayReplies: dayReplyLimit({ ...createRun(1), phase: "daytime", dayIndex: day }),
   };
   assert.ok(isContinuation(run, chat));
   assert.ok(legalActions(run).includes("reply"));
   const r = advance(run, {}, { type: "reply", chatId: 1, choice: 0 });
   assert.notEqual(r.run, run);
-  assert.equal(r.run.dayReplies, run.dayReplies, "接著回不算則數");
   // 隔天才回就不算接著回
   assert.ok(!isContinuation({ ...run, dayIndex: day + 1 }, chat));
 });
 
 // ---------- 白天一件事、晚上兩件事、週日跳過 ----------
 
-test("白天只能做一件事：回了訊息就不能約會或打理自己；約會或打理自己之後就不能回", async () => {
+test("週六白天只能做一件事：約會或打理自己二選一；白天都不能回訊息", async () => {
   const { canDoDayAction } = await import("./game.ts");
   const { STORY_BY_ID: BY_ID, HEROINE_STORY_ID } = await import("./stories/index.ts");
   const { HEROINE_SEED } = await import("./constants.ts");
@@ -269,15 +251,10 @@ test("白天只能做一件事：回了訊息就不能約會或打理自己；�
     nextChatId: 3,
   };
   const legal = legalActions(base);
-  assert.ok(legal.includes("reply") && legal.includes("goOnDate") && legal.includes("buy"));
-
-  // 選了回訊息：約會和打理自己都不行了
-  const replied = advance(base, {}, { type: "reply", chatId: 2, choice: 0 }).run;
-  assert.equal(replied.today.dayAction, "reply");
-  assert.ok(!legalActions(replied).includes("goOnDate"));
-  assert.equal(advance(replied, {}, { type: "buy", item: "haircut" }).run, replied);
+  assert.ok(!legal.includes("reply") && legal.includes("goOnDate") && legal.includes("buy"));
+  assert.equal(advance(base, {}, { type: "reply", chatId: 2, choice: 0 }).run, base);
   // Swipy Gold 已下架，任何時候都買不到
-  assert.equal(advance(replied, {}, { type: "buy", item: "gold" }).run, replied);
+  assert.equal(advance(base, {}, { type: "buy", item: "gold" }).run, base);
 
   // 選了打理自己：還能再買別的，但不能回訊息、不能約會
   const shopped = advance(base, {}, { type: "buy", item: "haircut" }).run;
@@ -294,18 +271,13 @@ test("白天只能做一件事：回了訊息就不能約會或打理自己；�
   assert.notEqual(advance(dated, {}, { type: "reply", chatId: 2, choice: 0 }).run, dated);
 });
 
-test("白天選回訊息最多回 3 則；晚上回訊息不算動作、不限則數", () => {
+test("晚上回訊息不算動作、不限則數", () => {
   const day = nextPhoneDay(20);
   const chats = [0, 1, 2, 3].map((i) => chatAt(0, { id: i + 1, girlSeed: 50 + i, lastAdvancedDay: day - 1 }));
-  let run: RunState = { ...createRun(1), phase: "daytime", dayIndex: day, chats, nextChatId: 5 };
-  for (let i = 1; i <= 3; i++) run = advance(run, {}, { type: "reply", chatId: i, choice: 0 }).run;
-  assert.equal(run.dayReplies, 3);
-  assert.ok(!legalActions(run).includes("reply"));
-  const night: RunState = { ...run, phase: "night" };
-  assert.ok(legalActions(night).includes("reply"));
-  const after = advance(night, {}, { type: "reply", chatId: 4, choice: 0 }).run;
-  assert.notEqual(after, night);
-  assert.equal(after.nightActions, 0, "晚上回訊息不算一件事");
+  let run: RunState = { ...createRun(1), phase: "night", dayIndex: day, chats, nextChatId: 5 };
+  for (let i = 1; i <= 4; i++) run = advance(run, {}, { type: "reply", chatId: i, choice: 0 }).run;
+  assert.deepEqual(run.chats.map((c) => c.stepIndex), [1, 1, 1, 1]);
+  assert.equal(run.nightActions, 0, "晚上回訊息不算一件事");
 });
 
 test("晚上只能做兩件事：滑 Swipy、打手槍、打電動任選", async () => {

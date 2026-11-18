@@ -45,7 +45,7 @@ function setup(patch: Partial<Chat> = {}): RunState {
     stats: { ...ZERO_STATS },
     ...patch,
   };
-  return { ...createRun(1), phase: "daytime", dayIndex: day, chats: [chat], nextChatId: 2 };
+  return { ...createRun(1), phase: "night", dayIndex: day, chats: [chat], nextChatId: 2 };
 }
 
 function reply(run: RunState): RunState {
@@ -74,13 +74,13 @@ test("一輪對話：回完她當場接著傳，可以再回一次，第三步�
   assert.equal(reply(run), run);
 });
 
-test("一輪對話：接續那一步不扣白天則數", () => {
+test("一輪對話：接續那一步算同一段（isContinuation）", () => {
   let run = setup();
+  assert.ok(!isContinuation(run, run.chats[0]));
   run = reply(run);
-  assert.equal(run.dayReplies, 1);
   assert.ok(isContinuation(run, run.chats[0]));
   run = reply(run);
-  assert.equal(run.dayReplies, 1, "接續不算一則");
+  assert.ok(!isContinuation(run, run.chats[0]), "一輪用完就不是接續了");
 });
 
 test("一輪對話：隔天第一次回會重開一輪，roundUsed 清掉", () => {

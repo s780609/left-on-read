@@ -59,16 +59,21 @@ function sampleStates(): RunState[] {
       case "payday":
         act({ type: "ackPayday" });
         break;
-      case "daytime": {
-        const [chat] = readyChats(run.chats, run.dayIndex);
-        if (!chat) act({ type: "endDaytime" });
+      case "daytime":
+        act({ type: "endDaytime" });
+        break;
+      case "evening":
+        act({ type: "goHome" });
+        break;
+      case "night":
+      case "nightDone": {
+        // 回到家才回訊息
+        const [chat] = readyChats(run.chats, run.dayIndex, run.phase);
+        if (!chat) act({ type: "sleep" });
         else if (isFinal(STORY_BY_ID[chat.storyId].steps[chat.stepIndex])) act({ type: "closeChat", chatId: chat.id });
         else act({ type: "reply", chatId: chat.id, choice: 0 });
         break;
       }
-      case "evening":
-        act({ type: "goHome" });
-        break;
       default:
         act({ type: "sleep" });
     }
@@ -83,8 +88,8 @@ const stateIn = (phase: RunState["phase"]) => {
   return found;
 };
 
-function concreteAction(type: GameAction["type"], run: RunState, rng: Rng): GameAction {
-  const extra = newGameplayAction(type, run, rng);
+function concreteAction(type: GameAction["type"], run: RunState, rng: Rng, dex: Dex = {}): GameAction {
+  const extra = newGameplayAction(type, run, rng, dex);
   if (extra) return extra;
   const ready = readyChats(run.chats, run.dayIndex);
   const stepOf = (chat: Chat) => STORY_BY_ID[chat.storyId].steps[chat.stepIndex];
@@ -120,7 +125,7 @@ function assertUsableOrNull(result: RunState | null, where: string) {
   for (let i = 0; i < 40; i++) {
     const legal = legalActions(run);
     assert.ok(legal.length > 0, `${where} 第 ${i} 步沒有合法動作`);
-    const action = concreteAction(pick(rng, legal), run, rng);
+    const action = concreteAction(pick(rng, legal), run, rng, dex);
     const r = advance(run, dex, action);
     assert.notEqual(r.run, run, `${where} 第 ${i} 步 ${action.type} 沒有作用`);
     assert.deepEqual(checkInvariants(r.run), [], `${where} 第 ${i} 步 ${action.type}`);

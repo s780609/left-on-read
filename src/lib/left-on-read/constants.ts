@@ -51,8 +51,6 @@ export const HEROINE_PHOTOS = ["/left-on-read/heroine/08.jpg", "/left-on-read/he
 export const IRIS_PHOTOS = ["/left-on-read/iris/01.jpg", "/left-on-read/iris/02.jpg"] as const;
 export const TRUE_ENDING_ID = "true-love";
 
-/** 白天選「回訊息」時最多回幾則（同一段對話當場接著回不算）；回訊息、約會、打理自己三選一 */
-export const DAYTIME_REPLY_LIMIT = 3;
 /** 晚上能做幾件事：滑 Swipy、打手槍、打電動任選；回訊息不算 */
 export const NIGHT_ACTION_LIMIT = 2;
 /** 聊天隱性數值：尷尬到這個值會提早結束 */
@@ -91,19 +89,14 @@ export const MIXUP_MIN_CHATS = 3;
 export const MIXUP_P = 0.15;
 
 /** ---------- E：夜間消遣 ---------- */
-/** 打電動隔天睡太晚，白天少回一則 */
-export const GAMES_TIRED_PENALTY = 1;
 
 /** ---------- F：節日與白天事件 ---------- */
 export const DAY_EVENT_RATE = 0.25;
-export const TYPHOON_REPLY_BONUS = 2;
 export const OVERTIME_PAY = 1_200;
 export const INVOICE_PRIZE = 200;
 export const INVOICE_WIN_P = 0.3;
 
 /** ---------- 重玩價值 ---------- */
-/** 新遊戲＋：冠宇比較知道要回誰，白天多一則 */
-export const NG_PLUS_REPLY_BONUS = 1;
 /** 第二條真結局：Iris。走到任何一個結局之後才會出現，每晚出現的機率 */
 export const IRIS_NIGHT_RATE = 0.5;
 export const IRIS_SEED = 0x1a15c0de;

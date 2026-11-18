@@ -101,9 +101,10 @@ type ChatEnded = Extract<GameEvent, { type: "chatEnded" }>;
 
 /** 用真正的 advance 把一段聊天走到結局 */
 function walkStory(story: Story, choose: (step: ReplyStep, index: number) => number, startDay = 0) {
+  // 訊息都是回到家才回
   let run: RunState = {
     ...createRun(1),
-    phase: "daytime",
+    phase: "night",
     dayIndex: startDay,
     money: 100_000,
     chats: [makeChat(story, { lastAdvancedDay: startDay })],
@@ -118,7 +119,7 @@ function walkStory(story: Story, choose: (step: ReplyStep, index: number) => num
     assert.ok(day <= startDay + 90, `${story.id} 走了 90 天還沒結束`);
     run = { ...run, dayIndex: day, dayReplies: 0, today: { ...FRESH_TODAY } };
     const chat = run.chats[0];
-    if (!isChatReady(chat, day)) continue;
+    if (!isChatReady(chat, day, "night")) continue;
     const step = story.steps[chat.stepIndex];
     const choice = isFinal(step) ? -1 : choose(step, chat.stepIndex);
     const result = advance(

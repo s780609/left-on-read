@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { audioManager } from "@/lib/audio/AudioManager";
-import { DECK_SIZE, SUPER_LIKE_PRICE } from "@/lib/left-on-read/constants";
+import { DECK_SIZE, HEROINE_SEED, SUPER_LIKE_PRICE } from "@/lib/left-on-read/constants";
 import { STREAK_HINTS } from "@/lib/left-on-read/flavor";
 import type { Dex } from "@/lib/left-on-read/dex";
 import { deckCardSeed, type RunState, type SwipeDir } from "@/lib/left-on-read/game";
@@ -90,7 +90,10 @@ interface SwipeScreenProps {
 }
 
 export function SwipeScreen({ run, dex, onSwipe, onQuit }: SwipeScreenProps) {
-  const girl = useMemo(() => generateGirl(deckCardSeed(run, dex, run.deckIndex)), [run, dex]);
+  const seed = deckCardSeed(run, dex, run.deckIndex);
+  const girl = useMemo(() => generateGirl(seed), [seed]);
+  /** 小晴只能喜歡或超級喜歡，不能滑掉 */
+  const noLeft = seed === HEROINE_SEED;
   const nextSeed = deckCardSeed(run, dex, run.deckIndex + 1);
   // 照片頁跟著卡片走：換一張新卡就從第一張照片開始
   const [photo, setPhoto] = useState({ deckIndex: run.deckIndex, index: 0 });
@@ -123,12 +126,12 @@ export function SwipeScreen({ run, dex, onSwipe, onQuit }: SwipeScreenProps) {
     el.style.transition = ms > 0 ? `transform ${ms}ms cubic-bezier(0.3, 0.9, 0.4, 1)` : "none";
     el.style.transform = `translate(${x}px, ${y}px) rotate(${x / 16}deg)`;
     if (likeRef.current) likeRef.current.style.opacity = String(Math.min(1, Math.max(0, x / 70)));
-    if (nopeRef.current) nopeRef.current.style.opacity = String(Math.min(1, Math.max(0, -x / 70)));
+    if (nopeRef.current) nopeRef.current.style.opacity = noLeft ? "0" : String(Math.min(1, Math.max(0, -x / 70)));
   };
 
   /** 手勢和按鈕走同一條飛出路徑，飛行中鎖定輸入，動畫結束才 dispatch */
   const flyOut = (dir: SwipeDir) => {
-    if (flyingRef.current) return;
+    if (flyingRef.current || (dir === "left" && noLeft)) return;
     flyingRef.current = true;
     dragRef.current = null;
     audioManager.whoosh();
@@ -181,7 +184,9 @@ export function SwipeScreen({ run, dex, onSwipe, onQuit }: SwipeScreenProps) {
     const drag = dragRef.current;
     if (!drag || drag.pointerId !== e.pointerId) return;
     dragRef.current = null;
-    const dir = resolveSwipe(drag.x, drag.vx, cardRef.current?.offsetWidth ?? 320);
+    const swiped = resolveSwipe(drag.x, drag.vx, cardRef.current?.offsetWidth ?? 320);
+    // 小晴往左甩也滑不掉，卡片彈回來
+    const dir = swiped === "left" && noLeft ? null : swiped;
     if (dir) flyOut(dir);
     else place(0, 0, 180);
     if (!dir && Math.abs(drag.x) < TAP_PX && Math.abs(drag.y) < TAP_PX) {
@@ -190,8 +195,11 @@ export function SwipeScreen({ run, dex, onSwipe, onQuit }: SwipeScreenProps) {
   };
 
   const holidayHint = holidayOf(run.dayIndex)?.swipeHint ?? null;
-  const hint =
-    run.rightStreak >= HINT_FROM_STREAK ? STREAK_HINTS[run.rightStreak % STREAK_HINTS.length] : holidayHint;
+  const hint = noLeft
+    ? "這張往左滑不動。不是手機的問題，是手指不肯。"
+    : run.rightStreak >= HINT_FROM_STREAK
+      ? STREAK_HINTS[run.rightStreak % STREAK_HINTS.length]
+      : holidayHint;
   const canSuper = run.money >= SUPER_LIKE_PRICE;
 
   return (
@@ -252,8 +260,9 @@ export function SwipeScreen({ run, dex, onSwipe, onQuit }: SwipeScreenProps) {
         <button
           type="button"
           aria-label="略過"
+          disabled={noLeft}
           onClick={() => flyOut("left")}
-          className="h-14 w-14 cursor-pointer border-[3px] border-black bg-[#f4efe0] text-2xl text-[#c9423a] shadow-[4px_4px_0_#000] active:translate-x-[3px] active:translate-y-[3px] active:shadow-[1px_1px_0_#000]"
+          className="h-14 w-14 cursor-pointer border-[3px] border-black bg-[#f4efe0] text-2xl text-[#c9423a] shadow-[4px_4px_0_#000] enabled:active:translate-x-[3px] enabled:active:translate-y-[3px] enabled:active:shadow-[1px_1px_0_#000] disabled:cursor-default disabled:opacity-35"
         >
           ✕
         </button>

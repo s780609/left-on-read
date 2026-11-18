@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { audioManager } from "@/lib/audio/AudioManager";
-import { calendarOf, formatDate } from "@/lib/left-on-read/calendar";
+import { calendarOf, formatDate, isWorkday } from "@/lib/left-on-read/calendar";
 import { nightActionsLeft, type Phase, type RunState } from "@/lib/left-on-read/game";
 import { typewriterCount } from "@/lib/left-on-read/intro";
 import PixelCanvas from "./PixelCanvas";
@@ -109,7 +109,10 @@ export function StatusBar({ run, onMenu }: { run: RunState; onMenu: () => void }
 /** 這個時段還能做幾件事：白天一件（回訊息、約會、打理自己三選一），晚上兩件（滑卡、打手槍、打電動） */
 function ActionChip({ run }: { run: RunState }) {
   let text: string | null = null;
-  if (run.phase === "daytime") text = run.today.dayAction ? "白天已用" : "白天可做 1 件";
+  if (run.phase === "daytime") {
+    // 平日白天就是上班；週六才有一件事可以選
+    text = isWorkday(calendarOf(run.dayIndex)) ? "上班日" : run.today.dayAction ? "白天已用" : "白天可做 1 件";
+  }
   else if (run.phase === "night" || run.phase === "nightDone") {
     const left = nightActionsLeft(run);
     text = left > 0 ? `晚上可做 ${left} 件` : "晚上已用完";

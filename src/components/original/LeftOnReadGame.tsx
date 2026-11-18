@@ -6,17 +6,18 @@ import { progressAchievements } from "@/lib/left-on-read/achievements";
 import { IRIS_ENDING_ID } from "@/lib/left-on-read/constants";
 import { dexProgress, endingsSeen } from "@/lib/left-on-read/dex";
 import type { EdEnding } from "@/lib/left-on-read/ed";
-import { advance, createRun, settleRun, type GameAction, type GameEvent, type RunState } from "@/lib/left-on-read/game";
+import { advance, createRun, pendingDayEvent, settleRun, type GameAction, type GameEvent, type RunState } from "@/lib/left-on-read/game";
 import type { Profile, ShopItemId } from "@/lib/left-on-read/profile";
 import { generateGirl } from "@/lib/left-on-read/girl";
 import { NOODLES } from "@/lib/left-on-read/meals";
+import { ROOM_START, homeDayEvent, roomIntro, type RoomActionId, type RoomPos } from "@/lib/left-on-read/room";
 import { chatTranscript, dueDateChat, visibleChats } from "@/lib/left-on-read/story";
 import { useSettings } from "@/lib/settings/SettingsContext";
 import PortraitFrame from "./PortraitFrame";
 import { commitSave, getSaveSnapshot, getServerSaveSnapshot, subscribeSave } from "./saveStore";
 import { ChatList, ChatRoom, EndingScreen, type EndingInfo } from "./screens/ChatScreens";
 import { DateScreen } from "./screens/DateScreen";
-import { DayScreen, PaydayScreen } from "./screens/DayScreen";
+import { PaydayScreen, WorkScreen } from "./screens/DayScreen";
 import { AchievementScreen } from "./screens/AchievementScreen";
 import { DexScreen } from "./screens/DexScreen";
 import { EdScreen } from "./screens/EdScreen";
@@ -27,8 +28,9 @@ import { IrisEndingScreen } from "./screens/IrisEndingScreen";
 import { LadybugScreen, type LadybugEntry } from "./screens/LadybugScreen";
 import { MatchScreen } from "./screens/MatchScreen";
 import MenuScreen from "./screens/MenuScreen";
-import { NightScreen } from "./screens/NightScreen";
+import { HobbyScreen } from "./screens/NightScreen";
 import { PhonePickupScreen } from "./screens/PhonePickupScreen";
+import { RoomScreen } from "./screens/RoomScreen";
 import { ProfileScreen, ShopScreen } from "./screens/ShopScreens";
 import { SwipeScreen } from "./screens/SwipeScreen";
 import { TrueEndingScreen } from "./screens/TrueEndingScreen";
@@ -104,6 +106,12 @@ export default function LeftOnReadGame() {
   const [shopNote, setShopNote] = useState<string | null>(null);
   /** 白天事件選完的那句；換到晚上就清掉 */
   const [eventNote, setEventNote] = useState<string | null>(null);
+  /** 上班途中遇到事件：在公司的畫面處理 */
+  const [atWork, setAtWork] = useState(false);
+  /** 冠宇在房間裡站哪：key 是「哪一天的白天／晚上」，換了就回到起點 */
+  const [roomSpot, setRoomSpot] = useState<{ key: string; pos: RoomPos } | null>(null);
+  /** 這一段（某天白天／晚上）進房間的那幾句已經看過了 */
+  const [introSeen, setIntroSeen] = useState<string | null>(null);
 
   useEffect(() => {
     audioManager.init();
@@ -360,6 +368,80 @@ export default function LeftOnReadGame() {
     return null;
   };
 
+  /** 房間裡選了某件事 */
+  const roomAction = (run: RunState, id: Exclude<RoomActionId, "close">) => {
+    switch (id) {
+      case "goWork":
+        // 路上沒事就直接過完白天；有事件才進公司的畫面
+        if (pendingDayEvent(run)) {
+          setAtWork(true);
+        } else {
+          setEventNote(null);
+          dispatch({ type: "endDaytime" });
+        }
+        return;
+      case "stayHome":
+        setEventNote(null);
+        dispatch({ type: "endDaytime" });
+        return;
+      case "goDate":
+        setOnDate(true);
+        return;
+      case "shop":
+        setOverlay("shop");
+        return;
+      case "chats":
+        setPhone("list");
+        return;
+      case "openApp":
+        setPickingUpPhone(true);
+        return;
+      case "profile":
+        setOverlay("profile");
+        return;
+      case "jerkOff":
+      case "playGames":
+        doHobby(id);
+        return;
+      case "sleep":
+        sleep();
+        return;
+    }
+  };
+
+  /** 白天、晚上的房間；位置和看過的開場白放在這裡，開手機回來還在原地 */
+  const renderRoom = (run: RunState, toMenu: () => void) => {
+    const night = run.phase === "night" || run.phase === "nightDone";
+    const key = `${run.dayIndex}:${night ? "night" : "day"}`;
+    const pos = roomSpot?.key === key ? roomSpot.pos : ROOM_START[night ? "night" : "day"];
+    const event = night ? null : homeDayEvent(run);
+    return (
+      <RoomScreen
+        key={key}
+        run={run}
+        pos={pos}
+        onPos={(p) => setRoomSpot({ key, pos: p })}
+        intro={introSeen === key ? null : roomIntro(run)}
+        onIntroDone={() => setIntroSeen(key)}
+        notice={night ? null : eventNote}
+        event={
+          event
+            ? {
+                text: event.text,
+                choices: event.choices.map((c) => {
+                  const broke = run.money + (c.money ?? 0) < 0;
+                  return { label: c.label, disabled: broke, sub: broke ? "錢不夠" : undefined };
+                }),
+                onChoose: pickDayEvent,
+              }
+            : null
+        }
+        onAction={(id) => roomAction(run, id)}
+        onMenu={toMenu}
+      />
+    );
+  };
+
   const renderGame = () => {
     const { run } = save;
     if (!run) return null;
@@ -413,24 +495,22 @@ export default function LeftOnReadGame() {
       case "daytime": {
         const dateChat = onDate ? dueDateChat(run.chats, run.dayIndex) : null;
         if (dateChat) return <DateScreen chat={dateChat} money={run.money} onDone={finishDate} />;
-        const phoneScreen = renderPhone(run);
-        if (phoneScreen) return phoneScreen;
-        return (
-          <DayScreen
-            run={run}
-            eventNote={eventNote}
-            onMenu={toMenu}
-            onOpenChats={() => setPhone("list")}
-            onGoDate={() => setOnDate(true)}
-            onShop={() => setOverlay("shop")}
-            onDayEvent={pickDayEvent}
-            onEndDay={() => {
-              setPhone(null);
-              setEventNote(null);
-              dispatch({ type: "endDaytime" });
-            }}
-          />
-        );
+        if (atWork) {
+          return (
+            <WorkScreen
+              run={run}
+              eventNote={eventNote}
+              onMenu={toMenu}
+              onDayEvent={pickDayEvent}
+              onEndDay={() => {
+                setAtWork(false);
+                setEventNote(null);
+                dispatch({ type: "endDaytime" });
+              }}
+            />
+          );
+        }
+        return renderRoom(run, toMenu);
       }
       case "evening":
         return <EveningScreen run={run} onMenu={toMenu} onEatOut={eatOut} onGoHome={goHome} />;
@@ -438,33 +518,21 @@ export default function LeftOnReadGame() {
       case "nightDone": {
         const phoneScreen = renderPhone(run);
         if (phoneScreen) return phoneScreen;
-        return (
-          <NightScreen
-            key={run.dayIndex}
-            run={run}
-            onMenu={toMenu}
-            onOpenApp={() => {
-              setHobbyNote(null);
-              setHobbyKind(null);
-              setPickingUpPhone(true);
-            }}
-            onOpenChats={() => {
-              setHobbyNote(null);
-              setHobbyKind(null);
-              setPhone("list");
-            }}
-            onJerkOff={() => doHobby("jerkOff")}
-            onPlayGames={() => doHobby("playGames")}
-            onProfile={() => {
-              setHobbyNote(null);
-              setHobbyKind(null);
-              setOverlay("profile");
-            }}
-            onSleep={sleep}
-            hobbyNote={hobbyNote}
-            hobbyKind={hobbyKind}
-          />
-        );
+        if (hobbyNote && hobbyKind) {
+          return (
+            <HobbyScreen
+              run={run}
+              kind={hobbyKind}
+              note={hobbyNote}
+              onMenu={toMenu}
+              onDone={() => {
+                setHobbyNote(null);
+                setHobbyKind(null);
+              }}
+            />
+          );
+        }
+        return renderRoom(run, toMenu);
       }
       case "swiping":
         return (
