@@ -1,5 +1,5 @@
 /**
- * 冠宇租屋處的俯視像素圖：一格 16 px，9 × 8 格。全部用 fillRect 畫，不用圖片檔。
+ * 冠宇租屋處的俯視像素圖：一格 16 px，8 × 11 格（直的）。全部用 fillRect 畫，不用圖片檔。
  * 擺設的位置對齊 lib/left-on-read/room.ts 的 ROOM_OBJECTS。
  */
 
@@ -7,8 +7,8 @@ import type { Dir } from "@/lib/left-on-read/room";
 import { glow, rect, sprite, type Ctx } from "./draw";
 
 export const TILE = 16;
-export const ROOM_W = 9 * TILE;
-export const ROOM_H = 8 * TILE;
+export const ROOM_W = 8 * TILE;
+export const ROOM_H = 11 * TILE;
 
 const C = {
   wall: "#e7dcc2",
@@ -41,10 +41,10 @@ function floor(ctx: Ctx) {
     const offset = (y / 8) % 2 === 0 ? 0 : 24;
     for (let x = offset; x < ROOM_W; x += 48) rect(ctx, C.floorLine, x, y, 1, 8);
   }
-  // 地毯
-  rect(ctx, C.rugEdge, 3 * TILE, 3 * TILE + 4, 3 * TILE, 2 * TILE + 8);
-  rect(ctx, C.rug, 3 * TILE + 2, 3 * TILE + 6, 3 * TILE - 4, 2 * TILE + 4);
-  for (let x = 3 * TILE + 6; x < 6 * TILE - 4; x += 6) rect(ctx, C.rugEdge, x, 4 * TILE + 4, 3, 1);
+  // 地毯（2～5 欄、4～6 列）
+  rect(ctx, C.rugEdge, 2 * TILE + 4, 4 * TILE, 4 * TILE - 8, 3 * TILE);
+  rect(ctx, C.rug, 2 * TILE + 6, 4 * TILE + 2, 4 * TILE - 12, 3 * TILE - 4);
+  for (let x = 2 * TILE + 10; x < 6 * TILE - 8; x += 6) rect(ctx, C.rugEdge, x, 5 * TILE + 8, 3, 1);
 }
 
 function walls(ctx: Ctx, night: boolean, t: number) {
@@ -52,34 +52,35 @@ function walls(ctx: Ctx, night: boolean, t: number) {
   rect(ctx, C.wall, 0, 0, ROOM_W, TILE);
   rect(ctx, C.wallShade, 0, 0, ROOM_W, 2);
   rect(ctx, C.baseboard, 0, TILE - 2, ROOM_W, 2);
-  // 窗戶（3～5 格）
+  // 窗戶（3～4 格）
   const wx = 3 * TILE + 4;
-  rect(ctx, "#f6f1de", wx - 2, 1, 3 * TILE - 4, 12);
-  rect(ctx, night ? "#1d2550" : "#9fd8ff", wx, 3, 3 * TILE - 8, 8);
+  const ww = 2 * TILE - 8;
+  rect(ctx, "#f6f1de", wx - 2, 1, ww + 4, 12);
+  rect(ctx, night ? "#1d2550" : "#9fd8ff", wx, 3, ww, 8);
   if (night) {
-    rect(ctx, "#fff3b0", wx + 30, 4, 3, 3);
-    rect(ctx, "#ffffff", wx + 8, 5, 1, 1);
-    if (Math.floor(t / 600) % 2 === 0) rect(ctx, "#ffffff", wx + 18, 8, 1, 1);
+    rect(ctx, "#fff3b0", wx + ww - 6, 4, 3, 3);
+    rect(ctx, "#ffffff", wx + 4, 5, 1, 1);
+    if (Math.floor(t / 600) % 2 === 0) rect(ctx, "#ffffff", wx + 10, 8, 1, 1);
   } else {
-    rect(ctx, "#ffffff", wx + 6, 5, 8, 2);
-    rect(ctx, "#ffffff", wx + 9, 4, 4, 1);
+    rect(ctx, "#ffffff", wx + 3, 5, 7, 2);
+    rect(ctx, "#ffffff", wx + 5, 4, 3, 1);
   }
-  rect(ctx, "#f6f1de", wx + 19, 3, 2, 8);
+  rect(ctx, "#f6f1de", wx + ww / 2 - 1, 3, 2, 8);
   // 窗簾
-  rect(ctx, "#d9837a", wx - 4, 1, 3, 13);
-  rect(ctx, "#d9837a", wx + 3 * TILE - 7, 1, 3, 13);
+  rect(ctx, "#d9837a", wx - 5, 1, 3, 13);
+  rect(ctx, "#d9837a", wx + ww + 2, 1, 3, 13);
   // 海報
   rect(ctx, C.black, TILE + 3, 2, 10, 11);
   rect(ctx, "#ff9fb4", TILE + 4, 3, 8, 9);
   rect(ctx, "#2a2a4e", TILE + 6, 5, 4, 5);
   // 月曆
-  rect(ctx, "#f6f1de", 7 * TILE + 4, 3, 8, 9);
-  rect(ctx, C.pink, 7 * TILE + 4, 3, 8, 2);
-  for (let i = 0; i < 3; i++) rect(ctx, C.baseboard, 7 * TILE + 5 + i * 2, 7, 1, 1);
-  // 前牆（第 7 列），門在第 4 格
+  rect(ctx, "#f6f1de", 6 * TILE + 4, 3, 8, 9);
+  rect(ctx, C.pink, 6 * TILE + 4, 3, 8, 2);
+  for (let i = 0; i < 3; i++) rect(ctx, C.baseboard, 6 * TILE + 5 + i * 2, 7, 1, 1);
+  // 前牆（最後一列），門在第 3 格
   rect(ctx, C.wallShade, 0, ROOM_H - TILE, ROOM_W, TILE);
   rect(ctx, C.baseboard, 0, ROOM_H - TILE, ROOM_W, 2);
-  const dx = 4 * TILE;
+  const dx = 3 * TILE;
   rect(ctx, C.woodDark, dx + 1, ROOM_H - TILE, TILE - 2, TILE);
   rect(ctx, C.wood, dx + 2, ROOM_H - TILE + 1, TILE - 4, TILE - 1);
   rect(ctx, "#f2d675", dx + TILE - 5, ROOM_H - TILE + 7, 2, 2);
@@ -114,7 +115,7 @@ function nightstand(ctx: Ctx, night: boolean, unread: boolean, t: number) {
 }
 
 function desk(ctx: Ctx, night: boolean, t: number) {
-  const x = 6 * TILE;
+  const x = 5 * TILE;
   const y = TILE;
   rect(ctx, C.woodDark, x, y + 4, 2 * TILE, TILE - 4);
   rect(ctx, C.woodTop, x, y + 3, 2 * TILE, 4);
@@ -135,7 +136,7 @@ function desk(ctx: Ctx, night: boolean, t: number) {
 }
 
 function fridge(ctx: Ctx) {
-  const x = 8 * TILE;
+  const x = 7 * TILE;
   const y = TILE;
   rect(ctx, C.metalShade, x + 1, y - 2, TILE - 2, 2 * TILE + 2);
   rect(ctx, C.metal, x + 2, y - 1, TILE - 4, 2 * TILE);
@@ -148,16 +149,31 @@ function fridge(ctx: Ctx) {
 
 function laundry(ctx: Ctx) {
   const x = 0;
-  const y = 6 * TILE;
+  const y = 8 * TILE;
   rect(ctx, "#5b6b8a", x + 1, y + 7, 14, 8);
   rect(ctx, "#c9a227", x + 3, y + 4, 8, 6);
   rect(ctx, "#6d6f78", x + 7, y + 2, 7, 6);
   rect(ctx, "#f6f1de", x + 4, y + 1, 4, 3);
 }
 
+/** 流理台：微波爐和水槽（右牆 5～6 列） */
+function counter(ctx: Ctx, t: number) {
+  const x = 7 * TILE;
+  const y = 5 * TILE;
+  rect(ctx, C.metalShade, x + 1, y, TILE - 1, 2 * TILE);
+  rect(ctx, C.metal, x + 2, y + 1, TILE - 3, 2 * TILE - 2);
+  // 水槽
+  rect(ctx, "#8a8f99", x + 4, y + 18, 9, 9);
+  rect(ctx, "#b8d4e6", x + 5, y + 19, 7, 7);
+  // 微波爐，時鐘一直閃 12:00
+  rect(ctx, C.black, x + 3, y + 2, 11, 10);
+  rect(ctx, "#3a3f55", x + 4, y + 3, 6, 8);
+  if (Math.floor(t / 700) % 2 === 0) rect(ctx, "#8fe0b0", x + 11, y + 4, 2, 1);
+}
+
 function trash(ctx: Ctx) {
-  const x = 8 * TILE;
-  const y = 6 * TILE;
+  const x = 7 * TILE;
+  const y = 8 * TILE;
   rect(ctx, "#6d6f78", x + 3, y + 4, 10, 11);
   rect(ctx, "#8a8f99", x + 2, y + 3, 12, 2);
   rect(ctx, "#f6f1de", x + 5, y + 1, 4, 3);
@@ -173,6 +189,7 @@ export function drawRoom(ctx: Ctx, opts: { night: boolean; unread: boolean; t: n
   nightstand(ctx, night, unread, t);
   desk(ctx, night, t);
   fridge(ctx);
+  counter(ctx, t);
   laundry(ctx);
   trash(ctx);
 }
@@ -183,7 +200,7 @@ export function drawNightShade(ctx: Ctx, t: number) {
   ctx.globalAlpha = 0.42;
   rect(ctx, "#0f0f2d", 0, 0, ROOM_W, ROOM_H);
   ctx.restore();
-  glow(ctx, "#6fb6ff", 6 * TILE + 16, TILE + 1, 9, t);
+  glow(ctx, "#6fb6ff", 5 * TILE + 16, TILE + 1, 9, t);
   glow(ctx, "#9fd3ff", 2 * TILE + 8, TILE + 2, 2, t);
 }
 

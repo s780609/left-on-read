@@ -1,10 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { audioManager } from "@/lib/audio/AudioManager";
 import type { RunState } from "@/lib/left-on-read/game";
 import {
+  adjacentAutoObject,
   facingObject,
+  planTap,
   roomMenu,
   stepRoom,
   type Dir,
@@ -22,8 +24,10 @@ import { COLOR, DialogBox, PixelButton, StatusBar, Typewriter } from "../ui";
 const NO_OPTIONS: readonly RoomOption[] = [];
 
 /** 走一格要幾毫秒 */
-const STEP_MS = 170;
+const STEP_MS = 150;
 const SLEEP_MS = 1200;
+/** 點下去的那一格閃多久 */
+const MARK_MS = 600;
 
 const TONE: Record<RoomOption["tone"], string> = {
   pink: COLOR.pink,
@@ -32,19 +36,12 @@ const TONE: Record<RoomOption["tone"], string> = {
   gray: COLOR.gray,
 };
 
+/** 電腦上也能用方向鍵走、Enter 調查 */
 const KEY_DIR: Record<string, Dir> = {
   ArrowUp: "up",
   ArrowDown: "down",
   ArrowLeft: "left",
   ArrowRight: "right",
-  w: "up",
-  s: "down",
-  a: "left",
-  d: "right",
-  W: "up",
-  S: "down",
-  A: "left",
-  D: "right",
 };
 
 /** 房間外的人要冠宇先處理的事：例如颱風假的事件，選完才能走動 */
@@ -75,7 +72,10 @@ interface Walk {
   start: number;
 }
 
-/** 俯視的房間：方向鍵或畫面上的十字鍵走路，面向東西按 A 調查 */
+const dirBetween = (a: RoomPos, b: RoomPos): Dir =>
+  b.x > a.x ? "right" : b.x < a.x ? "left" : b.y > a.y ? "down" : "up";
+
+/** 俯視的房間：點哪走到哪；走到手機、電腦、床、門旁邊就自己跳出選項 */
 export function RoomScreen({ run, pos, onPos, intro, onIntroDone, notice, event, onAction, onMenu }: RoomScreenProps) {
   const night = run.phase === "night" || run.phase === "nightDone";
   const unread = readyChats(visibleChats(run.chats, run.dayIndex), run.dayIndex, run.phase).length > 0;
@@ -88,20 +88,24 @@ export function RoomScreen({ run, pos, onPos, intro, onIntroDone, notice, event,
   const [sleeping, setSleeping] = useState(false);
   const [noticeSeen, setNoticeSeen] = useState<string | null>(null);
 
-  // 換一句 notice 就跳出來（不在 effect 裡 setState：渲染時比對上一句）
+  // 換一句 notice 就跳出來（渲染時比對上一句，不在 effect 裡 setState）
   if (notice && notice !== noticeSeen && !dialog) {
     setNoticeSeen(notice);
     setDialog({ d: { lines: [notice], options: [] }, line: 0 });
   }
 
+  const canvasBoxRef = useRef<HTMLDivElement>(null);
   const posRef = useRef(pos);
   const walkRef = useRef<Walk | null>(null);
-  const heldRef = useRef<Dir | null>(null);
-  /** 輕點一下也要走一步：按下時記住，下一格一定走 */
-  const tapRef = useRef<Dir | null>(null);
+  /** 點了之後還沒走完的格子 */
+  const pathRef = useRef<RoomPos[]>([]);
+  /** 走完要看的東西；null 就是走到之後看看旁邊有沒有會自己跳出來的 */
+  const targetRef = useRef<{ object: RoomObjectId | null; face: Dir | null } | null>(null);
+  const markRef = useRef<{ x: number; y: number; at: number } | null>(null);
+  const clockRef = useRef(0);
   const blockedRef = useRef(false);
   const stateRef = useRef({ night, unread });
-  const bumpRef = useRef<(id: RoomObjectId) => void>(() => {});
+  const arriveRef = useRef<(id: RoomObjectId) => void>(() => {});
   const onPosRef = useRef(onPos);
 
   const blocked = dialog !== null || event !== null || sleeping;
@@ -120,13 +124,11 @@ export function RoomScreen({ run, pos, onPos, intro, onIntroDone, notice, event,
     [run]
   );
   useEffect(() => {
-    bumpRef.current = (id) => {
-      // 撞到門就是要出門；其他東西要面向它按 A
-      if (id === "door") openMenu(id);
-    };
+    arriveRef.current = openMenu;
   }, [openMenu]);
 
   const draw = useCallback((ctx: CanvasRenderingContext2D, t: number) => {
+    clockRef.current = t;
     const walk = walkRef.current;
     let cur = posRef.current;
     let px = cur.x * TILE;
@@ -142,45 +144,75 @@ export function RoomScreen({ run, pos, onPos, intro, onIntroDone, notice, event,
         posRef.current = walk.to;
         cur = walk.to;
         onPosRef.current(walk.to);
+        // 走完最後一格：面向要看的東西，跳出選項
+        if (pathRef.current.length === 0 && targetRef.current) {
+          const target = targetRef.current;
+          targetRef.current = null;
+          const auto = target.object ? null : adjacentAutoObject(cur);
+          const object = target.object ?? auto?.object ?? null;
+          const face = target.face ?? auto?.dir ?? null;
+          if (face && face !== cur.dir) {
+            posRef.current = { ...cur, dir: face };
+            cur = posRef.current;
+            onPosRef.current(cur);
+          }
+          if (object) setTimeout(() => arriveRef.current(object), 0);
+        }
       }
     }
-    if (!walkRef.current && !blockedRef.current) {
-      const dir = tapRef.current ?? heldRef.current;
-      tapRef.current = null;
-      if (dir) {
-        const r = stepRoom(cur, dir);
-        if (r.moved) {
-          walkRef.current = { from: cur, to: r.pos, start: t };
-        } else {
-          posRef.current = r.pos;
-          if (r.pos.dir !== cur.dir) onPosRef.current(r.pos);
-          if (r.bumped) {
-            heldRef.current = null;
-            const id = r.bumped;
-            setTimeout(() => bumpRef.current(id), 0);
-          }
-        }
-        cur = posRef.current;
-      }
+    if (!walkRef.current && !blockedRef.current && pathRef.current.length > 0) {
+      const next = pathRef.current.shift()!;
+      walkRef.current = { from: cur, to: { ...next, dir: dirBetween(cur, next) }, start: t };
     }
     const { night: n, unread: u } = stateRef.current;
     drawRoom(ctx, { night: n, unread: u, t });
+    // 點下去的那一格閃一下
+    const mark = markRef.current;
+    if (mark && t - mark.at < MARK_MS) {
+      ctx.save();
+      ctx.globalAlpha = 0.55 * (1 - (t - mark.at) / MARK_MS);
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(mark.x * TILE + 1.5, mark.y * TILE + 1.5, TILE - 3, TILE - 3);
+      ctx.restore();
+    }
     drawPlayer(ctx, px, py, walkRef.current?.to.dir ?? cur.dir, frame);
     if (n) drawNightShade(ctx, t);
   }, []);
 
-  const press = useCallback((dir: Dir) => {
-    tapRef.current = dir;
-    heldRef.current = dir;
-  }, []);
-  const release = useCallback((dir?: Dir) => {
-    if (!dir || heldRef.current === dir) heldRef.current = null;
-  }, []);
+  /** 從現在（或正在走的那一格）出發，走到點的地方 */
+  const goTo = useCallback((x: number, y: number) => {
+    const from = walkRef.current?.to ?? posRef.current;
+    const plan = planTap(from, x, y);
+    if (!plan) return;
+    markRef.current = { x, y, at: clockRef.current };
+    pathRef.current = plan.path;
+    targetRef.current = { object: plan.object, face: plan.face };
+    // 已經站在旁邊：不用走，直接面向它
+    if (plan.path.length === 0 && !walkRef.current) {
+      const cur = posRef.current;
+      targetRef.current = null;
+      const auto = plan.object ? null : adjacentAutoObject(cur);
+      const object = plan.object ?? auto?.object ?? null;
+      const face = plan.face ?? auto?.dir ?? null;
+      if (face) {
+        posRef.current = { ...cur, dir: face };
+        onPosRef.current(posRef.current);
+      }
+      if (object) openMenu(object);
+    }
+  }, [openMenu]);
 
   const options = useMemo(
     () => (dialog && dialog.line >= dialog.d.lines.length - 1 ? dialog.d.options : NO_OPTIONS),
     [dialog]
   );
+
+  const closeDialog = useCallback(() => {
+    if (!dialog || sleeping) return;
+    if (dialog.intro) onIntroDone();
+    setDialog(null);
+  }, [dialog, sleeping, onIntroDone]);
 
   const choose = useCallback(
     (option: RoomOption) => {
@@ -198,33 +230,34 @@ export function RoomScreen({ run, pos, onPos, intro, onIntroDone, notice, event,
     [onAction]
   );
 
-  /** A：對話框開著就往下／確認，關著就調查面前的東西 */
-  const pressA = useCallback(() => {
-    if (sleeping || event) return;
-    if (dialog) {
-      if (dialog.line < dialog.d.lines.length - 1) {
-        setDialog({ ...dialog, line: dialog.line + 1 });
-        return;
-      }
-      if (options.length > 0) {
-        const option = options[Math.min(selected, options.length - 1)];
-        if (option) choose(option);
-        return;
-      }
-      if (dialog.intro) onIntroDone();
-      setDialog(null);
+  /** 點對話框：下一句，沒有下一句也沒有選項就關掉 */
+  const advanceDialog = useCallback(() => {
+    if (!dialog || sleeping) return;
+    if (dialog.line < dialog.d.lines.length - 1) {
+      setDialog({ ...dialog, line: dialog.line + 1 });
       return;
     }
-    if (walkRef.current) return;
-    const id = facingObject(posRef.current);
-    if (id) openMenu(id);
-  }, [sleeping, event, dialog, options, selected, choose, onIntroDone, openMenu]);
+    if (options.length === 0) closeDialog();
+  }, [dialog, sleeping, options, closeDialog]);
 
-  const pressB = useCallback(() => {
-    if (!dialog || sleeping) return;
-    if (dialog.intro) onIntroDone();
-    setDialog(null);
-  }, [dialog, sleeping, onIntroDone]);
+  /** 點房間：對話框開著就先關掉；不然走過去 */
+  const onTapRoom = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (sleeping || event) return;
+    if (dialog) {
+      if (dialog.line < dialog.d.lines.length - 1 || options.length === 0) advanceDialog();
+      else closeDialog();
+      return;
+    }
+    const box = canvasBoxRef.current;
+    if (!box) return;
+    const rect = box.getBoundingClientRect();
+    // 畫布等比縮放、靠上置中
+    const scale = Math.min(rect.width / ROOM_W, rect.height / ROOM_H);
+    const offX = (rect.width - ROOM_W * scale) / 2;
+    const x = Math.floor((e.clientX - rect.left - offX) / (scale * TILE));
+    const y = Math.floor((e.clientY - rect.top) / (scale * TILE));
+    goTo(x, y);
+  };
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -232,163 +265,111 @@ export function RoomScreen({ run, pos, onPos, intro, onIntroDone, notice, event,
       if (dir) {
         e.preventDefault();
         if (dialog && options.length > 0) {
-          if (!e.repeat && (dir === "up" || dir === "down")) {
+          if (dir === "up" || dir === "down") {
             const n = options.length;
             setSelected((s) => (s + (dir === "down" ? 1 : n - 1)) % n);
           }
           return;
         }
-        if (!e.repeat) press(dir);
-        else heldRef.current = dir;
+        if (dialog || event || sleeping || walkRef.current) return;
+        const r = stepRoom(posRef.current, dir);
+        if (r.moved) {
+          pathRef.current = [r.pos];
+          targetRef.current = null;
+        } else {
+          posRef.current = r.pos;
+          onPosRef.current(r.pos);
+          if (r.bumped === "door") openMenu("door");
+        }
         return;
       }
       if (e.repeat) return;
-      if (e.key === "Enter" || e.key === " " || e.key === "z" || e.key === "Z") {
+      if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
-        pressA();
-      } else if (e.key === "Escape" || e.key === "x" || e.key === "X") {
-        pressB();
+        if (dialog) {
+          if (options.length > 0) choose(options[Math.min(selected, options.length - 1)]);
+          else advanceDialog();
+        } else if (!event && !sleeping) {
+          const id = facingObject(posRef.current);
+          if (id) openMenu(id);
+        }
+      } else if (e.key === "Escape") {
+        closeDialog();
       }
     };
-    const up = (e: KeyboardEvent) => {
-      const dir = KEY_DIR[e.key];
-      if (dir) release(dir);
-    };
     window.addEventListener("keydown", down);
-    window.addEventListener("keyup", up);
-    return () => {
-      window.removeEventListener("keydown", down);
-      window.removeEventListener("keyup", up);
-    };
-  }, [dialog, options, press, release, pressA, pressB]);
+    return () => window.removeEventListener("keydown", down);
+  }, [dialog, options, selected, event, sleeping, choose, advanceDialog, closeDialog, openMenu]);
 
   const line = dialog ? dialog.d.lines[dialog.line] : null;
-  const hint = night ? "走到手機、電腦或床旁邊，面向它按 A" : "走到門口出門；面向東西按 A 看看";
+  const hint = night ? "點哪走到哪。走到手機、電腦或床旁邊看看" : "點哪走到哪。走到門口出門";
 
   return (
     <>
       <StatusBar run={run} onMenu={onMenu} />
-      <div className="relative shrink-0 border-b-[3px] border-black bg-black">
-        <PixelCanvas
-          width={ROOM_W}
-          height={ROOM_H}
-          draw={draw}
-          animate
-          frameMs={0}
-          label={night ? "深夜的租屋處" : "早上的租屋處"}
-          className="block h-auto w-full"
-        />
+      <div className="relative min-h-0 flex-1 touch-none select-none overflow-hidden bg-[#191933]" onPointerDown={onTapRoom}>
+        <div ref={canvasBoxRef} className="absolute inset-0">
+          <PixelCanvas
+            width={ROOM_W}
+            height={ROOM_H}
+            draw={draw}
+            animate
+            frameMs={0}
+            label={night ? "深夜的租屋處" : "早上的租屋處"}
+            className="block h-full w-full"
+            style={{ objectFit: "contain", objectPosition: "center top" }}
+          />
+        </div>
         {sleeping ? (
           <div className="absolute inset-0 flex items-center justify-center bg-black" style={{ animation: "lor-appear 900ms ease-out both" }}>
             <span className="text-lg text-[#c8cae0]">晚安</span>
           </div>
         ) : null}
+        {event || line !== null ? (
+          // 對話框蓋在畫面下方；點這裡不會讓冠宇走路
+          <div
+            className="absolute inset-x-0 bottom-0 flex max-h-[62%] flex-col gap-2 overflow-y-auto px-3 pb-3 pt-2"
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            {event ? (
+              <>
+                <DialogBox>
+                  <Typewriter key={event.text} text={event.text} />
+                </DialogBox>
+                {event.choices.map((c, i) => (
+                  <PixelButton key={c.label} color={i === 0 ? COLOR.pink : COLOR.gray} disabled={c.disabled} sub={c.sub} onClick={() => event.onChoose(i)}>
+                    {c.label}
+                  </PixelButton>
+                ))}
+              </>
+            ) : (
+              <>
+                <DialogBox>
+                  <button type="button" className="block w-full cursor-pointer text-left" onClick={advanceDialog}>
+                    <Typewriter key={`${dialog?.line}:${line}`} text={line ?? ""} />
+                    {options.length === 0 ? <span className="mt-1 block text-right text-xs text-[#a9abc9]">▼</span> : null}
+                  </button>
+                </DialogBox>
+                {options.map((o, i) => (
+                  <PixelButton
+                    key={o.id}
+                    color={TONE[o.tone]}
+                    disabled={o.disabled}
+                    sub={o.sub}
+                    silent={o.id === "sleep"}
+                    className={i === selected ? "outline outline-2 outline-offset-2 outline-[#f6f1de]" : ""}
+                    onClick={() => choose(o)}
+                  >
+                    {o.label}
+                  </PixelButton>
+                ))}
+              </>
+            )}
+          </div>
+        ) : !sleeping ? (
+          <p className="pointer-events-none absolute inset-x-0 bottom-3 px-4 text-center text-sm text-[#a9abc9]">{hint}</p>
+        ) : null}
       </div>
-      <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-3 py-3">
-        {event ? (
-          <>
-            <DialogBox>
-              <Typewriter key={event.text} text={event.text} />
-            </DialogBox>
-            {event.choices.map((c, i) => (
-              <PixelButton key={c.label} color={i === 0 ? COLOR.pink : COLOR.gray} disabled={c.disabled} sub={c.sub} onClick={() => event.onChoose(i)}>
-                {c.label}
-              </PixelButton>
-            ))}
-          </>
-        ) : line !== null ? (
-          <>
-            <DialogBox>
-              <button type="button" className="block w-full cursor-pointer text-left" onClick={options.length > 0 ? undefined : pressA}>
-                <Typewriter key={`${dialog?.line}:${line}`} text={line} />
-                {options.length === 0 ? <span className="mt-1 block text-right text-xs text-[#a9abc9]">▼</span> : null}
-              </button>
-            </DialogBox>
-            {options.map((o, i) => (
-              <PixelButton
-                key={o.id}
-                color={TONE[o.tone]}
-                disabled={o.disabled}
-                sub={o.sub}
-                silent={o.id === "sleep"}
-                className={i === selected ? "outline outline-2 outline-offset-2 outline-[#f6f1de]" : ""}
-                onClick={() => choose(o)}
-              >
-                {o.label}
-              </PixelButton>
-            ))}
-          </>
-        ) : (
-          <p className="px-1 text-center text-sm text-[#a9abc9]">{sleeping ? "" : hint}</p>
-        )}
-      </div>
-      <Pad onPress={press} onRelease={release} onA={pressA} onB={pressB} />
     </>
-  );
-}
-
-/** 畫面下方的十字鍵和 A、B */
-function Pad({
-  onPress,
-  onRelease,
-  onA,
-  onB,
-}: {
-  onPress: (d: Dir) => void;
-  onRelease: (d?: Dir) => void;
-  onA: () => void;
-  onB: () => void;
-}) {
-  const arrow = (dir: Dir, label: ReactNode, cls: string) => (
-    <button
-      type="button"
-      aria-label={{ up: "上", down: "下", left: "左", right: "右" }[dir]}
-      className={`absolute flex h-11 w-11 touch-none select-none items-center justify-center border-[3px] border-black bg-[#3a3a5e] text-[#c8cae0] active:bg-[#55587a] ${cls}`}
-      onPointerDown={(e) => {
-        e.preventDefault();
-        onPress(dir);
-        // 手指滑出按鈕也繼續走；有些瀏覽器不給捕捉就算了
-        try {
-          e.currentTarget.setPointerCapture(e.pointerId);
-        } catch {
-          /* 沒關係 */
-        }
-      }}
-      onPointerUp={() => onRelease(dir)}
-      onPointerCancel={() => onRelease(dir)}
-      onPointerLeave={() => onRelease(dir)}
-      onContextMenu={(e) => e.preventDefault()}
-    >
-      {label}
-    </button>
-  );
-  const round = (label: string, onClick: () => void, color: string) => (
-    <button
-      type="button"
-      aria-label={label}
-      className="flex h-14 w-14 touch-none select-none items-center justify-center rounded-full border-[3px] border-black text-lg text-white shadow-[2px_3px_0_#000] active:translate-y-0.5"
-      style={{ backgroundColor: color }}
-      onPointerDown={(e) => {
-        e.preventDefault();
-        onClick();
-      }}
-    >
-      {label}
-    </button>
-  );
-  return (
-    <div className="flex shrink-0 items-center justify-between border-t-[3px] border-black bg-[#191933] px-5 py-3">
-      <div className="relative h-[132px] w-[132px]">
-        {arrow("up", "▲", "left-[44px] top-0")}
-        {arrow("left", "◀", "left-0 top-[44px]")}
-        {arrow("right", "▶", "left-[88px] top-[44px]")}
-        {arrow("down", "▼", "left-[44px] top-[88px]")}
-        <div className="absolute left-[44px] top-[44px] h-11 w-11 border-[3px] border-black bg-[#3a3a5e]" />
-      </div>
-      <div className="flex items-end gap-3">
-        <div className="mb-2">{round("B", onB, COLOR.gray)}</div>
-        <div className="mb-8">{round("A", onA, COLOR.pink)}</div>
-      </div>
-    </div>
   );
 }

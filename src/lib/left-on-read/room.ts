@@ -22,11 +22,11 @@ export interface RoomPos {
   dir: Dir;
 }
 
-export type RoomObjectId = "bed" | "phone" | "window" | "pc" | "fridge" | "trash" | "laundry" | "door";
+export type RoomObjectId = "bed" | "phone" | "window" | "pc" | "fridge" | "counter" | "trash" | "laundry" | "door";
 
-/** 房間 9 × 8 格；第 0 列是後牆，第 7 列是前牆和門 */
-export const ROOM_COLS = 9;
-export const ROOM_ROWS = 8;
+/** 房間 8 × 11 格（直的，配手機直式）；第 0 列是後牆，最後一列是前牆和門 */
+export const ROOM_COLS = 8;
+export const ROOM_ROWS = 11;
 
 /** 每樣東西佔的格子 [x, y] */
 export const ROOM_OBJECTS: Readonly<Record<RoomObjectId, readonly (readonly [number, number])[]>> = {
@@ -42,26 +42,34 @@ export const ROOM_OBJECTS: Readonly<Record<RoomObjectId, readonly (readonly [num
   window: [
     [3, 0],
     [4, 0],
-    [5, 0],
   ],
   pc: [
+    [5, 1],
     [6, 1],
-    [7, 1],
   ],
   fridge: [
-    [8, 1],
-    [8, 2],
+    [7, 1],
+    [7, 2],
   ],
-  laundry: [[0, 6]],
-  trash: [[8, 6]],
-  door: [[4, 7]],
+  counter: [
+    [7, 5],
+    [7, 6],
+  ],
+  laundry: [[0, 8]],
+  trash: [[7, 8]],
+  door: [[3, 10]],
 };
+
+/** 走到旁邊就會自己跳出選項的東西；其他的要點它才會看 */
+export const AUTO_OBJECTS: readonly RoomObjectId[] = ["door", "phone", "bed", "pc"];
 
 /** 早上在床邊醒來；晚上從門口進來 */
 export const ROOM_START: Readonly<Record<"day" | "night", RoomPos>> = {
   day: { x: 2, y: 2, dir: "down" },
-  night: { x: 4, y: 6, dir: "up" },
+  night: { x: 3, y: 9, dir: "up" },
 };
+
+const DIRS: readonly Dir[] = ["up", "down", "left", "right"];
 
 const DELTA: Readonly<Record<Dir, readonly [number, number]>> = {
   up: [0, -1],
@@ -100,6 +108,88 @@ export function stepRoom(pos: RoomPos, dir: Dir): { pos: RoomPos; moved: boolean
 export function facingObject(pos: RoomPos): RoomObjectId | null {
   const [dx, dy] = DELTA[pos.dir];
   return objectAt(pos.x + dx, pos.y + dy);
+}
+
+/** 站在 pos 旁邊、會自己跳出選項的東西，和要面向哪邊才看得到它 */
+export function adjacentAutoObject(pos: RoomPos): { object: RoomObjectId; dir: Dir } | null {
+  // 先看面前，再照 AUTO_OBJECTS 的順序看四周
+  const ahead = facingObject(pos);
+  if (ahead && AUTO_OBJECTS.includes(ahead)) return { object: ahead, dir: pos.dir };
+  for (const object of AUTO_OBJECTS) {
+    for (const dir of DIRS) {
+      const [dx, dy] = DELTA[dir];
+      if (objectAt(pos.x + dx, pos.y + dy) === object) return { object, dir };
+    }
+  }
+  return null;
+}
+
+/** 從 from 走到 goals 裡最近的一格；回傳一步一步的格子（不含起點），走不到是 null */
+export function findPath(from: RoomPos, goals: readonly (readonly [number, number])[]): RoomPos[] | null {
+  const goal = new Set(goals.map(([x, y]) => `${x},${y}`));
+  if (goal.has(`${from.x},${from.y}`)) return [];
+  const prev = new Map<string, { key: string; pos: RoomPos }>();
+  const start = `${from.x},${from.y}`;
+  const seen = new Set([start]);
+  const queue: RoomPos[] = [from];
+  while (queue.length > 0) {
+    const cur = queue.shift()!;
+    for (const dir of DIRS) {
+      const r = stepRoom(cur, dir);
+      if (!r.moved) continue;
+      const key = `${r.pos.x},${r.pos.y}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      prev.set(key, { key: `${cur.x},${cur.y}`, pos: r.pos });
+      if (goal.has(key)) {
+        const path: RoomPos[] = [];
+        let k = key;
+        while (k !== start) {
+          const p = prev.get(k)!;
+          path.unshift(p.pos);
+          k = p.key;
+        }
+        return path;
+      }
+      queue.push(r.pos);
+    }
+  }
+  return null;
+}
+
+/**
+ * 點了房間的 (x, y) 那一格：要走哪條路、走到之後看哪樣東西。
+ * 點地板就走過去；點東西就走到它旁邊、面向它；點牆或走不到的地方回傳 null。
+ */
+export function planTap(
+  from: RoomPos,
+  x: number,
+  y: number
+): { path: RoomPos[]; object: RoomObjectId | null; face: Dir | null } | null {
+  const object = objectAt(x, y);
+  if (object) {
+    // 東西旁邊走得到的格子，各自記住要面向哪邊
+    const spots: { x: number; y: number; dir: Dir }[] = [];
+    for (const [cx, cy] of ROOM_OBJECTS[object]) {
+      for (const dir of DIRS) {
+        const [dx, dy] = DELTA[dir];
+        const sx = cx - dx;
+        const sy = cy - dy;
+        if (isWalkable(sx, sy)) spots.push({ x: sx, y: sy, dir });
+      }
+    }
+    const path = findPath(
+      from,
+      spots.map((p) => [p.x, p.y] as const)
+    );
+    if (!path) return null;
+    const end = path.at(-1) ?? from;
+    const spot = spots.find((p) => p.x === end.x && p.y === end.y)!;
+    return { path, object, face: spot.dir };
+  }
+  if (!isWalkable(x, y)) return null;
+  const path = findPath(from, [[x, y]]);
+  return path ? { path, object: null, face: null } : null;
 }
 
 // ---------- 按 A 之後 ----------
@@ -264,9 +354,10 @@ function pcMenu(run: RunState): RoomDialog {
   };
 }
 
-const FLAVOR: Readonly<Record<"window" | "fridge" | "trash" | "laundry", { day: string; night: string }>> = {
+const FLAVOR: Readonly<Record<"window" | "fridge" | "counter" | "trash" | "laundry", { day: string; night: string }>> = {
   window: { day: "外面天氣不錯。這種天氣，最適合待在冷氣房裡。", night: "樓下便利商店的燈還亮著。全世界只有它跟我還醒著。" },
   fridge: { day: "冰箱裡只有一瓶醬油跟半顆蛋。蛋是哪一天的，我不敢想。", night: "冰箱的聲音半夜特別大聲。打開，還是只有醬油。" },
+  counter: { day: "流理台上有微波爐和一個沒洗的碗。碗是昨天的我留給今天的我的。", night: "微波爐的時鐘一直停在 12:00。這個房間裡，只有它不知道現在幾點。" },
   trash: { day: "垃圾車今晚八點來。我每次都錯過。", night: "垃圾桶滿了。明天的我會處理的，他人很好。" },
   laundry: { day: "髒衣服堆成一座小山。山頂那件明天還可以穿。", night: "髒衣服山又長高了。它是這個房間裡唯一在成長的。" },
 };

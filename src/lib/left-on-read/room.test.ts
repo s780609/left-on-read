@@ -14,7 +14,9 @@ import {
   ROOM_OBJECTS,
   ROOM_ROWS,
   ROOM_START,
+  adjacentAutoObject,
   facingObject,
+  planTap,
   homeDayEvent,
   isWalkable,
   objectAt,
@@ -85,9 +87,9 @@ test("房間：走一步、轉向、撞到東西", () => {
   assert.equal(door.moved, false);
   assert.equal(door.bumped, "door");
   // 牆：只轉向，什麼都沒撞到
-  assert.deepEqual(stepRoom({ x: 8, y: 4, dir: "up" }, "right"), { pos: { x: 8, y: 4, dir: "right" }, moved: false, bumped: null });
+  assert.deepEqual(stepRoom({ x: 7, y: 4, dir: "up" }, "right"), { pos: { x: 7, y: 4, dir: "right" }, moved: false, bumped: null });
   assert.equal(facingObject({ x: 2, y: 2, dir: "up" }), "phone");
-  assert.equal(objectAt(4, 7), "door");
+  assert.equal(objectAt(3, ROOM_ROWS - 1), "door");
 });
 
 test("平日早上：門只有上班去；手機、電腦都不能用", () => {
@@ -158,4 +160,49 @@ test("條件達成後，小晴每晚 100% 出現", () => {
   }
   const fewer: Dex = Object.fromEntries(STORIES.slice(0, HEROINE_UNLOCK_FAILURES - 1).map((s) => [s.id, { count: 1, firstDayIndex: 0 }]));
   assert.equal(heroineCardIndex({ ...createRun(3), dayIndex: 5 }, fewer), null);
+});
+
+test("房間是直的：寬 8 格、高 11 格", () => {
+  assert.equal(ROOM_COLS, 8);
+  assert.equal(ROOM_ROWS, 11);
+  assert.ok(ROOM_ROWS > ROOM_COLS);
+});
+
+test("點地板：走最短的路過去，一步一格、不穿過家具", () => {
+  const from = ROOM_START.day;
+  const plan = planTap(from, 5, 7);
+  assert.ok(plan);
+  assert.equal(plan.object, null);
+  assert.equal(plan.path.length, Math.abs(5 - from.x) + Math.abs(7 - from.y));
+  let prev = from;
+  for (const step of plan.path) {
+    assert.equal(Math.abs(step.x - prev.x) + Math.abs(step.y - prev.y), 1, "一次走一格");
+    assert.ok(isWalkable(step.x, step.y), `${step.x},${step.y} 不能走`);
+    prev = step;
+  }
+  assert.deepEqual([prev.x, prev.y], [5, 7]);
+  // 點牆或點自己站的地方
+  assert.equal(planTap(from, 4, 0)?.object, "window", "點窗戶會走到窗戶下面");
+  assert.equal(planTap(from, 0, 10), null, "前牆走不到");
+  assert.deepEqual(planTap(from, from.x, from.y)?.path, []);
+});
+
+test("點東西：走到它旁邊、面向它", () => {
+  const plan = planTap(ROOM_START.day, 3, ROOM_ROWS - 1);
+  assert.ok(plan);
+  assert.equal(plan.object, "door");
+  const end = plan.path.at(-1)!;
+  assert.equal(facingObject({ ...end, dir: plan.face! }), "door");
+  const pc = planTap(ROOM_START.night, 5, 1);
+  assert.ok(pc);
+  const pcEnd = pc.path.at(-1)!;
+  assert.equal(facingObject({ ...pcEnd, dir: pc.face! }), "pc");
+});
+
+test("走到手機、電腦、床、門旁邊就會自己跳出來；窗戶、冰箱這些要點它", () => {
+  assert.deepEqual(adjacentAutoObject({ x: 3, y: 9, dir: "left" }), { object: "door", dir: "down" });
+  assert.deepEqual(adjacentAutoObject({ x: 2, y: 2, dir: "down" }), { object: "phone", dir: "up" });
+  assert.equal(adjacentAutoObject({ x: 4, y: 5, dir: "down" }), null);
+  // 冰箱旁邊不會自己跳
+  assert.equal(adjacentAutoObject({ x: 6, y: 3, dir: "down" }), null);
 });
