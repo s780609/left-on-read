@@ -663,7 +663,7 @@ test("結局進度：瓢蟲、真結局、Iris 一起算 n / 3", () => {
   );
 });
 
-test("腳本：回程捷運、六段加片名，都有文字", () => {
+test("腳本：回程捷運、六段加片名，都有文字；床上那段完事後先回到靠著的圖，再接回嘉義", () => {
   assert.deepEqual(TRUE_ENDING_BEATS.map((b) => b.scene), [
     "train",
     "noodles",
@@ -673,6 +673,7 @@ test("腳本：回程捷運、六段加片名，都有文字", () => {
     "intimateSex",
     "intimateSex",
     "intimateSex",
+    "intimate",
     "chiayi",
     "proposal",
     "wedding",
